@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeuraVPN Redirect</title>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      if (!params.has("open")) {
+        params.set("open", "1");
+      }
+
+      var currentPath = window.location.pathname || "/open";
+      var basePath = currentPath
+        .replace(/\/open\/index\.html$/, "/")
+        .replace(/\/open\/?$/, "/");
+      if (!basePath) {
+        basePath = "/";
+      }
+
+      var query = params.toString();
+      var target = basePath + (query ? ("?" + query) : "");
+      if (window.location.hash) {
+        target += window.location.hash;
+      }
+
+      window.location.replace(target);
+    })();
+  </script>
+</head>
+<body></body>
+</html>

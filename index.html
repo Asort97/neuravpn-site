@@ -1,0 +1,257 @@
+<html lang="ru" vid="0"><head vid="1">
+    <meta charset="UTF-8" vid="2">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" vid="3">
+    <title vid="4">neuravpn - подключение</title>
+    <link rel="stylesheet" href="assets/css/site.css">
+</head>
+<body vid="9">
+
+    <div class="grid-overlay" vid="10"></div>
+    <div class="ambient-glow" vid="11"></div>
+    <div class="scan-line" vid="12"></div>
+
+    <div class="container" vid="13">
+        
+        
+        <header style="padding: 24px 0; display: flex; justify-content: space-between; align-items: center;" vid="14">
+            <div style="font-weight: 800; font-size: 1.5rem; letter-spacing: -0.05em;" vid="15">
+                NEURA<span style="color: var(--accent-glow)" vid="16">VPN</span>
+            </div>
+            <nav vid="17"></nav>
+        </header>
+
+        <section id="openModeSection" class="onboarding-wrap hidden">
+            <div class="onboarding-card">
+                <span class="mono-label">[OPEN] QUICK IMPORT</span>
+                <h2 id="openTitle">Импорт профиля</h2>
+                <p id="openSubtitle" style="color: var(--text-secondary); max-width: 620px;">
+                    Нажмите "Открыть приложение" - профиль добавится автоматически.
+                </p>
+                <p id="openStatus" class="onboarding-status">Проверка ссылки...</p>
+                <div class="btn-group">
+                    <a id="openAppBtn" href="#" class="btn btn-primary">Открыть приложение</a>
+                    <a id="goHomeBtn" href="./" class="btn btn-secondary">На главную</a>
+                </div>
+                <div id="fallbackBlock" class="onboarding-fallback hidden">
+                    <p id="fallbackHint" style="color: var(--text-secondary); margin-bottom: 12px;">
+                        Если приложение не открылось, установите его и попробуйте снова.
+                    </p>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <a id="fallbackAndroidBtn" href="#" class="btn btn-secondary" style="font-size: 0.9rem; padding: 12px 20px;">Скачать Android</a>
+                        <a id="fallbackWindowsBtn" href="#" class="btn btn-secondary" style="font-size: 0.9rem; padding: 12px 20px;">Скачать Windows</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        
+        <section class="hero" data-landing="true" vid="18">
+            <div class="hero-layout" style="display:flex; justify-content:center; width:100%;" vid="19">
+                <div class="hero-text" style="display:flex; flex-direction:column; align-items:center; text-align:center; max-width:700px; width:100%;" vid="20">
+                    <span class="mono-label" vid="21">[01] SYSTEM ACCESS</span>
+                    <h1 vid="22">Подключение в один клик</h1>
+                    <p vid="23">Открой ссылку — приложение само импортирует профиль и подключится. Никаких сложных настроек.</p>
+                    
+                    <div class="btn-group" style="flex-direction: column; align-items: center; gap: 12px;" vid="24">
+                        <a id="landingAutoConnectBtn" href="?open=1" class="btn btn-primary" style="width: 320px; justify-content: center; font-size: 1.05rem; letter-spacing: 0.08em;" vid="25">Авто-подключение</a>
+                        <div style="display: flex; gap: 12px;" vid="26">
+                          <a id="landingDownloadAndroidBtn" href="#" class="btn btn-secondary" style="font-size: 0.85rem; padding: 12px 24px;" vid="27">Скачать для Android</a>
+                          <a id="landingDownloadWindowsBtn" href="#" class="btn btn-secondary" style="font-size: 0.85rem; padding: 12px 24px;" vid="28">Скачать для Windows</a>
+                        </div>
+                        <a href="https://github.com/Asort97/neuravpn-client" target="_blank" class="btn btn-secondary" style="font-size: 0.8rem; padding: 10px 20px; width: 320px; justify-content: center; gap: 8px; border-color: #333; color: var(--text-secondary);" vid="29">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0" vid="30"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" vid="31"></path></svg>
+                          GitHub
+                        </a>
+                        <a href="https://t.me/neuravpn_bot" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 0.8rem; padding: 10px 20px; width: 320px; justify-content: center; gap: 8px; border-color: var(--accent-red-mid); color: var(--text-primary);">
+                          Telegram-бот
+                        </a>
+                    </div>
+                </div>
+
+                
+                <div class="hero-visual" style="display:none" vid="32">
+                    <div class="tech-lines" vid="33">
+                        <svg vid="34">
+                            <path d="M50,300 L200,300 L350,150" class="path-glow" stroke-dasharray="5,5" vid="35"></path>
+                            <circle cx="350" cy="150" r="3" fill="#F83D3F" vid="36"></circle>
+                        </svg>
+                    </div>
+
+                    
+                    <div class="lens-container lens-main" vid="37">
+                        <div class="interface-sim" vid="38">
+                            
+                            <div style="width: 60%; height: 2px; background: #F83D3F; margin-bottom: 10px; box-shadow: 0 0 10px #F83D3F;" vid="39"></div>
+                            <div style="font-family: 'JetBrains Mono'; font-size: 0.7rem; color: #fff;" vid="40">IP: 192.168.X.X</div>
+                            <div style="font-family: 'JetBrains Mono'; font-size: 0.7rem; color: #666;" vid="41">ENCRYPTED</div>
+                        </div>
+                    </div>
+
+                    
+                    <div class="lens-container lens-secondary" vid="42">
+                        <div class="interface-sim" vid="43">
+                            <div style="border: 1px solid #F83D3F; padding: 5px 10px; color: #F83D3F; font-size: 0.8rem; font-family: 'JetBrains Mono';" vid="44">
+                                48ms
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        
+        <section class="features" data-landing="true" vid="45">
+            <span class="mono-label" vid="46">[02] CAPABILITIES</span>
+            <h2 vid="47">Функционал ядра</h2>
+            
+            <div class="grid-2x2" vid="48">
+                
+                <div class="card" vid="49">
+                    <div class="bracket-corner bc-tr" vid="50"></div>
+                    <div class="bracket-corner bc-bl" vid="51"></div>
+                    <div class="card-icon" vid="52">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" vid="53"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" vid="54"></path></svg>
+                    </div>
+                    <h3 vid="55">Раздельное туннелирование</h3>
+                    <p vid="56">Настраиваемые White/Black листы. Выбирайте, какие приложения работают через VPN, а какие напрямую.</p>
+                </div>
+
+                
+                <div class="card" vid="57">
+                    <div class="bracket-corner bc-tr" vid="58"></div>
+                    <div class="bracket-corner bc-bl" vid="59"></div>
+                    <div class="card-icon" vid="60">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" vid="61"><circle cx="12" cy="12" r="10" vid="62"></circle><polyline points="12 6 12 12 16 14" vid="63"></polyline></svg>
+                    </div>
+                    <h3 vid="64">Быстрое подключение</h3>
+                    <p vid="65">Технология One Tap. Мгновенная инициализация соединения без задержек и лишних тапов.</p>
+                </div>
+
+                
+                <div class="card" vid="66">
+                    <div class="bracket-corner bc-tr" vid="67"></div>
+                    <div class="bracket-corner bc-bl" vid="68"></div>
+                    <div class="card-icon" vid="69">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" vid="70"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" vid="71"></rect><line x1="8" y1="21" x2="16" y2="21" vid="72"></line><line x1="12" y1="17" x2="12" y2="21" vid="73"></line></svg>
+                    </div>
+                    <h3 vid="74">Профили подключения</h3>
+                    <p vid="75">Храните несколько серверов одновременно. Умное переключение между локациями.</p>
+                </div>
+
+                
+                <div class="card" vid="76">
+                    <div class="bracket-corner bc-tr" vid="77"></div>
+                    <div class="bracket-corner bc-bl" vid="78"></div>
+                    <div class="card-icon" vid="79">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" vid="80"><path d="M12 2a10 10 0 1 0 10 10H12V2z" vid="81"></path><path d="M12 12 2.1 12.1" vid="82"></path><path d="M12 12 21.9 21.9" vid="83"></path></svg>
+                    </div>
+                    <h3 vid="84">Расширенные настройки</h3>
+                    <p vid="85">Маскировка трафика, фрагментация TLS Hello пакетов и эффективный обход DPI.</p>
+                </div>
+            </div>
+        </section>
+
+        
+        <section class="steps-section" data-landing="true" vid="86">
+            <div style="text-align: center;" vid="87">
+                <span class="mono-label" vid="88">[03] PROTOCOL</span>
+                <h2 vid="89">Как это работает</h2>
+            </div>
+
+            <div class="steps-container" vid="90">
+                <div class="steps-line" vid="91"></div>
+                
+                <div class="step-item" vid="92">
+                    <div class="step-node" vid="93">01</div>
+                    <div class="step-title" vid="94">Оплата в Telegram</div>
+                    <div style="color: #666; font-size: 0.9rem;" vid="95">Бот выдает уникальную ссылку доступа</div>
+                </div>
+
+                <div class="step-item" vid="96">
+                    <div class="step-node" vid="97">02</div>
+                    <div class="step-title" vid="98">Переход по ссылке</div>
+                    <div style="color: #666; font-size: 0.9rem;" vid="99">Кликните "Открыть" на устройстве</div>
+                </div>
+
+                <div class="step-item" vid="100">
+                    <div class="step-node" vid="101">03</div>
+                    <div class="step-title" vid="102">Авто-импорт</div>
+                    <div style="color: #666; font-size: 0.9rem;" vid="103">Приложение само настроит конфиг</div>
+                </div>
+            </div>
+        </section>
+
+        
+        <section class="compat-section" data-landing="true" vid="104">
+            <span class="mono-label" vid="105">[04] ARCHITECTURE</span>
+            <div class="platform-logos" vid="106">
+                <div class="platform-item" vid="107">
+                    <svg width="48" height="48" fill="currentColor" viewBox="0 0 24 24" vid="108"><path d="M17.523 15.3414C17.523 15.3414 17.4764 15.3414 17.4912 15.3414C16.8906 14.6548 16.2748 13.9064 15.548 13.1497L15.228 13.5135C15.9392 14.2443 16.5508 14.9813 17.1528 15.6586C16.5916 16.1422 15.9723 16.4357 15.2891 16.5298C14.4926 16.6385 13.6898 16.5416 12.8988 16.4447C12.0152 16.3359 11.1332 16.2287 10.2376 16.3683C9.37803 16.5022 8.56064 16.8041 7.85044 17.3828C8.51408 16.6358 9.18956 15.8234 9.97292 15.0186L9.61904 14.6738C8.8256 15.4912 8.14028 16.3157 7.46912 17.0734C7.4882 17.0734 7.4246 17.0734 7.4246 17.0734C2.51528 11.5204 3.01236 5.86259 3.01236 5.86259C3.01236 5.86259 4.352 2.37976 8.35604 2.21956C8.35604 2.21956 9.38864 5.25876 12.4738 5.25876C15.559 5.25876 16.5916 2.21956 16.5916 2.21956C20.5956 2.37976 21.9352 5.86259 21.9352 5.86259C21.9352 5.86259 22.4323 11.5204 17.523 15.3414ZM15.3103 9.48911C14.6193 9.48911 14.0597 10.0467 14.0597 10.7351C14.0597 11.4234 14.6193 11.9811 15.3103 11.9811C16.0013 11.9811 16.5609 11.4234 16.5609 10.7351C16.5609 10.0467 16.0013 9.48911 15.3103 9.48911ZM9.63704 9.48911C8.94608 9.48911 8.38652 10.0467 8.38652 10.7351C8.38652 11.4234 8.94608 11.9811 9.63704 11.9811C10.328 11.9811 10.8876 11.4234 10.8876 10.7351C10.8876 10.0467 10.328 9.48911 9.63704 9.48911Z" vid="109"></path></svg>
+                    <span class="platform-name" vid="110">ANDROID</span>
+                </div>
+                <div class="platform-item" vid="111">
+                    <svg width="48" height="48" fill="currentColor" viewBox="0 0 24 24" vid="112"><path d="M0 3.449L9.75 2.1v9.451H0V3.449zm10.949-1.69L24 0v11.4H10.949V1.76zm-10.949 11.24H9.75V21.9L0 20.55v-7.55zm10.949 0H24V24L10.95 22.24V13z" vid="113"></path></svg>
+                    <span class="platform-name" vid="114">WINDOWS</span>
+                </div>
+            </div>
+            <div class="tags-row" vid="115">
+                <div class="tag" vid="116">App Links / Deep Links</div>
+                <div class="tag" vid="117">One-time token</div>
+                <div class="tag" style="border-color: var(--accent-red-mid); color: #fff;" vid="118">Без ручного копипаста</div>
+            </div>
+        </section>
+
+        
+        <section class="faq-section" data-landing="true" vid="119">
+            <span class="mono-label" style="text-align: center;" vid="120">[05] DATABASE</span>
+            <h2 style="text-align: center;" vid="121">Частые вопросы</h2>
+
+            <details vid="122">
+                <summary vid="123">Безопасно ли это?</summary>
+                <div class="faq-content" vid="124">
+                    Абсолютно. Приложение использует открытые протоколы шифрования. Ваши данные не сохраняются на серверах, а конфигурация передается через зашифрованный канал.
+                </div>
+            </details>
+
+            <details vid="125">
+                <summary vid="126">Что если приложение не установлено?</summary>
+                <div class="faq-content" vid="127">
+                    При переходе по ссылке система определит отсутствие приложения и перенаправит вас в Google Play или на страницу загрузки Windows версии.
+                </div>
+            </details>
+
+            <details vid="128">
+                <summary vid="129">Можно ли несколько профилей?</summary>
+                <div class="faq-content" vid="130">
+                    Да. Вы можете иметь неограниченное количество профилей от разных локаций. Приложение автоматически выберет оптимальный или запомнит ваш выбор.
+                </div>
+            </details>
+
+            <details vid="131">
+                <summary vid="132">Как включить split tunneling?</summary>
+                <div class="faq-content" vid="133">
+                    В настройках приложения перейдите в раздел "Приложения" и выберите режим: пускать все через VPN кроме выбранных, или только выбранные через VPN.
+                </div>
+            </details>
+        </section>
+
+        
+        <footer data-landing="true" vid="134">
+            <div class="footer-content" vid="135">
+                <div style="font-family: var(--font-tech); color: #666;" vid="136">
+                    © 2024 NEURAVPN<br vid="137">
+                    <span style="font-size: 0.8rem" vid="138">SECURE CONNECTION ESTABLISHED</span>
+                </div>
+                <div class="footer-links" vid="139">
+                    <a href="#" vid="140">Privacy Policy</a>
+                    <a href="#" vid="141">Terms of Use</a>
+                    <a href="#" style="color: var(--accent-glow)" vid="142">Support (Telegram)</a>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <script src="assets/js/site.js"></script>
+
+</body></html>
