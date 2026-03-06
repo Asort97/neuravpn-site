@@ -71,14 +71,16 @@
                 return;
             }
 
-            if (!vlessString.startsWith("vless://")) {
+            const payloadType = detectPayloadType(vlessString);
+            if (!payloadType) {
                 showInvalid("Некорректная ссылка");
                 return;
             }
 
             const encodedV = encodeURIComponent(vlessString);
             const platformName = detectPlatformName();
-            openStatus.textContent = "Ключ получен. Платформа: " + platformName + (isTelegramWebView ? " (Telegram WebView)" : "");
+            const payloadLabel = payloadType === "vless" ? "Ключ" : "Подписка";
+            openStatus.textContent = payloadLabel + " получен(а). Платформа: " + platformName + (isTelegramWebView ? " (Telegram WebView)" : "");
 
             openAppBtn.addEventListener("click", function (event) {
                 event.preventDefault();
@@ -228,6 +230,29 @@
                     return "macOS";
                 }
                 return "Unknown";
+            }
+
+            function detectPayloadType(value) {
+                if (!value) {
+                    return "";
+                }
+
+                if (value.startsWith("vless://")) {
+                    return "vless";
+                }
+
+                if (value.startsWith("https://") || value.startsWith("http://")) {
+                    try {
+                        const url = new URL(value);
+                        if (url.protocol === "https:" || url.protocol === "http:") {
+                            return "subscription";
+                        }
+                    } catch (error) {
+                        return "";
+                    }
+                }
+
+                return "";
             }
 
             function isOpenModeParam(rawOpenValue, rawModeValue) {
