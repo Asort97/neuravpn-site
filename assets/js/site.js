@@ -10,7 +10,6 @@
             const MAX_V_SIZE = 32 * 1024;
             const REDIRECT_TIMEOUT_MS = 1600;
             const AUTO_OPEN_DELAY_MS = 120;
-            const ANDROID_SCHEME_RETRY_MS = 550;
 
             const ua = navigator.userAgent || "";
             const isAndroid = /Android/i.test(ua);
@@ -134,39 +133,12 @@
 
             function tryOpenAndroid(encodedPayload) {
                 const schemeUrl = "neuravpn://import?v=" + encodedPayload;
-                const intentUrl = buildAndroidIntentUrl(encodedPayload);
-
                 tryOpen(schemeUrl, {
-                    timeoutMs: intentUrl ? ANDROID_SCHEME_RETRY_MS : REDIRECT_TIMEOUT_MS,
+                    timeoutMs: REDIRECT_TIMEOUT_MS,
                     onTimeout: function () {
-                        if (intentUrl) {
-                            tryOpen(intentUrl);
-                        } else {
-                            showManualInstallFallback();
-                        }
+                        showManualInstallFallback();
                     }
                 });
-            }
-
-            function buildAndroidIntentUrl(encodedPayload) {
-                const pkg = getValidAndroidPackageName();
-                if (!pkg) {
-                    return "";
-                }
-                const fallbackUrl = encodeURIComponent(initialAndroidUrl || RELEASES_PAGE_URL);
-                return "intent://import?v=" + encodedPayload +
-                    "#Intent;scheme=neuravpn;package=" + pkg +
-                    ";S.browser_fallback_url=" + fallbackUrl +
-                    ";end";
-            }
-
-            function getValidAndroidPackageName() {
-                const pkg = (ANDROID_PACKAGE || "").trim();
-                if (!pkg || pkg.indexOf("<") >= 0 || pkg.indexOf(">") >= 0) {
-                    return "";
-                }
-                const packagePattern = /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$/;
-                return packagePattern.test(pkg) ? pkg : "";
             }
 
             function showManualInstallFallback() {
