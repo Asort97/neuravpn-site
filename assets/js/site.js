@@ -1,6 +1,6 @@
 (function () {
             const DOMAIN = "<мой домен>";
-            const ANDROID_PACKAGE = "<мой package name>";
+            const ANDROID_PACKAGE = "com.neuravpn.app";
             const ANDROID_APK_URL = "<ссылка на apk>";
             const WINDOWS_EXE_URL = "<ссылка на exe/msi>";
             const ANDROID_LATEST_DIRECT_URL = "https://github.com/Asort97/neuravpn-client/releases/latest/download/neuravpn_android_v1.0.3.apk";
@@ -10,6 +10,7 @@
             const MAX_V_SIZE = 32 * 1024;
             const REDIRECT_TIMEOUT_MS = 1600;
             const AUTO_OPEN_DELAY_MS = 120;
+            const ANDROID_SCHEME_RETRY_MS = 550;
 
             const ua = navigator.userAgent || "";
             const isAndroid = /Android/i.test(ua);
@@ -90,7 +91,7 @@
             const platformName = detectPlatformName();
             const payloadLabel = payloadType === "vless" ? "Ключ" : "Подписка";
             openStatus.textContent = payloadLabel + " получен(а). Платформа: " + platformName + (isTelegramWebView ? " (Telegram WebView)" : "");
-            let openAttempted = false;
+            let lastOpenAtMs = 0;
 
             openAppBtn.addEventListener("click", function (event) {
                 event.preventDefault();
@@ -104,10 +105,11 @@
             }
 
             function openInApp() {
-                if (openAttempted) {
+                const now = Date.now();
+                if (now - lastOpenAtMs < 700) {
                     return;
                 }
-                openAttempted = true;
+                lastOpenAtMs = now;
 
                 if (encodedV.length > MAX_V_SIZE) {
                     showTooLong();
@@ -115,8 +117,7 @@
                 }
 
                 if (isAndroid) {
-                    const intentUrl = "intent://import?v=" + encodedV + "#Intent;scheme=neuravpn;package=" + ANDROID_PACKAGE + ";end";
-                    tryOpen(intentUrl);
+                    tryOpenAndroid(encodedV);
                     return;
                 }
 
@@ -131,7 +132,53 @@
                 fallbackBlock.classList.remove("hidden");
             }
 
-            function tryOpen(targetUrl) {
+            function tryOpenAndroid(encodedPayload) {
+                const schemeUrl = "neuravpn://import?v=" + encodedPayload;
+                const intentUrl = buildAndroidIntentUrl(encodedPayload);
+
+                tryOpen(schemeUrl, {
+                    timeoutMs: intentUrl ? ANDROID_SCHEME_RETRY_MS : REDIRECT_TIMEOUT_MS,
+                    onTimeout: function () {
+                        if (intentUrl) {
+                            tryOpen(intentUrl);
+                        } else {
+                            showManualInstallFallback();
+                        }
+                    }
+                });
+            }
+
+            function buildAndroidIntentUrl(encodedPayload) {
+                const pkg = getValidAndroidPackageName();
+                if (!pkg) {
+                    return "";
+                }
+                const fallbackUrl = encodeURIComponent(initialAndroidUrl || RELEASES_PAGE_URL);
+                return "intent://import?v=" + encodedPayload +
+                    "#Intent;scheme=neuravpn;package=" + pkg +
+                    ";S.browser_fallback_url=" + fallbackUrl +
+                    ";end";
+            }
+
+            function getValidAndroidPackageName() {
+                const pkg = (ANDROID_PACKAGE || "").trim();
+                if (!pkg || pkg.indexOf("<") >= 0 || pkg.indexOf(">") >= 0) {
+                    return "";
+                }
+                const packagePattern = /^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+$/;
+                return packagePattern.test(pkg) ? pkg : "";
+            }
+
+            function showManualInstallFallback() {
+                openStatus.textContent = "Приложение не открылось автоматически.";
+                fallbackHint.textContent = "Установите приложение для Android или Windows.";
+                fallbackBlock.classList.remove("hidden");
+            }
+
+            function tryOpen(targetUrl, options) {
+                const opts = options || {};
+                const timeoutMs = typeof opts.timeoutMs === "number" ? opts.timeoutMs : REDIRECT_TIMEOUT_MS;
+                const onTimeout = typeof opts.onTimeout === "function" ? opts.onTimeout : null;
                 fallbackBlock.classList.add("hidden");
                 let appOpened = false;
 
@@ -164,10 +211,14 @@
                 window.setTimeout(function () {
                     cleanup();
                     if (!appOpened) {
+                        if (onTimeout) {
+                            onTimeout();
+                            return;
+                        }
                         fallbackHint.textContent = "Приложение не открылось автоматически. Установите его и повторите попытку.";
                         fallbackBlock.classList.remove("hidden");
                     }
-                }, REDIRECT_TIMEOUT_MS);
+                }, timeoutMs);
             }
 
             function showTooLong() {
