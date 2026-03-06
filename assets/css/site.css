@@ -592,6 +592,57 @@
             border-top: 1px solid #1a1a1a;
         }
 
+        .debug-panel {
+            margin-top: 20px;
+            padding: 14px;
+            border: 1px dashed var(--accent-red-mid);
+            background: rgba(196, 3, 4, 0.06);
+        }
+
+        .debug-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-family: var(--font-tech);
+            font-size: 0.85rem;
+            color: var(--text-mono);
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .debug-copy-btn {
+            border: 1px solid var(--accent-red-mid);
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 0.75rem;
+            padding: 6px 10px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .debug-copy-btn:hover {
+            border-color: var(--accent-glow);
+            background: rgba(248, 61, 63, 0.1);
+        }
+
+        .debug-log {
+            max-height: 220px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid #222;
+            padding: 10px;
+            font-family: var(--font-tech);
+            font-size: 0.76rem;
+            line-height: 1.45;
+            color: #ddd;
+            margin: 0;
+        }
+
         
         @media (max-width: 900px) {
             .hero-layout {

@@ -45,44 +45,68 @@
             const rawOpen = getRawQueryParam("open");
             const rawMode = getRawQueryParam("mode");
             const rawAuto = getRawQueryParam("auto");
+            const rawDebug = getRawQueryParam("debug");
+            const debugEnabled = shouldEnableDebug(rawDebug);
             const normalizedPath = normalizePath(window.location.pathname);
             const isOpenMode =
                 isOpenPath(normalizedPath) ||
                 rawV !== null ||
                 isOpenModeParam(rawOpen, rawMode);
+            let debugConsole = null;
 
             if (isOpenMode) {
                 openModeSection.classList.remove("hidden");
                 landingSections.forEach(function (section) { section.classList.add("hidden"); });
+                if (debugEnabled) {
+                    debugConsole = createDebugConsole();
+                    debugLog("debug enabled", {
+                        path: normalizedPath,
+                        auto: rawAuto,
+                        ua: ua
+                    });
+                }
             } else {
                 openModeSection.classList.add("hidden");
                 landingSections.forEach(function (section) { section.classList.remove("hidden"); });
                 return;
             }
 
+            debugLog("platform", {
+                android: isAndroid,
+                windows: isWindows,
+                ios: isiOS,
+                mac: isMac,
+                telegramWebView: isTelegramWebView
+            });
+
             if (!rawV) {
+                debugLog("invalid: missing v");
                 showInvalid("Некорректная ссылка");
                 return;
             }
 
             if (rawV.length > MAX_V_SIZE) {
+                debugLog("invalid: raw v too long", { length: rawV.length, limit: MAX_V_SIZE });
                 showTooLong();
                 return;
             }
 
             const vlessString = safeDecode(rawV);
             if (!vlessString) {
+                debugLog("invalid: decode failed");
                 showInvalid("Некорректная ссылка");
                 return;
             }
 
             if (vlessString.length > MAX_V_SIZE) {
+                debugLog("invalid: decoded value too long", { length: vlessString.length, limit: MAX_V_SIZE });
                 showTooLong();
                 return;
             }
 
             const payloadType = detectPayloadType(vlessString);
             if (!payloadType) {
+                debugLog("invalid: payload type not supported", { payloadPreview: shorten(vlessString, 120) });
                 showInvalid("Некорректная ссылка");
                 return;
             }
@@ -91,42 +115,59 @@
             const platformName = detectPlatformName();
             const payloadLabel = payloadType === "vless" ? "Ключ" : "Подписка";
             openStatus.textContent = payloadLabel + " получен(а). Платформа: " + platformName + (isTelegramWebView ? " (Telegram WebView)" : "");
+            debugLog("payload accepted", {
+                payloadType: payloadType,
+                encodedLength: encodedV.length,
+                platform: platformName,
+                payloadPreview: shorten(vlessString, 120)
+            });
             let lastOpenAtMs = 0;
 
             openAppBtn.addEventListener("click", function (event) {
                 event.preventDefault();
+                debugLog("button: open app clicked");
                 openInApp("manual");
             });
 
             if (shouldAutoOpen(rawAuto)) {
+                debugLog("auto open scheduled", { delayMs: AUTO_OPEN_DELAY_MS });
                 window.setTimeout(function () {
+                    debugLog("auto open fired");
                     openInApp("auto");
                 }, AUTO_OPEN_DELAY_MS);
+            } else {
+                debugLog("auto open disabled", { auto: rawAuto });
             }
 
             function openInApp(source) {
                 const now = Date.now();
                 if (now - lastOpenAtMs < 700) {
+                    debugLog("open throttled", { source: source, deltaMs: now - lastOpenAtMs });
                     return;
                 }
                 lastOpenAtMs = now;
+                debugLog("open attempt", { source: source, encodedLength: encodedV.length });
 
                 if (encodedV.length > MAX_V_SIZE) {
+                    debugLog("abort: encoded too long", { length: encodedV.length, limit: MAX_V_SIZE });
                     showTooLong();
                     return;
                 }
 
                 if (isAndroid) {
+                    debugLog("route: android");
                     tryOpenAndroid(encodedV, source === "manual");
                     return;
                 }
 
                 if (isWindows) {
                     const windowsUrl = "neuravpn://import?v=" + encodedV;
+                    debugLog("route: windows", { url: shorten(windowsUrl, 140) });
                     tryOpen(windowsUrl);
                     return;
                 }
 
+                debugLog("route: unsupported platform");
                 openStatus.textContent = "Платформа пока не поддерживает авто-открытие по этой ссылке.";
                 fallbackHint.textContent = "Установите приложение для Android или Windows.";
                 fallbackBlock.classList.remove("hidden");
@@ -135,25 +176,37 @@
             function tryOpenAndroid(encodedPayload, userInitiated) {
                 const schemeUrl = "neuravpn://import?v=" + encodedPayload;
                 const intentUrl = buildAndroidIntentUrl(encodedPayload);
+                debugLog("android handoff", {
+                    userInitiated: userInitiated,
+                    hasIntent: !!intentUrl,
+                    schemeUrl: shorten(schemeUrl, 150),
+                    intentUrl: shorten(intentUrl, 180)
+                });
 
                 if (userInitiated && intentUrl) {
                     // Samsung/Chrome often allow intent on real user gesture more reliably than custom scheme.
+                    debugLog("android manual: try intent first");
                     tryOpen(intentUrl, {
                         timeoutMs: REDIRECT_TIMEOUT_MS,
                         onTimeout: function () {
+                            debugLog("android manual intent timeout");
                             showManualInstallFallback();
                         }
                     });
                     return;
                 }
 
+                debugLog("android: try scheme first");
                 tryOpen(schemeUrl, {
                     timeoutMs: intentUrl ? ANDROID_SCHEME_RETRY_MS : REDIRECT_TIMEOUT_MS,
                     onTimeout: function () {
+                        debugLog("android scheme timeout", { hasIntent: !!intentUrl });
                         if (intentUrl) {
+                            debugLog("android: fallback to intent");
                             tryOpen(intentUrl, {
                                 timeoutMs: REDIRECT_TIMEOUT_MS,
                                 onTimeout: function () {
+                                    debugLog("android fallback intent timeout");
                                     showManualInstallFallback();
                                 }
                             });
@@ -167,13 +220,16 @@
             function buildAndroidIntentUrl(encodedPayload) {
                 const pkg = getValidAndroidPackageName();
                 if (!pkg) {
+                    debugLog("intent build skipped: invalid package");
                     return "";
                 }
                 const fallbackUrl = encodeURIComponent(initialAndroidUrl || RELEASES_PAGE_URL);
-                return "intent://import?v=" + encodedPayload +
+                const intent = "intent://import?v=" + encodedPayload +
                     "#Intent;scheme=neuravpn;package=" + pkg +
                     ";S.browser_fallback_url=" + fallbackUrl +
                     ";end";
+                debugLog("intent built", { package: pkg, fallbackUrl: decodeURIComponent(fallbackUrl) });
+                return intent;
             }
 
             function getValidAndroidPackageName() {
@@ -186,6 +242,7 @@
             }
 
             function showManualInstallFallback() {
+                debugLog("show fallback block");
                 openStatus.textContent = "Приложение не открылось автоматически.";
                 fallbackHint.textContent = "Установите приложение для Android или Windows.";
                 fallbackBlock.classList.remove("hidden");
@@ -195,20 +252,24 @@
                 const opts = options || {};
                 const timeoutMs = typeof opts.timeoutMs === "number" ? opts.timeoutMs : REDIRECT_TIMEOUT_MS;
                 const onTimeout = typeof opts.onTimeout === "function" ? opts.onTimeout : null;
+                debugLog("tryOpen start", { url: shorten(targetUrl, 220), timeoutMs: timeoutMs });
                 fallbackBlock.classList.add("hidden");
                 let appOpened = false;
 
                 const onBlur = function () {
                     appOpened = true;
+                    debugLog("event: blur");
                     cleanup();
                 };
                 const onPageHide = function () {
                     appOpened = true;
+                    debugLog("event: pagehide");
                     cleanup();
                 };
                 const onVisibility = function () {
                     if (document.visibilityState === "hidden") {
                         appOpened = true;
+                        debugLog("event: visibility hidden");
                         cleanup();
                     }
                 };
@@ -227,21 +288,26 @@
                 window.setTimeout(function () {
                     cleanup();
                     if (!appOpened) {
+                        debugLog("tryOpen timeout", { url: shorten(targetUrl, 220) });
                         if (onTimeout) {
                             onTimeout();
                             return;
                         }
                         fallbackHint.textContent = "Приложение не открылось автоматически. Установите его и повторите попытку.";
                         fallbackBlock.classList.remove("hidden");
+                    } else {
+                        debugLog("tryOpen success signal");
                     }
                 }, timeoutMs);
             }
 
             function showTooLong() {
+                debugLog("showTooLong");
                 showInvalid("Ссылка слишком длинная");
             }
 
             function showInvalid(message) {
+                debugLog("showInvalid", { message: message });
                 openTitle.textContent = "Некорректная ссылка";
                 openSubtitle.textContent = message;
                 openStatus.textContent = "Проверьте ссылку из Telegram и попробуйте снова.";
@@ -290,6 +356,7 @@
 
             async function bindLatestReleaseLinks() {
                 try {
+                    debugLog("release fetch start");
                     const response = await fetch(GITHUB_API_LATEST_RELEASE, {
                         method: "GET",
                         headers: {
@@ -297,12 +364,14 @@
                         }
                     });
                     if (!response.ok) {
+                        debugLog("release fetch failed", { status: response.status });
                         return;
                     }
 
                     const release = await response.json();
                     const assets = Array.isArray(release.assets) ? release.assets : [];
                     if (assets.length === 0) {
+                        debugLog("release fetch: no assets");
                         return;
                     }
 
@@ -320,12 +389,15 @@
                     if (androidAsset && androidAsset.browser_download_url) {
                         setLinkTargets(landingDownloadAndroidBtn, androidAsset.browser_download_url, { newTab: false });
                         setLinkTargets(fallbackAndroidBtn, androidAsset.browser_download_url, { newTab: false });
+                        debugLog("android download link updated", { name: androidAsset.name || "" });
                     }
                     if (windowsAsset && windowsAsset.browser_download_url) {
                         setLinkTargets(landingDownloadWindowsBtn, windowsAsset.browser_download_url, { newTab: false });
                         setLinkTargets(fallbackWindowsBtn, windowsAsset.browser_download_url, { newTab: false });
+                        debugLog("windows download link updated", { name: windowsAsset.name || "" });
                     }
                 } catch (error) {
+                    debugLog("release fetch error", { message: error && error.message ? error.message : String(error) });
                     return;
                 }
             }
@@ -475,6 +547,90 @@
                 }
                 const value = safeDecode(rawAutoValue).toLowerCase();
                 return value !== "0" && value !== "false" && value !== "no" && value !== "off";
+            }
+
+            function shouldEnableDebug(rawDebugValue) {
+                if (rawDebugValue === null) {
+                    return false;
+                }
+                const value = safeDecode(rawDebugValue).toLowerCase();
+                if (value === "" || value === "1" || value === "true" || value === "yes" || value === "on") {
+                    return true;
+                }
+                return false;
+            }
+
+            function createDebugConsole() {
+                if (!openModeSection) {
+                    return null;
+                }
+                const card = openModeSection.querySelector(".onboarding-card");
+                if (!card) {
+                    return null;
+                }
+
+                const panel = document.createElement("div");
+                panel.className = "debug-panel";
+                panel.innerHTML = [
+                    '<div class="debug-head">',
+                    '<span>Debug Handoff</span>',
+                    '<button type="button" class="debug-copy-btn">Copy log</button>',
+                    '</div>',
+                    '<pre class="debug-log"></pre>'
+                ].join("");
+                card.appendChild(panel);
+
+                const logEl = panel.querySelector(".debug-log");
+                const copyBtn = panel.querySelector(".debug-copy-btn");
+                const lines = [];
+                if (copyBtn) {
+                    copyBtn.addEventListener("click", function () {
+                        const text = lines.join("\n");
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(text);
+                        }
+                    });
+                }
+                return {
+                    lines: lines,
+                    logEl: logEl
+                };
+            }
+
+            function debugLog(message, data) {
+                if (!debugConsole || !debugConsole.logEl) {
+                    return;
+                }
+                const now = new Date();
+                const ts = now.toISOString().slice(11, 23);
+                const suffix = typeof data === "undefined" ? "" : " " + stringifyDebug(data);
+                const line = "[" + ts + "] " + message + suffix;
+                debugConsole.lines.push(line);
+                if (debugConsole.lines.length > 200) {
+                    debugConsole.lines.shift();
+                }
+                debugConsole.logEl.textContent = debugConsole.lines.join("\n");
+                debugConsole.logEl.scrollTop = debugConsole.logEl.scrollHeight;
+            }
+
+            function stringifyDebug(value) {
+                if (typeof value === "string") {
+                    return shorten(value, 320);
+                }
+                try {
+                    return shorten(JSON.stringify(value), 320);
+                } catch (error) {
+                    return shorten(String(value), 320);
+                }
+            }
+
+            function shorten(value, maxLen) {
+                const input = String(value || "");
+                const limit = typeof maxLen === "number" ? maxLen : 160;
+                if (input.length <= limit) {
+                    return input;
+                }
+                return input.slice(0, limit) + "...";
             }
 
             void DOMAIN;
