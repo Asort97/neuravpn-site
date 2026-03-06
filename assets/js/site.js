@@ -3,6 +3,10 @@
             const ANDROID_PACKAGE = "<мой package name>";
             const ANDROID_APK_URL = "<ссылка на apk>";
             const WINDOWS_EXE_URL = "<ссылка на exe/msi>";
+            const ANDROID_LATEST_DIRECT_URL = "https://github.com/Asort97/neuravpn-client/releases/latest/download/neuravpn_android_v1.0.3.apk";
+            const WINDOWS_LATEST_DIRECT_URL = "https://github.com/Asort97/neuravpn-client/releases/latest/download/neuravpn_windows_v1.0.3.zip";
+            const RELEASES_PAGE_URL = "https://github.com/Asort97/neuravpn-client/releases";
+            const GITHUB_API_LATEST_RELEASE = "https://api.github.com/repos/Asort97/neuravpn-client/releases/latest";
             const MAX_V_SIZE = 32 * 1024;
             const REDIRECT_TIMEOUT_MS = 1600;
             const AUTO_OPEN_DELAY_MS = 120;
@@ -28,10 +32,13 @@
             const fallbackAndroidBtn = document.getElementById("fallbackAndroidBtn");
             const fallbackWindowsBtn = document.getElementById("fallbackWindowsBtn");
 
-            setLinkTargets(landingDownloadAndroidBtn, ANDROID_APK_URL);
-            setLinkTargets(landingDownloadWindowsBtn, WINDOWS_EXE_URL);
-            setLinkTargets(fallbackAndroidBtn, ANDROID_APK_URL);
-            setLinkTargets(fallbackWindowsBtn, WINDOWS_EXE_URL);
+            const initialAndroidUrl = isPlaceholderUrl(ANDROID_APK_URL) ? ANDROID_LATEST_DIRECT_URL : ANDROID_APK_URL;
+            const initialWindowsUrl = isPlaceholderUrl(WINDOWS_EXE_URL) ? WINDOWS_LATEST_DIRECT_URL : WINDOWS_EXE_URL;
+            setLinkTargets(landingDownloadAndroidBtn, initialAndroidUrl, { newTab: false });
+            setLinkTargets(landingDownloadWindowsBtn, initialWindowsUrl, { newTab: false });
+            setLinkTargets(fallbackAndroidBtn, initialAndroidUrl, { newTab: false });
+            setLinkTargets(fallbackWindowsBtn, initialWindowsUrl, { newTab: false });
+            void bindLatestReleaseLinks();
 
             const rawV = getRawQueryParam("v");
             const rawOpen = getRawQueryParam("open");
@@ -176,13 +183,19 @@
                 fallbackBlock.classList.remove("hidden");
             }
 
-            function setLinkTargets(element, href) {
+            function setLinkTargets(element, href, options) {
                 if (!element) {
                     return;
                 }
                 element.href = href;
-                element.target = "_blank";
-                element.rel = "noopener noreferrer";
+                const openInNewTab = !options || options.newTab !== false;
+                if (openInNewTab) {
+                    element.target = "_blank";
+                    element.rel = "noopener noreferrer";
+                } else {
+                    element.removeAttribute("target");
+                    element.removeAttribute("rel");
+                }
             }
 
             function normalizePath(pathname) {
@@ -206,6 +219,105 @@
                 } catch (error) {
                     return "";
                 }
+            }
+
+            async function bindLatestReleaseLinks() {
+                try {
+                    const response = await fetch(GITHUB_API_LATEST_RELEASE, {
+                        method: "GET",
+                        headers: {
+                            "Accept": "application/vnd.github+json"
+                        }
+                    });
+                    if (!response.ok) {
+                        return;
+                    }
+
+                    const release = await response.json();
+                    const assets = Array.isArray(release.assets) ? release.assets : [];
+                    if (assets.length === 0) {
+                        return;
+                    }
+
+                    const androidAsset = pickBestAsset(assets, {
+                        extensions: [".apk"],
+                        includeTokens: ["android", "neuravpn"],
+                        excludeTokens: ["source"]
+                    });
+                    const windowsAsset = pickBestAsset(assets, {
+                        extensions: [".msi", ".exe", ".msix", ".zip"],
+                        includeTokens: ["windows", "neuravpn"],
+                        excludeTokens: ["source"]
+                    });
+
+                    if (androidAsset && androidAsset.browser_download_url) {
+                        setLinkTargets(landingDownloadAndroidBtn, androidAsset.browser_download_url, { newTab: false });
+                        setLinkTargets(fallbackAndroidBtn, androidAsset.browser_download_url, { newTab: false });
+                    }
+                    if (windowsAsset && windowsAsset.browser_download_url) {
+                        setLinkTargets(landingDownloadWindowsBtn, windowsAsset.browser_download_url, { newTab: false });
+                        setLinkTargets(fallbackWindowsBtn, windowsAsset.browser_download_url, { newTab: false });
+                    }
+                } catch (error) {
+                    return;
+                }
+            }
+
+            function pickBestAsset(assets, options) {
+                const extensions = Array.isArray(options.extensions) ? options.extensions : [];
+                const includeTokens = Array.isArray(options.includeTokens) ? options.includeTokens : [];
+                const excludeTokens = Array.isArray(options.excludeTokens) ? options.excludeTokens : [];
+                const filtered = assets.filter(function (asset) {
+                    const name = typeof asset.name === "string" ? asset.name.toLowerCase() : "";
+                    const url = typeof asset.browser_download_url === "string" ? asset.browser_download_url.toLowerCase() : "";
+                    const hasAllowedExt = extensions.some(function (ext) {
+                        const e = ext.toLowerCase();
+                        return name.endsWith(e) || url.endsWith(e);
+                    });
+                    if (!hasAllowedExt) {
+                        return false;
+                    }
+
+                    const hasExcluded = excludeTokens.some(function (token) {
+                        const t = token.toLowerCase();
+                        return name.indexOf(t) >= 0 || url.indexOf(t) >= 0;
+                    });
+                    return !hasExcluded;
+                });
+
+                if (filtered.length === 0) {
+                    return null;
+                }
+
+                let best = null;
+                let bestScore = -1;
+                for (let i = 0; i < filtered.length; i++) {
+                    const asset = filtered[i];
+                    const name = typeof asset.name === "string" ? asset.name.toLowerCase() : "";
+                    const url = typeof asset.browser_download_url === "string" ? asset.browser_download_url.toLowerCase() : "";
+                    let score = 0;
+                    for (let j = 0; j < includeTokens.length; j++) {
+                        const token = includeTokens[j].toLowerCase();
+                        if (name.indexOf(token) >= 0 || url.indexOf(token) >= 0) {
+                            score += 2;
+                        }
+                    }
+                    if (name.indexOf("release") >= 0) {
+                        score += 1;
+                    }
+                    if (score > bestScore) {
+                        best = asset;
+                        bestScore = score;
+                    }
+                }
+                return best;
+            }
+
+            function isPlaceholderUrl(url) {
+                if (!url) {
+                    return true;
+                }
+                return url.indexOf("<") >= 0 || url.indexOf(">") >= 0;
             }
 
             function getRawQueryParam(paramName) {
