@@ -13,10 +13,20 @@
             const ANDROID_SCHEME_RETRY_MS = 550;
 
             const ua = navigator.userAgent || "";
-            const isAndroid = /Android/i.test(ua);
-            const isWindows = /Windows NT/i.test(ua);
-            const isiOS = /iPhone|iPad|iPod/i.test(ua);
-            const isMac = /Macintosh|Mac OS X/i.test(ua) && !isiOS;
+            const rawPlatform = getRawQueryParam("platform");
+            const forcedPlatform = normalizePlatformOverride(rawPlatform);
+            const isSamsungBrowser = /SamsungBrowser/i.test(ua);
+            const touchPoints = typeof navigator.maxTouchPoints === "number" ? navigator.maxTouchPoints : 0;
+            const uaMobile = !!(navigator.userAgentData && navigator.userAgentData.mobile);
+            const looksLikeAndroidDesktopUa =
+                isSamsungBrowser &&
+                /Linux/i.test(ua) &&
+                !/Android/i.test(ua) &&
+                touchPoints > 0;
+            const isAndroid = forcedPlatform === "android" || /Android/i.test(ua) || looksLikeAndroidDesktopUa;
+            const isWindows = forcedPlatform === "windows" || (/Windows NT/i.test(ua) && forcedPlatform !== "android");
+            const isiOS = forcedPlatform === "ios" || (/iPhone|iPad|iPod/i.test(ua) && forcedPlatform !== "android");
+            const isMac = forcedPlatform === "mac" || ((/Macintosh|Mac OS X/i.test(ua) && !isiOS) && forcedPlatform !== "android");
             const isTelegramWebView = /Telegram/i.test(ua) || typeof window.TelegramWebviewProxy !== "undefined";
 
             const openModeSection = document.getElementById("openModeSection");
@@ -62,6 +72,7 @@
                     debugLog("debug enabled", {
                         path: normalizedPath,
                         auto: rawAuto,
+                        forcePlatform: forcedPlatform || "",
                         ua: ua
                     });
                 }
@@ -76,7 +87,11 @@
                 windows: isWindows,
                 ios: isiOS,
                 mac: isMac,
-                telegramWebView: isTelegramWebView
+                telegramWebView: isTelegramWebView,
+                samsungBrowser: isSamsungBrowser,
+                touchPoints: touchPoints,
+                uaMobile: uaMobile,
+                looksLikeAndroidDesktopUa: looksLikeAndroidDesktopUa
             });
 
             if (!rawV) {
@@ -558,6 +573,26 @@
                     return true;
                 }
                 return false;
+            }
+
+            function normalizePlatformOverride(rawValue) {
+                if (rawValue === null) {
+                    return "";
+                }
+                const value = safeDecode(rawValue).toLowerCase();
+                if (value === "android") {
+                    return "android";
+                }
+                if (value === "windows" || value === "win") {
+                    return "windows";
+                }
+                if (value === "ios" || value === "iphone" || value === "ipad") {
+                    return "ios";
+                }
+                if (value === "mac" || value === "macos" || value === "osx") {
+                    return "mac";
+                }
+                return "";
             }
 
             function createDebugConsole() {
