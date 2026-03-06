@@ -5,6 +5,7 @@
             const WINDOWS_EXE_URL = "<ссылка на exe/msi>";
             const MAX_V_SIZE = 32 * 1024;
             const REDIRECT_TIMEOUT_MS = 1600;
+            const AUTO_OPEN_DELAY_MS = 120;
 
             const ua = navigator.userAgent || "";
             const isAndroid = /Android/i.test(ua);
@@ -35,6 +36,7 @@
             const rawV = getRawQueryParam("v");
             const rawOpen = getRawQueryParam("open");
             const rawMode = getRawQueryParam("mode");
+            const rawAuto = getRawQueryParam("auto");
             const normalizedPath = normalizePath(window.location.pathname);
             const isOpenMode =
                 isOpenPath(normalizedPath) ||
@@ -81,9 +83,24 @@
             const platformName = detectPlatformName();
             const payloadLabel = payloadType === "vless" ? "Ключ" : "Подписка";
             openStatus.textContent = payloadLabel + " получен(а). Платформа: " + platformName + (isTelegramWebView ? " (Telegram WebView)" : "");
+            let openAttempted = false;
 
             openAppBtn.addEventListener("click", function (event) {
                 event.preventDefault();
+                openInApp();
+            });
+
+            if (shouldAutoOpen(rawAuto)) {
+                window.setTimeout(function () {
+                    openInApp();
+                }, AUTO_OPEN_DELAY_MS);
+            }
+
+            function openInApp() {
+                if (openAttempted) {
+                    return;
+                }
+                openAttempted = true;
 
                 if (encodedV.length > MAX_V_SIZE) {
                     showTooLong();
@@ -105,7 +122,7 @@
                 openStatus.textContent = "Платформа пока не поддерживает авто-открытие по этой ссылке.";
                 fallbackHint.textContent = "Установите приложение для Android или Windows.";
                 fallbackBlock.classList.remove("hidden");
-            });
+            }
 
             function tryOpen(targetUrl) {
                 fallbackBlock.classList.add("hidden");
@@ -271,6 +288,14 @@
                 }
 
                 return false;
+            }
+
+            function shouldAutoOpen(rawAutoValue) {
+                if (rawAutoValue === null || rawAutoValue === "") {
+                    return true;
+                }
+                const value = safeDecode(rawAutoValue).toLowerCase();
+                return value !== "0" && value !== "false" && value !== "no" && value !== "off";
             }
 
             void DOMAIN;
