@@ -168,6 +168,14 @@
             background: rgba(196, 3, 4, 0.1);
         }
 
+        .download-count {
+            font-family: var(--font-tech);
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            letter-spacing: 0.04em;
+            min-height: 1em;
+        }
+
         
         .hero {
             min-height: 100vh;

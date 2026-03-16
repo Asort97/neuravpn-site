@@ -50,6 +50,7 @@
             setLinkTargets(fallbackAndroidBtn, initialAndroidUrl, { newTab: false });
             setLinkTargets(fallbackWindowsBtn, initialWindowsUrl, { newTab: false });
             void bindLatestReleaseLinks();
+            void loadDownloadCounts();
 
             const rawV = getRawQueryParam("v");
             const rawOpen = getRawQueryParam("open");
@@ -413,6 +414,53 @@
                     }
                 } catch (error) {
                     debugLog("release fetch error", { message: error && error.message ? error.message : String(error) });
+                    return;
+                }
+            }
+
+            async function loadDownloadCounts() {
+                const androidEl = document.getElementById("androidDownloadCount");
+                const windowsEl = document.getElementById("windowsDownloadCount");
+                if (!androidEl && !windowsEl) return;
+
+                try {
+                    const allReleasesUrl = GITHUB_API_LATEST_RELEASE.replace("/releases/latest", "/releases");
+                    const response = await fetch(allReleasesUrl, {
+                        headers: { "Accept": "application/vnd.github+json" }
+                    });
+                    if (!response.ok) return;
+
+                    const releases = await response.json();
+                    if (!Array.isArray(releases)) return;
+
+                    let androidTotal = 0;
+                    let windowsTotal = 0;
+
+                    for (let i = 0; i < releases.length; i++) {
+                        const assets = Array.isArray(releases[i].assets) ? releases[i].assets : [];
+                        for (let j = 0; j < assets.length; j++) {
+                            const asset = assets[j];
+                            const name = (typeof asset.name === "string" ? asset.name : "").toLowerCase();
+                            const count = typeof asset.download_count === "number" ? asset.download_count : 0;
+                            if (name.endsWith(".apk") || name.indexOf("android") >= 0) {
+                                androidTotal += count;
+                            } else if (
+                                name.endsWith(".exe") || name.endsWith(".msi") ||
+                                name.endsWith(".msix") || name.endsWith(".zip") ||
+                                name.indexOf("windows") >= 0 || name.indexOf("win") >= 0
+                            ) {
+                                windowsTotal += count;
+                            }
+                        }
+                    }
+
+                    if (androidEl && androidTotal > 0) {
+                        androidEl.textContent = androidTotal.toLocaleString("ru-RU") + " скачиваний";
+                    }
+                    if (windowsEl && windowsTotal > 0) {
+                        windowsEl.textContent = windowsTotal.toLocaleString("ru-RU") + " скачиваний";
+                    }
+                } catch (e) {
                     return;
                 }
             }
