@@ -3,10 +3,7 @@
             const ANDROID_PACKAGE = "com.neuravpn.app";
             const ANDROID_APK_URL = "<ссылка на apk>";
             const WINDOWS_EXE_URL = "<ссылка на exe/msi>";
-            const ANDROID_LATEST_DIRECT_URL = "https://github.com/Asort97/neuravpn-client/releases/latest/download/neuravpn_android_v1.0.3.apk";
-            const WINDOWS_LATEST_DIRECT_URL = "https://github.com/Asort97/neuravpn-client/releases/latest/download/neuravpn_windows_v1.0.3.zip";
             const RELEASES_PAGE_URL = "https://github.com/Asort97/neuravpn-client/releases";
-            const GITHUB_API_LATEST_RELEASE = "https://api.github.com/repos/Asort97/neuravpn-client/releases/latest";
             const MAX_V_SIZE = 32 * 1024;
             const REDIRECT_TIMEOUT_MS = 1600;
             const AUTO_OPEN_DELAY_MS = 120;
@@ -42,9 +39,10 @@
             const landingDownloadWindowsBtn = document.getElementById("landingDownloadWindowsBtn");
             const fallbackAndroidBtn = document.getElementById("fallbackAndroidBtn");
             const fallbackWindowsBtn = document.getElementById("fallbackWindowsBtn");
+            let releaseCatalogPromise = null;
 
-            const initialAndroidUrl = isPlaceholderUrl(ANDROID_APK_URL) ? ANDROID_LATEST_DIRECT_URL : ANDROID_APK_URL;
-            const initialWindowsUrl = isPlaceholderUrl(WINDOWS_EXE_URL) ? WINDOWS_LATEST_DIRECT_URL : WINDOWS_EXE_URL;
+            const initialAndroidUrl = isPlaceholderUrl(ANDROID_APK_URL) ? RELEASES_PAGE_URL : ANDROID_APK_URL;
+            const initialWindowsUrl = isPlaceholderUrl(WINDOWS_EXE_URL) ? RELEASES_PAGE_URL : WINDOWS_EXE_URL;
             setLinkTargets(landingDownloadAndroidBtn, initialAndroidUrl, { newTab: false });
             setLinkTargets(landingDownloadWindowsBtn, initialWindowsUrl, { newTab: false });
             setLinkTargets(fallbackAndroidBtn, initialAndroidUrl, { newTab: false });
@@ -370,51 +368,48 @@
                 }
             }
 
-            async function bindLatestReleaseLinks() {
-                try {
-                    debugLog("release fetch start");
-                    const response = await fetch(GITHUB_API_LATEST_RELEASE, {
+            async function loadReleaseCatalog() {
+                if (!releaseCatalogPromise) {
+                    releaseCatalogPromise = fetch(RELEASES_PAGE_URL, {
                         method: "GET",
                         headers: {
-                            "Accept": "application/vnd.github+json"
+                            "Accept": "text/html"
                         }
+                    }).then(function (response) {
+                        if (!response.ok) {
+                            debugLog("releases fetch failed", { status: response.status });
+                            return [];
+                        }
+                        return response.text();
+                    }).then(function (html) {
+                        return parseReleaseAssetsFromHtml(html);
+                    }).catch(function (error) {
+                        debugLog("releases fetch error", { message: error && error.message ? error.message : String(error) });
+                        return [];
                     });
-                    if (!response.ok) {
-                        debugLog("release fetch failed", { status: response.status });
-                        return;
-                    }
+                }
 
-                    const release = await response.json();
-                    const assets = Array.isArray(release.assets) ? release.assets : [];
-                    if (assets.length === 0) {
-                        debugLog("release fetch: no assets");
-                        return;
-                    }
+                return releaseCatalogPromise;
+            }
 
-                    const androidAsset = pickBestAsset(assets, {
-                        extensions: [".apk"],
-                        includeTokens: ["android", "neuravpn"],
-                        excludeTokens: ["source"]
-                    });
-                    const windowsAsset = pickBestAsset(assets, {
-                        extensions: [".msi", ".exe", ".msix", ".zip"],
-                        includeTokens: ["windows", "neuravpn"],
-                        excludeTokens: ["source"]
-                    });
-
-                    if (androidAsset && androidAsset.browser_download_url) {
-                        setLinkTargets(landingDownloadAndroidBtn, androidAsset.browser_download_url, { newTab: false });
-                        setLinkTargets(fallbackAndroidBtn, androidAsset.browser_download_url, { newTab: false });
-                        debugLog("android download link updated", { name: androidAsset.name || "" });
-                    }
-                    if (windowsAsset && windowsAsset.browser_download_url) {
-                        setLinkTargets(landingDownloadWindowsBtn, windowsAsset.browser_download_url, { newTab: false });
-                        setLinkTargets(fallbackWindowsBtn, windowsAsset.browser_download_url, { newTab: false });
-                        debugLog("windows download link updated", { name: windowsAsset.name || "" });
-                    }
-                } catch (error) {
-                    debugLog("release fetch error", { message: error && error.message ? error.message : String(error) });
+            async function bindLatestReleaseLinks() {
+                const assets = await loadReleaseCatalog();
+                if (assets.length === 0) {
                     return;
+                }
+
+                const androidAsset = pickLatestPlatformAsset(assets, "android");
+                const windowsAsset = pickLatestPlatformAsset(assets, "windows");
+
+                if (androidAsset && androidAsset.browser_download_url) {
+                    setLinkTargets(landingDownloadAndroidBtn, androidAsset.browser_download_url, { newTab: false });
+                    setLinkTargets(fallbackAndroidBtn, androidAsset.browser_download_url, { newTab: false });
+                    debugLog("android download link updated", { name: androidAsset.name || "", version: androidAsset._resolvedVersion || "" });
+                }
+                if (windowsAsset && windowsAsset.browser_download_url) {
+                    setLinkTargets(landingDownloadWindowsBtn, windowsAsset.browser_download_url, { newTab: false });
+                    setLinkTargets(fallbackWindowsBtn, windowsAsset.browser_download_url, { newTab: false });
+                    debugLog("windows download link updated", { name: windowsAsset.name || "", version: windowsAsset._resolvedVersion || "" });
                 }
             }
 
@@ -423,96 +418,119 @@
                 const windowsEl = document.getElementById("windowsDownloadCount");
                 if (!androidEl && !windowsEl) return;
 
-                try {
-                    const allReleasesUrl = GITHUB_API_LATEST_RELEASE.replace("/releases/latest", "/releases");
-                    const response = await fetch(allReleasesUrl, {
-                        headers: { "Accept": "application/vnd.github+json" }
-                    });
-                    if (!response.ok) return;
-
-                    const releases = await response.json();
-                    if (!Array.isArray(releases)) return;
-
-                    let androidTotal = 0;
-                    let windowsTotal = 0;
-
-                    for (let i = 0; i < releases.length; i++) {
-                        const assets = Array.isArray(releases[i].assets) ? releases[i].assets : [];
-                        for (let j = 0; j < assets.length; j++) {
-                            const asset = assets[j];
-                            const name = (typeof asset.name === "string" ? asset.name : "").toLowerCase();
-                            const count = typeof asset.download_count === "number" ? asset.download_count : 0;
-                            if (name.endsWith(".apk") || name.indexOf("android") >= 0) {
-                                androidTotal += count;
-                            } else if (
-                                name.endsWith(".exe") || name.endsWith(".msi") ||
-                                name.endsWith(".msix") || name.endsWith(".zip") ||
-                                name.indexOf("windows") >= 0 || name.indexOf("win") >= 0
-                            ) {
-                                windowsTotal += count;
-                            }
-                        }
-                    }
-
-                    if (androidEl && androidTotal > 0) {
-                        androidEl.textContent = androidTotal.toLocaleString("ru-RU") + " скачиваний";
-                    }
-                    if (windowsEl && windowsTotal > 0) {
-                        windowsEl.textContent = windowsTotal.toLocaleString("ru-RU") + " скачиваний";
-                    }
-                } catch (e) {
-                    return;
-                }
+                // Download counters require GitHub API (download_count), so keep hidden in HTML-only mode.
+                if (androidEl) androidEl.textContent = "";
+                if (windowsEl) windowsEl.textContent = "";
             }
 
-            function pickBestAsset(assets, options) {
-                const extensions = Array.isArray(options.extensions) ? options.extensions : [];
-                const includeTokens = Array.isArray(options.includeTokens) ? options.includeTokens : [];
-                const excludeTokens = Array.isArray(options.excludeTokens) ? options.excludeTokens : [];
-                const filtered = assets.filter(function (asset) {
-                    const name = typeof asset.name === "string" ? asset.name.toLowerCase() : "";
-                    const url = typeof asset.browser_download_url === "string" ? asset.browser_download_url.toLowerCase() : "";
-                    const hasAllowedExt = extensions.some(function (ext) {
-                        const e = ext.toLowerCase();
-                        return name.endsWith(e) || url.endsWith(e);
-                    });
-                    if (!hasAllowedExt) {
-                        return false;
-                    }
-
-                    const hasExcluded = excludeTokens.some(function (token) {
-                        const t = token.toLowerCase();
-                        return name.indexOf(t) >= 0 || url.indexOf(t) >= 0;
-                    });
-                    return !hasExcluded;
-                });
-
-                if (filtered.length === 0) {
-                    return null;
+            function parseReleaseAssetsFromHtml(html) {
+                if (!html || typeof html !== "string") {
+                    return [];
                 }
 
-                let best = null;
-                let bestScore = -1;
-                for (let i = 0; i < filtered.length; i++) {
-                    const asset = filtered[i];
-                    const name = typeof asset.name === "string" ? asset.name.toLowerCase() : "";
-                    const url = typeof asset.browser_download_url === "string" ? asset.browser_download_url.toLowerCase() : "";
-                    let score = 0;
-                    for (let j = 0; j < includeTokens.length; j++) {
-                        const token = includeTokens[j].toLowerCase();
-                        if (name.indexOf(token) >= 0 || url.indexOf(token) >= 0) {
-                            score += 2;
-                        }
+                const linkPattern = /href="([^\"]*\/releases\/download\/[^\"]+)"/gi;
+                const uniqueByUrl = {};
+                const assets = [];
+                let match;
+
+                while ((match = linkPattern.exec(html)) !== null) {
+                    const rawHref = String(match[1] || "").replace(/&amp;/g, "&");
+                    const absoluteUrl = new URL(rawHref, "https://github.com").toString();
+                    if (uniqueByUrl[absoluteUrl]) {
+                        continue;
                     }
-                    if (name.indexOf("release") >= 0) {
-                        score += 1;
+                    uniqueByUrl[absoluteUrl] = true;
+
+                    const pathParts = absoluteUrl.split("/");
+                    const name = decodeURIComponent(pathParts[pathParts.length - 1] || "");
+                    const downloadIndex = pathParts.indexOf("download");
+                    const releaseTag = downloadIndex >= 0 && downloadIndex + 1 < pathParts.length ? decodeURIComponent(pathParts[downloadIndex + 1]) : "";
+
+                    assets.push({
+                        name: name,
+                        browser_download_url: absoluteUrl,
+                        _releaseVersion: extractVersionFromText(releaseTag)
+                    });
+                }
+
+                return assets;
+            }
+
+            function pickLatestPlatformAsset(assets, platform) {
+                let bestAsset = null;
+                let bestVersion = "";
+
+                for (let i = 0; i < assets.length; i++) {
+                    const asset = assets[i];
+                    if (detectAssetPlatform(asset) !== platform) {
+                        continue;
                     }
-                    if (score > bestScore) {
-                        best = asset;
-                        bestScore = score;
+
+                    const assetVersion = extractVersionFromText(asset.name || "") || asset._releaseVersion || "0.0.0";
+                    if (!bestAsset || compareVersions(assetVersion, bestVersion) > 0) {
+                        bestAsset = asset;
+                        bestVersion = assetVersion;
+                        bestAsset._resolvedVersion = assetVersion;
                     }
                 }
-                return best;
+
+                return bestAsset;
+            }
+
+            function detectAssetPlatform(asset) {
+                const name = typeof asset.name === "string" ? asset.name.toLowerCase() : "";
+                const url = typeof asset.browser_download_url === "string" ? asset.browser_download_url.toLowerCase() : "";
+
+                if (!name && !url) {
+                    return "";
+                }
+                if (name.indexOf("source") >= 0 || url.indexOf("source") >= 0) {
+                    return "";
+                }
+                if (name.endsWith(".apk") || url.endsWith(".apk") || name.indexOf("android") >= 0 || url.indexOf("android") >= 0) {
+                    return "android";
+                }
+                if (
+                    name.endsWith(".exe") || name.endsWith(".msi") || name.endsWith(".msix") || name.endsWith(".zip") ||
+                    url.endsWith(".exe") || url.endsWith(".msi") || url.endsWith(".msix") || url.endsWith(".zip") ||
+                    name.indexOf("windows") >= 0 || url.indexOf("windows") >= 0
+                ) {
+                    return "windows";
+                }
+
+                return "";
+            }
+
+            function extractVersionFromText(text) {
+                if (!text) {
+                    return "";
+                }
+                const match = String(text).match(/v?(\d+(?:\.\d+)+)/i);
+                return match ? match[1] : "";
+            }
+
+            function compareVersions(left, right) {
+                const leftParts = String(left || "0").split(".").map(toVersionNumber);
+                const rightParts = String(right || "0").split(".").map(toVersionNumber);
+                const maxLength = Math.max(leftParts.length, rightParts.length);
+
+                for (let i = 0; i < maxLength; i++) {
+                    const leftPart = i < leftParts.length ? leftParts[i] : 0;
+                    const rightPart = i < rightParts.length ? rightParts[i] : 0;
+                    if (leftPart > rightPart) {
+                        return 1;
+                    }
+                    if (leftPart < rightPart) {
+                        return -1;
+                    }
+                }
+
+                return 0;
+            }
+
+            function toVersionNumber(value) {
+                const parsed = parseInt(value, 10);
+                return Number.isFinite(parsed) ? parsed : 0;
             }
 
             function isPlaceholderUrl(url) {
