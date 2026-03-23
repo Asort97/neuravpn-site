@@ -1,8 +1,8 @@
 (function () {
             const DOMAIN = "<мой домен>";
             const ANDROID_PACKAGE = "com.neuravpn.app";
-            const ANDROID_APK_URL = "https://github.com/Asort97/neuravpn-client/releases/download/v1.0.3/neuravpn_android_v1.0.3.apk";
-            const WINDOWS_EXE_URL = "https://github.com/Asort97/neuravpn-client/releases/download/v1.0.4/neuravpn_windows_v1.0.4.zip";
+            const ANDROID_APK_URL = "https://github.com/Asort97/neuravpn-client/releases/download/v1.0.5/neuravpn_android_v1.0.5_arm64.apk";
+            const WINDOWS_EXE_URL = "https://github.com/Asort97/neuravpn-client/releases/download/v1.0.5/neuravpn_windows_v1.0.5.zip";
             const RELEASES_PAGE_URL = "https://github.com/Asort97/neuravpn-client/releases";
             const MAX_V_SIZE = 32 * 1024;
             const REDIRECT_TIMEOUT_MS = 1600;
@@ -404,11 +404,13 @@
                 if (androidAsset && androidAsset.browser_download_url) {
                     setLinkTargets(landingDownloadAndroidBtn, androidAsset.browser_download_url, { newTab: false });
                     setLinkTargets(fallbackAndroidBtn, androidAsset.browser_download_url, { newTab: false });
+                    updateVersionDisplay("android", androidAsset._resolvedVersion);
                     debugLog("android download link updated", { name: androidAsset.name || "", version: androidAsset._resolvedVersion || "" });
                 }
                 if (windowsAsset && windowsAsset.browser_download_url) {
                     setLinkTargets(landingDownloadWindowsBtn, windowsAsset.browser_download_url, { newTab: false });
                     setLinkTargets(fallbackWindowsBtn, windowsAsset.browser_download_url, { newTab: false });
+                    updateVersionDisplay("windows", windowsAsset._resolvedVersion);
                     debugLog("windows download link updated", { name: windowsAsset.name || "", version: windowsAsset._resolvedVersion || "" });
                 }
             }
@@ -421,6 +423,28 @@
                 // Download counters require GitHub API (download_count), so keep hidden in HTML-only mode.
                 if (androidEl) androidEl.textContent = "";
                 if (windowsEl) windowsEl.textContent = "";
+            }
+
+            function updateVersionDisplay(platform, version) {
+                if (!version) {
+                    return;
+                }
+                
+                let elementId = "";
+                if (platform === "android") {
+                    elementId = "androidDownloadCount";
+                } else if (platform === "windows") {
+                    elementId = "windowsDownloadCount";
+                }
+
+                if (!elementId) {
+                    return;
+                }
+
+                const el = document.getElementById(elementId);
+                if (el) {
+                    el.textContent = "v" + version;
+                }
             }
 
             function parseReleaseAssetsFromHtml(html) {
