@@ -370,20 +370,27 @@
 
             async function loadReleaseCatalog() {
                 if (!releaseCatalogPromise) {
-                    releaseCatalogPromise = fetch(RELEASES_PAGE_URL, {
+                    const apiUrl = "https://api.github.com/repos/Asort97/neuravpn-client/releases?per_page=30";
+                    console.log("[NeuraVPN] loadReleaseCatalog: starting fetch from", apiUrl);
+                    
+                    releaseCatalogPromise = fetch(apiUrl, {
                         method: "GET",
                         headers: {
-                            "Accept": "text/html"
+                            "Accept": "application/vnd.github+json"
                         }
                     }).then(function (response) {
+                        console.log("[NeuraVPN] loadReleaseCatalog: fetch response status", response.status);
                         if (!response.ok) {
+                            console.log("[NeuraVPN] loadReleaseCatalog: fetch failed with status", response.status);
                             debugLog("releases fetch failed", { status: response.status });
                             return [];
                         }
-                        return response.text();
-                    }).then(function (html) {
-                        return parseReleaseAssetsFromHtml(html);
+                        return response.json();
+                    }).then(function (releases) {
+                        console.log("[NeuraVPN] loadReleaseCatalog: got releases, count:", releases ? releases.length : 0);
+                        return parseReleaseAssetsFromJson(releases);
                     }).catch(function (error) {
+                        console.log("[NeuraVPN] loadReleaseCatalog: fetch error", error && error.message ? error.message : String(error));
                         debugLog("releases fetch error", { message: error && error.message ? error.message : String(error) });
                         return [];
                     });
@@ -394,22 +401,28 @@
 
             async function bindLatestReleaseLinks() {
                 const assets = await loadReleaseCatalog();
+                console.log("[NeuraVPN] bindLatestReleaseLinks - assets:", assets);
                 if (assets.length === 0) {
+                    console.log("[NeuraVPN] No assets found");
                     return;
                 }
 
                 const androidAsset = pickLatestPlatformAsset(assets, "android");
                 const windowsAsset = pickLatestPlatformAsset(assets, "windows");
 
+                console.log("[NeuraVPN] picked assets - android:", androidAsset, "windows:", windowsAsset);
+
                 if (androidAsset && androidAsset.browser_download_url) {
                     setLinkTargets(landingDownloadAndroidBtn, androidAsset.browser_download_url, { newTab: false });
                     setLinkTargets(fallbackAndroidBtn, androidAsset.browser_download_url, { newTab: false });
+                    console.log("[NeuraVPN] Setting android version:", androidAsset._resolvedVersion);
                     updateVersionDisplay("android", androidAsset._resolvedVersion);
                     debugLog("android download link updated", { name: androidAsset.name || "", version: androidAsset._resolvedVersion || "" });
                 }
                 if (windowsAsset && windowsAsset.browser_download_url) {
                     setLinkTargets(landingDownloadWindowsBtn, windowsAsset.browser_download_url, { newTab: false });
                     setLinkTargets(fallbackWindowsBtn, windowsAsset.browser_download_url, { newTab: false });
+                    console.log("[NeuraVPN] Setting windows version:", windowsAsset._resolvedVersion);
                     updateVersionDisplay("windows", windowsAsset._resolvedVersion);
                     debugLog("windows download link updated", { name: windowsAsset.name || "", version: windowsAsset._resolvedVersion || "" });
                 }
@@ -426,7 +439,9 @@
             }
 
             function updateVersionDisplay(platform, version) {
+                console.log("[NeuraVPN] updateVersionDisplay:", { platform, version });
                 if (!version) {
+                    console.log("[NeuraVPN] updateVersionDisplay: no version");
                     return;
                 }
                 
@@ -438,17 +453,61 @@
                 }
 
                 if (!elementId) {
+                    console.log("[NeuraVPN] updateVersionDisplay: no elementId");
                     return;
                 }
 
                 const el = document.getElementById(elementId);
+                console.log("[NeuraVPN] updateVersionDisplay - element found:", !!el);
                 if (el) {
                     el.textContent = "v" + version;
+                    console.log("[NeuraVPN] Set version text:", "v" + version, "Current text:", el.textContent);
                 }
             }
 
+            function parseReleaseAssetsFromJson(releases) {
+                if (!Array.isArray(releases)) {
+                    console.log("[NeuraVPN] parseReleaseAssetsFromJson: invalid releases input");
+                    return [];
+                }
+
+                const assets = [];
+                for (let i = 0; i < releases.length; i++) {
+                    const release = releases[i];
+                    if (!Array.isArray(release.assets)) {
+                        continue;
+                    }
+
+                    const releaseTag = release.tag_name || "";
+                    const releaseVersion = extractVersionFromText(releaseTag);
+                    console.log("[NeuraVPN] Processing release:", { tag: releaseTag, version: releaseVersion, assetCount: release.assets.length });
+
+                    for (let j = 0; j < release.assets.length; j++) {
+                        const asset = release.assets[j];
+                        const name = asset.name || "";
+                        const browser_download_url = asset.browser_download_url || "";
+
+                        if (!name || !browser_download_url) {
+                            continue;
+                        }
+
+                        const version = extractVersionFromText(name) || releaseVersion || "0.0.0";
+                        assets.push({
+                            name: name,
+                            browser_download_url: browser_download_url,
+                            _releaseVersion: version
+                        });
+                        console.log("[NeuraVPN] Parsed asset:", { name: name, version: version });
+                    }
+                }
+
+                console.log("[NeuraVPN] Total assets parsed:", assets.length);
+                return assets;
+            };
+
             function parseReleaseAssetsFromHtml(html) {
                 if (!html || typeof html !== "string") {
+                    console.log("[NeuraVPN] parseReleaseAssetsFromHtml: invalid html input");
                     return [];
                 }
 
@@ -470,13 +529,16 @@
                     const downloadIndex = pathParts.indexOf("download");
                     const releaseTag = downloadIndex >= 0 && downloadIndex + 1 < pathParts.length ? decodeURIComponent(pathParts[downloadIndex + 1]) : "";
 
+                    const version = extractVersionFromText(releaseTag);
                     assets.push({
                         name: name,
                         browser_download_url: absoluteUrl,
-                        _releaseVersion: extractVersionFromText(releaseTag)
+                        _releaseVersion: version
                     });
+                    console.log("[NeuraVPN] Parsed asset:", { name: name, releaseTag: releaseTag, version: version });
                 }
 
+                console.log("[NeuraVPN] Total assets parsed:", assets.length);
                 return assets;
             }
 
