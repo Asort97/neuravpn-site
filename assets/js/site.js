@@ -2,7 +2,7 @@
             const DOMAIN = "<мой домен>";
             const ANDROID_PACKAGE = "com.neuravpn.app";
             const ANDROID_APK_URL = "https://github.com/Asort97/neuravpn-client/releases/download/v1.0.5/neuravpn_android_v1.0.5_arm64.apk";
-            const WINDOWS_EXE_URL = "https://github.com/Asort97/neuravpn-client/releases/download/v1.0.5/neuravpn_windows_v1.0.5.zip";
+            const WINDOWS_EXE_URL = "https://github.com/Asort97/neuravpn-client/releases/download/v.1.0.6/neuravpn-setup-v1.0.6.exe";
             const RELEASES_PAGE_URL = "https://github.com/Asort97/neuravpn-client/releases";
             const MAX_V_SIZE = 32 * 1024;
             const REDIRECT_TIMEOUT_MS = 1600;
