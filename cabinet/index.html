@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>neuravpn - личный кабинет</title>
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/css/cabinet.css">
+</head>
+<body>
+  <div class="grid-overlay"></div>
+  <div class="ambient-glow"></div>
+  <div class="scan-line"></div>
+
+  <div class="container cabinet-shell">
+    <header class="cabinet-header">
+      <a href="../" class="brand-link">neura<span>vpn</span></a>
+      <nav class="cabinet-nav">
+        <a href="../">главная</a>
+        <a href="https://t.me/asortiment97" target="_blank" rel="noopener noreferrer">поддержка</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="authView" class="cabinet-auth card-panel">
+        <span class="mono-label">[ACCESS] WEB CABINET</span>
+        <h1>Вход в личный кабинет</h1>
+        <p class="muted">Введите email, который использовали при оплате. Мы отправим одноразовый код для входа.</p>
+
+        <form id="emailForm" class="auth-form">
+          <label for="emailInput">email для чека</label>
+          <div class="input-row">
+            <input id="emailInput" name="email" type="email" autocomplete="email" placeholder="name@example.com" required>
+            <button class="btn btn-primary" type="submit">получить код</button>
+          </div>
+        </form>
+
+        <form id="codeForm" class="auth-form hidden">
+          <label for="codeInput">код из письма</label>
+          <div class="input-row code-row">
+            <input id="codeInput" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="000000" required>
+            <button class="btn btn-primary" type="submit">войти</button>
+          </div>
+          <button id="changeEmailBtn" class="link-button" type="button">изменить email</button>
+        </form>
+
+        <div id="accountChooser" class="account-chooser hidden">
+          <p class="muted">На этот email найдено несколько аккаунтов. Выберите свой аккаунт.</p>
+          <div id="accountList" class="account-list"></div>
+        </div>
+
+        <p id="authStatus" class="status-line"></p>
+      </section>
+
+      <section id="dashboardView" class="hidden">
+        <div class="dashboard-hero card-panel">
+          <div>
+            <span class="mono-label">[ONLINE] PERSONAL NODE</span>
+            <h1>Личный кабинет</h1>
+            <p id="userMeta" class="muted">загрузка профиля...</p>
+          </div>
+          <div class="status-orb" aria-hidden="true">
+            <span id="daysBig">--</span>
+            <small>дней</small>
+          </div>
+        </div>
+
+        <div class="cabinet-grid">
+          <section class="card-panel subscription-card">
+            <span class="mono-label">[SUBSCRIPTION]</span>
+            <h2>VPN-доступ</h2>
+            <div id="subState" class="state-pill">проверка</div>
+            <p id="expireText" class="muted"></p>
+            <div class="secret-box">
+              <textarea id="subLink" readonly placeholder="Ссылка появится после загрузки"></textarea>
+              <div class="secret-actions">
+                <button id="copySubBtn" class="btn btn-primary" type="button">скопировать</button>
+                <a id="openSubBtn" class="btn btn-secondary" href="#" target="_blank" rel="noopener noreferrer">открыть</a>
+              </div>
+            </div>
+            <p class="warning-text">Не передавайте подписочную ссылку другим людям. Это ваш личный ключ доступа.</p>
+          </section>
+
+          <section class="card-panel quick-card">
+            <span class="mono-label">[ACTIONS]</span>
+            <h2>Быстрые действия</h2>
+            <div class="action-stack">
+              <a class="btn btn-secondary" href="../?open=1" id="autoImportBtn">авто-импорт</a>
+              <a class="btn btn-secondary" href="../" >скачать приложение</a>
+              <a class="btn btn-secondary" href="#instructions">инструкции</a>
+              <button id="logoutBtn" class="btn btn-secondary" type="button">выйти</button>
+            </div>
+          </section>
+
+          <section class="card-panel payment-card">
+            <span class="mono-label">[PAYMENT]</span>
+            <h2>Продлить подписку</h2>
+            <div id="plans" class="plans-grid"></div>
+            <label class="save-card-row">
+              <input id="saveCard" type="checkbox" checked>
+              <span>сохранить карту для автопродления</span>
+            </label>
+            <p id="paymentStatus" class="status-line"></p>
+          </section>
+
+          <section class="card-panel autopay-card">
+            <span class="mono-label">[AUTOPAY]</span>
+            <h2>Автопродление</h2>
+            <p id="autopayText" class="muted">проверка...</p>
+            <button id="disableAutopayBtn" class="btn btn-secondary" type="button">отключить</button>
+          </section>
+        </div>
+
+        <section id="instructions" class="card-panel instructions-panel">
+          <span class="mono-label">[GUIDE]</span>
+          <h2>Инструкции</h2>
+          <div class="platform-grid">
+            <a href="../" class="platform-card">Windows</a>
+            <a href="../" class="platform-card">Android</a>
+            <a href="../" class="platform-card">iOS</a>
+            <a href="../" class="platform-card">macOS</a>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="../assets/js/cabinet.js"></script>
+</body>
+</html>
