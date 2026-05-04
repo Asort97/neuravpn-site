@@ -1,5 +1,5 @@
 (function () {
-    const API_BASE = window.NEURAVPN_API_BASE || localStorage.getItem("neuravpn_api_base") || "";
+    const API_BASE = detectAPIBase();
     const authView = document.getElementById("authView");
     const dashboardView = document.getElementById("dashboardView");
     const emailForm = document.getElementById("emailForm");
@@ -240,5 +240,19 @@
         return String(value || "").replace(/[&<>'"]/g, function (char) {
             return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char];
         });
+    }
+
+    function detectAPIBase() {
+        if (window.NEURAVPN_API_BASE) {
+            return window.NEURAVPN_API_BASE;
+        }
+        const stored = localStorage.getItem("neuravpn_api_base");
+        if (stored) {
+            return stored;
+        }
+        if (window.location.port === "8085") {
+            return window.location.protocol + "//" + window.location.hostname + ":8090";
+        }
+        return "";
     }
 })();
