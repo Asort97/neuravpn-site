@@ -126,9 +126,16 @@
         if (/\.mp4$/i.test(src)) {
             const video = document.createElement("video");
             video.src = src;
-            video.controls = true;
+            video.autoplay = true;
+            video.loop = true;
+            video.muted = true;
             video.playsInline = true;
-            video.preload = "metadata";
+            video.controls = false;
+            video.preload = "auto";
+            video.setAttribute("autoplay", "");
+            video.setAttribute("loop", "");
+            video.setAttribute("muted", "");
+            video.setAttribute("playsinline", "");
             return video;
         }
         const img = document.createElement("img");
