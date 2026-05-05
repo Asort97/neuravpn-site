@@ -11,6 +11,7 @@
     const accountChooser = document.getElementById("accountChooser");
     const accountList = document.getElementById("accountList");
     const userMeta = document.getElementById("userMeta");
+    const dashboardTitle = document.getElementById("dashboardTitle");
     const daysBig = document.getElementById("daysBig");
     const subState = document.getElementById("subState");
     const expireText = document.getElementById("expireText");
@@ -71,7 +72,7 @@
         }
         await navigator.clipboard.writeText(value);
         copySubBtn.textContent = "скопировано";
-        window.setTimeout(function () { copySubBtn.textContent = "скопировать"; }, 1400);
+        window.setTimeout(function () { copySubBtn.textContent = "Скопировать ссылку"; }, 1400);
     });
 
     logoutBtn.addEventListener("click", async function () {
@@ -153,6 +154,9 @@
         dashboardView.classList.remove("hidden");
         const days = Number(me.days || 0);
         daysBig.textContent = String(days);
+        if (dashboardTitle) {
+            dashboardTitle.textContent = "Привет, " + displayName(me);
+        }
         userMeta.textContent = [me.email || "email не указан", me.masked_id || me.user_id || ""].filter(Boolean).join(" · ");
         subState.textContent = days > 0 ? "активна" : "нет активной подписки";
         subState.classList.toggle("is-active", days > 0);
@@ -240,6 +244,14 @@
         return String(value || "").replace(/[&<>'"]/g, function (char) {
             return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char];
         });
+    }
+
+    function displayName(me) {
+        const email = String(me.email || "");
+        if (email.includes("@")) {
+            return email.split("@")[0];
+        }
+        return me.masked_id || "пользователь";
     }
 
     function detectAPIBase() {

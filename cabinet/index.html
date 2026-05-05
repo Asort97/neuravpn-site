@@ -55,26 +55,25 @@
       <section id="dashboardView" class="hidden">
         <div class="dashboard-hero card-panel">
           <div>
-            <span class="mono-label">[ONLINE] PERSONAL NODE</span>
-            <h1>Личный кабинет</h1>
+            <span class="mono-label">Личный кабинет</span>
+            <h1 id="dashboardTitle">Привет</h1>
             <p id="userMeta" class="muted">загрузка профиля...</p>
           </div>
-          <div class="status-orb" aria-hidden="true">
-            <span id="daysBig">--</span>
-            <small>дней</small>
+          <div class="active-pill" aria-live="polite">
+            <span class="active-dot"></span>
+            <strong><span id="daysBig">--</span> дней активно</strong>
           </div>
         </div>
 
         <div class="cabinet-grid">
           <section class="card-panel subscription-card">
-            <span class="mono-label">[SUBSCRIPTION]</span>
-            <h2>VPN-доступ</h2>
+            <h2>Ваш доступ к VPN</h2>
             <div id="subState" class="state-pill">проверка</div>
             <p id="expireText" class="muted"></p>
             <div class="secret-box">
               <textarea id="subLink" readonly placeholder="Ссылка появится после загрузки"></textarea>
               <div class="secret-actions">
-                <button id="copySubBtn" class="btn btn-primary" type="button">скопировать</button>
+                <button id="copySubBtn" class="btn btn-primary" type="button">Скопировать ссылку</button>
                 <a id="openSubBtn" class="btn btn-secondary" href="#" target="_blank" rel="noopener noreferrer">открыть</a>
               </div>
             </div>
@@ -82,7 +81,6 @@
           </section>
 
           <section class="card-panel quick-card">
-            <span class="mono-label">[ACTIONS]</span>
             <h2>Быстрые действия</h2>
             <div class="action-stack">
               <a class="btn btn-secondary" href="../?open=1" id="autoImportBtn">авто-импорт</a>
@@ -93,7 +91,6 @@
           </section>
 
           <section class="card-panel payment-card">
-            <span class="mono-label">[PAYMENT]</span>
             <h2>Продлить подписку</h2>
             <div id="plans" class="plans-grid"></div>
             <label class="save-card-row">
@@ -104,7 +101,6 @@
           </section>
 
           <section class="card-panel autopay-card">
-            <span class="mono-label">[AUTOPAY]</span>
             <h2>Автопродление</h2>
             <p id="autopayText" class="muted">проверка...</p>
             <button id="disableAutopayBtn" class="btn btn-secondary" type="button">отключить</button>
@@ -112,8 +108,7 @@
         </div>
 
         <section id="instructions" class="card-panel instructions-panel">
-          <span class="mono-label">[GUIDE]</span>
-          <h2>Инструкции</h2>
+          <h2>Инструкции по подключению</h2>
           <div class="platform-grid">
             <a href="../instructions/windows/" class="platform-card">Windows</a>
             <a href="../instructions/android/" class="platform-card">Android</a>
