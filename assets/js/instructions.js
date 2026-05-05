@@ -125,10 +125,10 @@
     function renderMedia(src) {
         if (/\.mp4$/i.test(src)) {
             const video = document.createElement("video");
-            video.src = src;
             video.autoplay = true;
             video.loop = true;
             video.muted = true;
+            video.defaultMuted = true;
             video.playsInline = true;
             video.controls = false;
             video.preload = "auto";
@@ -136,6 +136,13 @@
             video.setAttribute("loop", "");
             video.setAttribute("muted", "");
             video.setAttribute("playsinline", "");
+            video.src = src;
+            video.addEventListener("loadeddata", function () {
+                const playPromise = video.play();
+                if (playPromise && typeof playPromise.catch === "function") {
+                    playPromise.catch(function () {});
+                }
+            }, { once: true });
             return video;
         }
         const img = document.createElement("img");
