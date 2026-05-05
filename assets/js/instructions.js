@@ -126,6 +126,7 @@
     function renderMedia(src) {
         if (/\.mp4$/i.test(src)) {
             const video = document.createElement("video");
+            video.className = "instruction-video";
             video.autoplay = true;
             video.loop = true;
             video.muted = true;
@@ -141,8 +142,14 @@
             video.setAttribute("disablepictureinpicture", "");
             video.setAttribute("controlslist", "nodownload nofullscreen noremoteplayback");
             video.src = src;
+            video.load();
             video.addEventListener("loadeddata", function () { playVideo(video); }, { once: true });
             video.addEventListener("canplay", function () { playVideo(video); }, { once: true });
+            video.addEventListener("pause", function () {
+                if (!video.ended && document.visibilityState === "visible") {
+                    window.setTimeout(function () { playVideo(video); }, 120);
+                }
+            });
             return video;
         }
         const img = document.createElement("img");
@@ -163,20 +170,59 @@
         videos.forEach(function (video) {
             playVideo(video);
         });
-        window.setTimeout(function () {
-            videos.forEach(function (video) {
-                playVideo(video);
-            });
-        }, 350);
+        bindVideoViewportAutoplay(videos);
+        retryVideoAutoplay(videos);
+        window.addEventListener("load", function () { retryVideoAutoplay(videos); }, { once: true });
+        document.addEventListener("visibilitychange", function () {
+            if (document.visibilityState === "visible") {
+                retryVideoAutoplay(videos);
+            }
+        });
     }
 
     function playVideo(video) {
         video.muted = true;
         video.defaultMuted = true;
         video.controls = false;
+        if (video.readyState < 2) {
+            try {
+                video.load();
+            } catch (error) {}
+        }
         const playPromise = video.play();
         if (playPromise && typeof playPromise.catch === "function") {
             playPromise.catch(function () {});
         }
+    }
+
+    function bindVideoViewportAutoplay(videos) {
+        if (!("IntersectionObserver" in window)) {
+            return;
+        }
+        const observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    playVideo(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+        videos.forEach(function (video) {
+            observer.observe(video);
+        });
+    }
+
+    function retryVideoAutoplay(videos) {
+        let attempts = 0;
+        const timer = window.setInterval(function () {
+            attempts += 1;
+            videos.forEach(function (video) {
+                if (video.paused || video.readyState < 2) {
+                    playVideo(video);
+                }
+            });
+            if (attempts >= 8) {
+                window.clearInterval(timer);
+            }
+        }, 450);
     }
 })();
