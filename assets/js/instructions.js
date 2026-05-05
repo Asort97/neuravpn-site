@@ -3,7 +3,6 @@
     const guides = {
         windows: {
             label: "Windows",
-            eyebrow: "[WINDOWS] NEURAVPN CLIENT",
             title: "Инструкция для Windows",
             intro: "Установка клиента NeuraVPN, импорт ключа и запуск подключения.",
             actions: [
@@ -20,7 +19,6 @@
         },
         android: {
             label: "Android",
-            eyebrow: "[ANDROID] V2RAYTUN",
             title: "Инструкция для Android",
             intro: "Установка V2RayTun из Google Play, импорт ключа и включение VPN.",
             actions: [
@@ -35,7 +33,6 @@
         },
         ios: {
             label: "iOS",
-            eyebrow: "[IOS] V2RAYTUN",
             title: "Инструкция для iOS",
             intro: "Установка V2RayTun из App Store, импорт ключа и включение VPN.",
             actions: [
@@ -51,7 +48,6 @@
         },
         macos: {
             label: "macOS",
-            eyebrow: "[MACOS] V2RAYTUN",
             title: "Инструкция для macOS",
             intro: "Установка V2RayTun из App Store и импорт ключа подключения.",
             actions: [
@@ -66,7 +62,6 @@
         },
         "ios-region": {
             label: "iOS region",
-            eyebrow: "[IOS] APP STORE REGION",
             title: "Смена региона App Store",
             intro: "Если V2RayTun недоступен в вашем App Store, смените регион на Казахстан.",
             actions: [
@@ -90,7 +85,6 @@
     }
 
     document.title = "neuravpn - " + guide.label;
-    document.getElementById("guideEyebrow").textContent = guide.eyebrow;
     document.getElementById("guideTitle").textContent = guide.title;
     document.getElementById("guideIntro").textContent = guide.intro;
 

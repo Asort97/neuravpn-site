@@ -25,9 +25,11 @@
     const autopayText = document.getElementById("autopayText");
     const disableAutopayBtn = document.getElementById("disableAutopayBtn");
     const logoutBtn = document.getElementById("logoutBtn");
+    const toastEl = document.getElementById("toast");
 
     let pendingEmail = "";
     let selectedUserID = "";
+    let toastTimer = 0;
 
     boot();
 
@@ -46,8 +48,10 @@
             codeForm.classList.remove("hidden");
             codeInput.focus();
             setStatus(authStatus, "код отправлен. Если SMTP не настроен, код будет в логах web-сервиса.", "ok");
+            showToast("код отправлен");
         } catch (error) {
             setStatus(authStatus, error.message || "не удалось отправить код", "error");
+            showToast("не удалось отправить код", "error");
         }
     });
 
@@ -63,21 +67,29 @@
         codeInput.value = "";
         setStatus(authStatus, "", "");
         emailInput.focus();
+        showToast("email можно изменить");
     });
 
     copySubBtn.addEventListener("click", async function () {
         const value = subLink.value.trim();
         if (!value) {
+            showToast("ключ ещё не загружен", "error");
             return;
         }
-        await navigator.clipboard.writeText(value);
-        copySubBtn.textContent = "скопировано";
-        window.setTimeout(function () { copySubBtn.textContent = "Скопировать ссылку"; }, 1400);
+        try {
+            await copyText(value);
+            copySubBtn.textContent = "скопировано";
+            showToast("ключ скопирован");
+            window.setTimeout(function () { copySubBtn.textContent = "Скопировать ссылку"; }, 1400);
+        } catch (error) {
+            showToast("не удалось скопировать", "error");
+        }
     });
 
     logoutBtn.addEventListener("click", async function () {
         await api("/api/auth/logout", { method: "POST", body: {} }).catch(function () {});
         showAuth();
+        showToast("вы вышли");
     });
 
     disableAutopayBtn.addEventListener("click", async function () {
@@ -87,8 +99,9 @@
         try {
             await api("/api/autopay/disable", { method: "POST", body: {} });
             await loadMe();
+            showToast("автопродление отключено");
         } catch (error) {
-            alert(error.message || "Не удалось отключить автопродление");
+            showToast(error.message || "не удалось отключить автопродление", "error");
         }
     });
 
@@ -114,11 +127,14 @@
             if (response.multiple) {
                 renderAccountChooser(response.accounts || []);
                 setStatus(authStatus, "выберите аккаунт", "");
+                showToast("выберите аккаунт");
                 return;
             }
             await loadMe();
+            showToast("вход выполнен");
         } catch (error) {
             setStatus(authStatus, error.message || "код не подошёл", "error");
+            showToast(error.message || "код не подошёл", "error");
         }
     }
 
@@ -188,18 +204,22 @@
 
     async function createPayment(planID) {
         setStatus(paymentStatus, "создаём платёж...", "");
+        showToast("создаём платёж");
         try {
             const data = await api("/api/payments/create", {
                 method: "POST",
                 body: { plan_id: planID, save_card: saveCard.checked }
             });
             if (data.confirmation_url) {
+                showToast("переходим к оплате");
                 window.location.href = data.confirmation_url;
                 return;
             }
             setStatus(paymentStatus, "платёж создан, но ссылка не пришла", "error");
+            showToast("ссылка оплаты не пришла", "error");
         } catch (error) {
             setStatus(paymentStatus, error.message || "не удалось создать платёж", "error");
+            showToast(error.message || "не удалось создать платёж", "error");
         }
     }
 
@@ -230,6 +250,32 @@
         el.textContent = text || "";
         el.classList.toggle("is-error", kind === "error");
         el.classList.toggle("is-ok", kind === "ok");
+    }
+
+    async function copyText(value) {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(value);
+            return;
+        }
+        subLink.focus();
+        subLink.select();
+        if (!document.execCommand("copy")) {
+            throw new Error("copy failed");
+        }
+        window.getSelection().removeAllRanges();
+    }
+
+    function showToast(message, kind) {
+        if (!toastEl) {
+            return;
+        }
+        window.clearTimeout(toastTimer);
+        toastEl.textContent = message;
+        toastEl.classList.toggle("is-error", kind === "error");
+        toastEl.classList.add("is-visible");
+        toastTimer = window.setTimeout(function () {
+            toastEl.classList.remove("is-visible");
+        }, 1800);
     }
 
     function formatDate(value) {

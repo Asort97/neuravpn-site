@@ -31,12 +31,15 @@
 }
 
 .cabinet-nav a {
+    display: inline-flex;
     color: var(--text-muted);
     text-decoration: none;
+    transition: color 0.16s ease, transform 0.16s ease;
 }
 
 .cabinet-nav a:hover {
     color: #fff;
+    transform: translateY(-1px);
 }
 
 .card-panel {
@@ -45,6 +48,7 @@
     border-radius: 28px;
     box-shadow: 0 28px 70px rgba(0, 0, 0, 0.32);
     overflow: hidden;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 .cabinet-auth {
@@ -110,6 +114,7 @@ textarea {
 input:focus,
 textarea:focus {
     border-color: var(--accent-red-mid);
+    box-shadow: 0 0 0 4px rgba(255, 42, 42, 0.12);
 }
 
 .status-line {
@@ -134,6 +139,12 @@ textarea:focus {
     color: var(--accent-glow);
     cursor: pointer;
     font-family: var(--font-tech);
+    transition: color 0.16s ease, transform 0.16s ease;
+}
+
+.link-button:hover {
+    color: #fff;
+    transform: translateX(2px);
 }
 
 .account-chooser {
@@ -155,6 +166,7 @@ textarea:focus {
     text-align: left;
     cursor: pointer;
     font-family: var(--font-tech);
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 .dashboard-hero {
@@ -202,6 +214,12 @@ textarea:focus {
 .cabinet-grid .card-panel,
 .instructions-panel {
     padding: 32px;
+}
+
+.cabinet-grid .card-panel:hover,
+.cabinet-auth:hover {
+    border-color: rgba(255, 42, 42, 0.42);
+    box-shadow: 0 30px 82px rgba(255, 42, 42, 0.08), 0 28px 70px rgba(0, 0, 0, 0.34);
 }
 
 .quick-card,
@@ -292,6 +310,12 @@ textarea:focus {
 
 .plan-card:hover {
     border-color: rgba(255, 42, 42, 0.5);
+    box-shadow: 0 18px 45px rgba(255, 42, 42, 0.08);
+    transform: translateY(-2px);
+}
+
+.plan-card:active {
+    transform: translateY(0) scale(0.985);
 }
 
 .plan-card strong {
@@ -347,12 +371,49 @@ textarea:focus {
     display: grid;
     place-items: center;
     font-weight: 700;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease, transform 0.16s ease;
 }
 
 .platform-card:hover,
 .account-button:hover {
-    border-color: #404040;
+    border-color: rgba(255, 42, 42, 0.55);
     color: #fff;
+    box-shadow: 0 16px 42px rgba(255, 42, 42, 0.08);
+    transform: translateY(-2px);
+}
+
+.platform-card:active,
+.account-button:active {
+    transform: translateY(0) scale(0.985);
+}
+
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    z-index: 50;
+    max-width: calc(100vw - 32px);
+    padding: 12px 18px;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    border-radius: 999px;
+    background: rgba(8, 8, 10, 0.92);
+    color: #8dffb1;
+    box-shadow: 0 18px 55px rgba(0, 0, 0, 0.42);
+    font-weight: 800;
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, 12px) scale(0.96);
+    transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.toast.is-visible {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+}
+
+.toast.is-error {
+    border-color: rgba(255, 42, 42, 0.45);
+    color: #ff9b9b;
 }
 
 @media (max-width: 760px) {

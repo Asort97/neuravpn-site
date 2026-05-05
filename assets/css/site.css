@@ -130,6 +130,30 @@ a {
     text-decoration: none;
     cursor: pointer;
     transition: 0.16s ease;
+    will-change: transform;
+}
+
+.btn:hover {
+    transform: translateY(-2px) scale(1.018);
+}
+
+.btn:active {
+    transform: translateY(0) scale(0.975);
+}
+
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+    transform: none;
+}
+
+.btn:focus-visible,
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid rgba(255, 42, 42, 0.82);
+    outline-offset: 4px;
 }
 
 .btn-primary {
@@ -217,6 +241,18 @@ details,
     border-radius: 24px;
     padding: 24px;
     box-shadow: 0 22px 60px rgba(0, 0, 0, 0.22);
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.card:hover,
+details:hover,
+.onboarding-card:hover,
+.step-item:hover,
+.platform-item:hover,
+.tag:hover {
+    border-color: rgba(255, 42, 42, 0.5);
+    box-shadow: 0 26px 70px rgba(255, 42, 42, 0.08), 0 24px 70px rgba(0, 0, 0, 0.32);
+    transform: translateY(-2px);
 }
 
 .card-icon {
@@ -243,6 +279,7 @@ details,
     border: 1px solid var(--border);
     border-radius: 22px;
     padding: 22px;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 .step-node {
@@ -262,11 +299,17 @@ details,
     border: 1px solid var(--border);
     border-radius: 18px;
     padding: 18px;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
 summary {
     cursor: pointer;
     font-weight: 800;
+    transition: color 0.16s ease;
+}
+
+summary:hover {
+    color: var(--accent-glow);
 }
 
 .faq-content {
