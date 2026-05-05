@@ -126,22 +126,26 @@
     function renderMedia(src) {
         if (/\.mp4$/i.test(src)) {
             const video = document.createElement("video");
+            const source = document.createElement("source");
             video.className = "instruction-video";
             video.autoplay = true;
             video.loop = true;
             video.muted = true;
             video.defaultMuted = true;
+            video.volume = 0;
             video.playsInline = true;
             video.controls = false;
             video.disablePictureInPicture = true;
             video.preload = "auto";
-            video.setAttribute("autoplay", "");
-            video.setAttribute("loop", "");
-            video.setAttribute("muted", "");
-            video.setAttribute("playsinline", "");
-            video.setAttribute("disablepictureinpicture", "");
+            video.setAttribute("autoplay", "autoplay");
+            video.setAttribute("loop", "loop");
+            video.setAttribute("muted", "muted");
+            video.setAttribute("playsinline", "playsinline");
+            video.setAttribute("disablepictureinpicture", "disablepictureinpicture");
             video.setAttribute("controlslist", "nodownload nofullscreen noremoteplayback");
-            video.src = src;
+            source.src = src + "?v=20260506-5";
+            source.type = "video/mp4";
+            video.appendChild(source);
             video.load();
             video.addEventListener("loadeddata", function () { playVideo(video); }, { once: true });
             video.addEventListener("canplay", function () { playVideo(video); }, { once: true });
@@ -183,6 +187,7 @@
     function playVideo(video) {
         video.muted = true;
         video.defaultMuted = true;
+        video.volume = 0;
         video.controls = false;
         if (video.readyState < 2) {
             try {
