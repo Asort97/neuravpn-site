@@ -11,8 +11,8 @@
             ],
             steps: [
                 { media: "Windows/neuravpn_app/0.png", title: "Скачайте клиент", text: `скачайте последнюю версию neuravpn с сайта, нажав кнопку «скачать для windows».` },
-                { title: "Распакуйте архив", text: `после завершения загрузки выполните следующие действия:<br><br>1) найдите загруженный файл <code>neuravpn_windows_vX.X.X</code>.<br>2) щелкните правой кнопкой мыши на файле и выберите «извлечь все».` },
-                { title: "Запустите от администратора", text: `откройте папку с распакованными файлами. найдите файл <code>neuravpn.exe</code>. щелкните по нему правой кнопкой мыши и запустите от имени администратора.` },
+                { title: "Распакуйте архив", text: `после завершения загрузки выполните следующие действия:<br><br>1) найдите загруженный файл <b>neuravpn_windows_vX.X.X</b>.<br>2) щелкните правой кнопкой мыши на файле и выберите «извлечь все».` },
+                { title: "Запустите от администратора", text: `откройте папку с распакованными файлами. найдите файл <b>neuravpn.exe</b>. щелкните по нему правой кнопкой мыши и запустите от имени администратора.` },
                 { media: "Windows/0.MP4", title: "Импортируйте ключ", text: `предварительно скопировав ключ доступа, в программе нажмите на кнопку «вставить из буфера». Если ключ открыт в кабинете, можно использовать авто-импорт.` },
                 { media: "Windows/1.MP4", title: "Подключитесь", text: `подключитесь к VPN, нажав по большой кнопке в центре.` }
             ]
@@ -73,7 +73,7 @@
                 { media: "ChangeRegion/1.png", title: "Откройте аккаунт", text: `перейдите в настройки аккаунта, нажав на ваше имя и почту.` },
                 { media: "ChangeRegion/2.png", title: "Страна/регион", text: `нажмите на кнопку «страна/регион».` },
                 { media: "ChangeRegion/3.png", title: "Выберите Казахстан", text: `в списке стран выберите страну Казахстан.` },
-                { media: "ChangeRegion/4.png", title: "Заполните данные", text: `заполните данные, как показано на картинке, и нажмите Done.<br><br>Street - <code>Абая</code><br>City/Town - <code>Кокшетау</code><br>Region - <code>Aqmola</code><br>Postcode - <code>020000</code><br>Phone - <code>77011234567</code>` }
+                { media: "ChangeRegion/4.png", title: "Заполните данные", text: `заполните данные, как показано на картинке, и нажмите Done.<br><br>Street - <b>Абая</b><br>City/Town - <b>Кокшетау</b><br>Region - <b>Aqmola</b><br>Postcode - <b>020000</b><br>Phone - <b>77011234567</b>` }
             ]
         }
     };
@@ -121,6 +121,7 @@
         article.appendChild(content);
         steps.appendChild(article);
     });
+    startInstructionVideos();
 
     function renderMedia(src) {
         if (/\.mp4$/i.test(src)) {
@@ -131,18 +132,17 @@
             video.defaultMuted = true;
             video.playsInline = true;
             video.controls = false;
+            video.disablePictureInPicture = true;
             video.preload = "auto";
             video.setAttribute("autoplay", "");
             video.setAttribute("loop", "");
             video.setAttribute("muted", "");
             video.setAttribute("playsinline", "");
+            video.setAttribute("disablepictureinpicture", "");
+            video.setAttribute("controlslist", "nodownload nofullscreen noremoteplayback");
             video.src = src;
-            video.addEventListener("loadeddata", function () {
-                const playPromise = video.play();
-                if (playPromise && typeof playPromise.catch === "function") {
-                    playPromise.catch(function () {});
-                }
-            }, { once: true });
+            video.addEventListener("loadeddata", function () { playVideo(video); }, { once: true });
+            video.addEventListener("canplay", function () { playVideo(video); }, { once: true });
             return video;
         }
         const img = document.createElement("img");
@@ -156,5 +156,27 @@
         try {
             img.loading = "lazy";
         } catch (error) {}
+    }
+
+    function startInstructionVideos() {
+        const videos = document.querySelectorAll(".step-media video");
+        videos.forEach(function (video) {
+            playVideo(video);
+        });
+        window.setTimeout(function () {
+            videos.forEach(function (video) {
+                playVideo(video);
+            });
+        }, 350);
+    }
+
+    function playVideo(video) {
+        video.muted = true;
+        video.defaultMuted = true;
+        video.controls = false;
+        const playPromise = video.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+            playPromise.catch(function () {});
+        }
     }
 })();

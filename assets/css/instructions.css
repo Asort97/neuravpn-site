@@ -47,8 +47,7 @@
 
 .instructions-hero,
 .guide-hero,
-.guide-step,
-.guide-panel {
+.guide-step {
     background: var(--bg-panel);
     border: 1px solid var(--border);
     border-radius: 28px;
@@ -57,8 +56,7 @@
     transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
-.guide-step:hover,
-.guide-panel:hover {
+.guide-step:hover {
     border-color: rgba(255, 42, 42, 0.42);
     box-shadow: 0 30px 82px rgba(255, 42, 42, 0.08), 0 28px 70px rgba(0, 0, 0, 0.34);
 }
@@ -172,10 +170,9 @@
 }
 
 .step-index {
-    color: var(--accent-glow);
-    font-family: var(--font-tech);
-    font-size: 0.78rem;
-    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 800;
     margin-bottom: 12px;
 }
 
@@ -195,18 +192,9 @@
     color: var(--accent-glow);
 }
 
-.step-content code {
+.step-content b {
     color: #fff;
-    background: #08080a;
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 2px 6px;
-}
-
-.guide-panel {
-    padding: 26px;
-    margin-top: 22px;
-    background: #0b0b0e;
+    font-weight: 800;
 }
 
 .platform-note {
@@ -229,8 +217,26 @@
 
     .instructions-hero,
     .guide-hero,
-    .guide-step,
-    .guide-panel {
+    .guide-step {
         padding: 22px;
     }
+}
+
+.step-media video::-webkit-media-controls,
+.step-media video::-webkit-media-controls-panel,
+.step-media video::-webkit-media-controls-play-button,
+.step-media video::-webkit-media-controls-timeline,
+.step-media video::-webkit-media-controls-current-time-display,
+.step-media video::-webkit-media-controls-time-remaining-display,
+.step-media video::-webkit-media-controls-mute-button,
+.step-media video::-webkit-media-controls-toggle-closed-captions-button,
+.step-media video::-webkit-media-controls-volume-slider,
+.step-media video::-webkit-media-controls-fullscreen-button {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.step-media video {
+    pointer-events: none;
 }
