@@ -1,7 +1,13 @@
+:root {
+    --cabinet-type-big: clamp(1.38rem, 3vw, 1.62rem);
+    --cabinet-type-small: 0.92rem;
+}
+
 .cabinet-shell {
     min-height: 100vh;
     max-width: 760px;
     padding-bottom: 44px;
+    font-size: var(--cabinet-type-small);
 }
 
 .cabinet-header {
@@ -16,7 +22,7 @@
     color: var(--text-primary);
     text-decoration: none;
     font-weight: 800;
-    font-size: 1.35rem;
+    font-size: var(--cabinet-type-big);
     letter-spacing: -0.06em;
 }
 
@@ -27,7 +33,7 @@
 .cabinet-nav {
     display: flex;
     gap: 20px;
-    font-size: 0.82rem;
+    font-size: var(--cabinet-type-small);
     font-weight: 700;
 }
 
@@ -52,6 +58,18 @@
     transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
+.cabinet-shell .btn,
+.modal-card .btn,
+.account-button {
+    font-size: var(--cabinet-type-big);
+}
+
+.cabinet-shell .muted,
+.modal-card .muted,
+.profile-kicker {
+    font-size: var(--cabinet-type-small);
+}
+
 .cabinet-auth {
     max-width: 620px;
     margin: 46px auto;
@@ -60,7 +78,7 @@
 
 .cabinet-auth h1,
 .dashboard-hero h1 {
-    font-size: clamp(2.6rem, 7vw, 4.4rem);
+    font-size: var(--cabinet-type-big);
     line-height: 0.98;
     margin-bottom: 18px;
 }
@@ -74,7 +92,7 @@
     margin-bottom: 10px;
     color: var(--text-muted);
     font-family: var(--font-tech);
-    font-size: 0.8rem;
+    font-size: var(--cabinet-type-small);
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }
@@ -99,6 +117,7 @@ textarea {
 input {
     min-height: 58px;
     padding: 0 18px;
+    font-size: var(--cabinet-type-small);
 }
 
 textarea {
@@ -107,7 +126,7 @@ textarea {
     padding: 14px;
     color: var(--text-secondary);
     font-family: var(--font-tech);
-    font-size: 0.8rem;
+    font-size: var(--cabinet-type-small);
     line-height: 1.45;
 }
 
@@ -121,6 +140,7 @@ textarea:focus {
     margin-top: 18px;
     min-height: 24px;
     color: var(--text-secondary);
+    font-size: var(--cabinet-type-small);
     font-weight: 600;
 }
 
@@ -139,6 +159,7 @@ textarea:focus {
     color: var(--accent-glow);
     cursor: pointer;
     font-family: var(--font-tech);
+    font-size: var(--cabinet-type-small);
     transition: color 0.16s ease, transform 0.16s ease;
 }
 
@@ -196,7 +217,7 @@ textarea:focus {
 
 #userMeta {
     color: var(--text-primary);
-    font-size: clamp(1.38rem, 3vw, 1.62rem);
+    font-size: var(--cabinet-type-big);
     font-weight: 800;
     line-height: 1.12;
     overflow-wrap: anywhere;
@@ -213,6 +234,7 @@ textarea:focus {
     border-radius: 999px;
     padding: 9px 16px;
     color: #4ade80;
+    font-size: var(--cabinet-type-small);
     box-shadow: 0 12px 34px rgba(34, 197, 94, 0.08);
     white-space: nowrap;
 }
@@ -251,7 +273,7 @@ textarea:focus {
 .payment-card h2,
 .instructions-panel h2 {
     margin-bottom: 7px;
-    font-size: 1.28rem;
+    font-size: var(--cabinet-type-big);
 }
 
 .state-pill,
@@ -271,7 +293,7 @@ textarea:focus {
     width: 100%;
     min-height: 54px;
     border-radius: 14px;
-    font-size: 0.98rem;
+    font-size: var(--cabinet-type-big);
 }
 
 .secret-actions .btn-secondary {
@@ -327,13 +349,13 @@ textarea:focus {
 
 .plan-card strong {
     display: block;
-    font-size: 0.92rem;
+    font-size: var(--cabinet-type-big);
     margin-bottom: 2px;
 }
 
 .plan-card span {
     color: var(--text-muted);
-    font-size: 0.82rem;
+    font-size: var(--cabinet-type-small);
 }
 
 .autopay-setup {
@@ -349,7 +371,7 @@ textarea:focus {
 }
 
 .autopay-setup h3 {
-    font-size: 1rem;
+    font-size: var(--cabinet-type-big);
     margin-bottom: 3px;
 }
 
@@ -369,6 +391,7 @@ textarea:focus {
     align-items: center;
     gap: 10px;
     color: var(--text-primary);
+    font-size: var(--cabinet-type-small);
     font-weight: 800;
 }
 
@@ -441,6 +464,7 @@ textarea:focus {
     text-align: center;
     display: grid;
     place-items: center;
+    font-size: var(--cabinet-type-big);
     font-weight: 700;
     transition: border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease, transform 0.16s ease;
 }
@@ -470,6 +494,7 @@ textarea:focus {
     background: rgba(8, 8, 10, 0.92);
     color: #8dffb1;
     box-shadow: 0 18px 55px rgba(0, 0, 0, 0.42);
+    font-size: var(--cabinet-type-small);
     font-weight: 800;
     opacity: 0;
     pointer-events: none;
@@ -509,6 +534,7 @@ textarea:focus {
 
 .modal-card h2 {
     margin-bottom: 10px;
+    font-size: var(--cabinet-type-big);
 }
 
 .modal-actions {
@@ -535,7 +561,7 @@ textarea:focus {
     }
 
     #userMeta {
-        font-size: clamp(1.15rem, 7vw, 1.5rem);
+        font-size: var(--cabinet-type-big);
     }
 
     .autopay-setup,
