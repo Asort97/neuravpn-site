@@ -315,20 +315,6 @@ textarea:focus {
     font-weight: 400;
 }
 
-.plan-card:last-child {
-    border-color: var(--accent-glow);
-    background: rgba(255, 42, 42, 0.045);
-}
-
-.plan-card:last-child::after {
-    content: '✓';
-    background: var(--accent-glow);
-    border-color: var(--accent-glow);
-    color: #fff;
-    font-size: 1rem;
-    font-weight: 800;
-}
-
 .plan-card:hover {
     border-color: rgba(255, 42, 42, 0.5);
     box-shadow: 0 18px 45px rgba(255, 42, 42, 0.08);
