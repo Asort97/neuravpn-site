@@ -43,8 +43,15 @@
     let toastTimer = 0;
     let selectedPlan = null;
     let currentMe = null;
+    const adminUserIDs = ["623290294", "6365653009"];
 
     boot();
+    window.addEventListener("pageshow", clearPendingPaymentStatus);
+    document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible") {
+            clearPendingPaymentStatus();
+        }
+    });
 
     emailForm.addEventListener("submit", async function (event) {
         event.preventDefault();
@@ -208,6 +215,7 @@
 
     function showDashboard(me) {
         currentMe = me;
+        clearPendingPaymentStatus();
         authView.classList.add("hidden");
         dashboardView.classList.remove("hidden");
         const days = Number(me.days || 0);
@@ -234,7 +242,7 @@
         try {
             const data = await api("/api/plans");
             plansEl.innerHTML = "";
-            (data.plans || []).forEach(function (plan) {
+            getVisiblePlans(data.plans || []).forEach(function (plan) {
                 const button = document.createElement("button");
                 button.className = "plan-card";
                 button.type = "button";
@@ -256,6 +264,7 @@
 
     function closePaymentChoice() {
         paymentChoiceModal.classList.add("hidden");
+        clearPendingPaymentStatus();
     }
 
     function showAutopayStatus(me) {
@@ -275,6 +284,7 @@
             });
             if (data.confirmation_url) {
                 showToast("переходим к оплате");
+                setStatus(paymentStatus, "", "");
                 window.location.href = data.confirmation_url;
                 return;
             }
@@ -346,6 +356,12 @@
         el.classList.toggle("is-ok", kind === "ok");
     }
 
+    function clearPendingPaymentStatus() {
+        if (paymentStatus.textContent.trim().toLowerCase().includes("создаём платёж")) {
+            setStatus(paymentStatus, "", "");
+        }
+    }
+
     async function copyText(value) {
         if (navigator.clipboard && window.isSecureContext) {
             await navigator.clipboard.writeText(value);
@@ -404,6 +420,24 @@
     function escapeHTML(value) {
         return String(value || "").replace(/[&<>'"]/g, function (char) {
             return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char];
+        });
+    }
+
+    function getVisiblePlans(plans) {
+        const visiblePlans = plans.slice();
+        if (isCurrentUserAdmin() && !visiblePlans.some(function (plan) { return plan.id === "test_1d"; })) {
+            visiblePlans.push({ id: "test_1d", title: "Тест 1 день", amount: 1, days: 1 });
+        }
+        return visiblePlans;
+    }
+
+    function isCurrentUserAdmin() {
+        if (!currentMe) {
+            return false;
+        }
+        const rawID = String(currentMe.user_id || currentMe.id || currentMe.masked_id || "");
+        return adminUserIDs.some(function (adminID) {
+            return rawID === adminID || rawID.includes(adminID);
         });
     }
 
