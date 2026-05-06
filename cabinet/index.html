@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>neuravpn - личный кабинет</title>
   <link rel="stylesheet" href="../assets/css/site.css">
-  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260506-2">
+  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260506-3">
 </head>
 <body>
   <div class="grid-overlay"></div>
@@ -92,16 +92,17 @@
             <h2>Продлить подписку</h2>
             <div id="plans" class="plans-grid"></div>
             <div id="autopaySetup" class="autopay-setup hidden">
-              <div>
+              <div class="autopay-info">
                 <h3 id="autopayPlanTitle">Автопродление</h3>
                 <p id="autopayNextText" class="muted"></p>
               </div>
-              <label class="toggle-row">
-                <span>включить автосписание</span>
-                <input id="autopayToggle" type="checkbox" checked>
-              </label>
-              <button id="autopayPayBtn" class="btn btn-primary" type="button">Перейти к оплате</button>
-              <button id="detachCardBtn" class="link-button detach-button hidden" type="button">отвязать карту</button>
+              <div class="autopay-controls">
+                <label class="toggle-row">
+                  <span>Автосписание</span>
+                  <input id="autopayToggle" type="checkbox" checked>
+                </label>
+                <button id="detachCardBtn" class="btn btn-secondary detach-card-btn hidden" type="button">Отвязать карту</button>
+              </div>
             </div>
             <p id="paymentStatus" class="status-line"></p>
           </section>
@@ -148,6 +149,6 @@
       </div>
     </div>
   </div>
-  <script src="../assets/js/cabinet.js?v=20260506-2"></script>
+  <script src="../assets/js/cabinet.js?v=20260506-3"></script>
 </body>
 </html>

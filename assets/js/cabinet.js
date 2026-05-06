@@ -24,7 +24,6 @@
     const autopayPlanTitle = document.getElementById("autopayPlanTitle");
     const autopayNextText = document.getElementById("autopayNextText");
     const autopayToggle = document.getElementById("autopayToggle");
-    const autopayPayBtn = document.getElementById("autopayPayBtn");
     const detachCardBtn = document.getElementById("detachCardBtn");
     const autopayText = document.getElementById("autopayText");
     const disableAutopayBtn = document.getElementById("disableAutopayBtn");
@@ -133,22 +132,18 @@
             return;
         }
         closePaymentChoice();
-        showAutopaySetup(selectedPlan);
-    });
-    autopayPayBtn.addEventListener("click", function () {
-        if (!selectedPlan) {
-            showToast("сначала выберите тариф", "error");
-            return;
-        }
-        createPayment(selectedPlan.id, autopayToggle.checked);
+        createPayment(selectedPlan.id, true);
     });
     autopayToggle.addEventListener("change", function () {
-        if (!selectedPlan) {
+        if (!currentMe || !currentMe.autopay_enabled) {
+            autopayToggle.checked = false;
             return;
         }
-        autopayNextText.textContent = autopayToggle.checked
-            ? "Следующее автосписание: " + nextAutopayText(selectedPlan.days)
-            : "Автосписание не включится. Оплата пройдет как разовое продление.";
+        if (!autopayToggle.checked) {
+            openDetachConfirm();
+        } else {
+            autopayNextText.textContent = "Следующее автосписание: " + nextAutopayText(0);
+        }
     });
 
     async function boot() {
@@ -228,8 +223,10 @@
         autopayText.textContent = me.autopay_enabled ? "автопродление включено" + (me.autopay_plan_id ? " · тариф " + me.autopay_plan_id : "") : "автопродление выключено";
         disableAutopayBtn.disabled = !me.autopay_enabled;
         detachCardBtn.classList.toggle("hidden", !me.autopay_enabled);
-        if (!selectedPlan && me.autopay_enabled) {
+        if (me.autopay_enabled) {
             showAutopayStatus(me);
+        } else {
+            autopaySetup.classList.add("hidden");
         }
     }
 
@@ -261,22 +258,10 @@
         paymentChoiceModal.classList.add("hidden");
     }
 
-    function showAutopaySetup(plan) {
-        selectedPlan = plan;
-        autopayToggle.checked = true;
-        autopayPlanTitle.textContent = "Автопродление: " + plan.title;
-        autopayNextText.textContent = "Следующее автосписание: " + nextAutopayText(plan.days);
-        autopayPayBtn.textContent = "Перейти к оплате";
-        autopaySetup.classList.remove("hidden");
-        paymentStatus.scrollIntoView({ behavior: "smooth", block: "center" });
-        showToast("настройте автопродление");
-    }
-
     function showAutopayStatus(me) {
         autopayToggle.checked = true;
-        autopayPlanTitle.textContent = "Карта привязана для автопродления";
+        autopayPlanTitle.textContent = "Автопродление";
         autopayNextText.textContent = "Следующее автосписание: " + nextAutopayText(0);
-        autopayPayBtn.textContent = "Выберите тариф выше";
         autopaySetup.classList.remove("hidden");
     }
 
@@ -311,6 +296,9 @@
 
     function closeDetachConfirm() {
         detachConfirmModal.classList.add("hidden");
+        if (currentMe && currentMe.autopay_enabled) {
+            autopayToggle.checked = true;
+        }
     }
 
     async function detachCard() {
