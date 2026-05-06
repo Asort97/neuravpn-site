@@ -43,7 +43,6 @@
     let toastTimer = 0;
     let selectedPlan = null;
     let currentMe = null;
-    const adminUserIDs = ["623290294", "6365653009"];
 
     boot();
     window.addEventListener("pageshow", clearPendingPaymentStatus);
@@ -424,21 +423,7 @@
     }
 
     function getVisiblePlans(plans) {
-        const visiblePlans = plans.slice();
-        if (isCurrentUserAdmin() && !visiblePlans.some(function (plan) { return plan.id === "test_1d"; })) {
-            visiblePlans.push({ id: "test_1d", title: "Тест 1 день", amount: 1, days: 1 });
-        }
-        return visiblePlans;
-    }
-
-    function isCurrentUserAdmin() {
-        if (!currentMe) {
-            return false;
-        }
-        const rawID = String(currentMe.user_id || currentMe.id || currentMe.masked_id || "");
-        return adminUserIDs.some(function (adminID) {
-            return rawID === adminID || rawID.includes(adminID);
-        });
+        return plans.slice();
     }
 
     function displayName(me) {
