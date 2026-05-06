@@ -103,6 +103,7 @@ func main() {
 	mux.HandleFunc("/api/payments/create", a.requireAuth(a.handleCreatePayment))
 	mux.HandleFunc("/api/autopay/enable", a.requireAuth(a.handleEnableAutopay))
 	mux.HandleFunc("/api/autopay/disable", a.requireAuth(a.handleDisableAutopay))
+	mux.HandleFunc("/api/autopay/detach", a.requireAuth(a.handleDetachAutopay))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, http.StatusOK, map[string]any{"ok": true}) })
 
 	port := strings.TrimSpace(os.Getenv("WEB_PORT"))
@@ -341,9 +342,22 @@ func (a *app) handleDisableAutopay(w http.ResponseWriter, r *http.Request, userI
 		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
 		return
 	}
-	_, err := a.db.Exec(r.Context(), `UPDATE users SET autopay_enabled=FALSE, autopay_method_id=NULL, autopay_plan_id=NULL, updated_at=NOW() WHERE id=$1`, userID)
+	_, err := a.db.Exec(r.Context(), `UPDATE users SET autopay_enabled=FALSE, updated_at=NOW() WHERE id=$1`, userID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, errResp("не удалось отключить автопродление"))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (a *app) handleDetachAutopay(w http.ResponseWriter, r *http.Request, userID string) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
+		return
+	}
+	_, err := a.db.Exec(r.Context(), `UPDATE users SET autopay_enabled=FALSE, autopay_method_id=NULL, autopay_plan_id=NULL, updated_at=NOW() WHERE id=$1`, userID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, errResp("не удалось отвязать карту"))
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})

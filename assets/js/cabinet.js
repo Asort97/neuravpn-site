@@ -148,14 +148,14 @@
         createPayment(selectedPlan.id, true);
     });
     autopayToggle.addEventListener("change", function () {
-        if (!currentMe || !currentMe.autopay_enabled) {
+        if (!currentMe || !currentMe.autopay_available) {
             autopayToggle.checked = false;
             return;
         }
         if (!autopayToggle.checked) {
-            openDetachConfirm();
+            disableAutopay();
         } else {
-            autopayNextText.textContent = "Следующее автосписание: " + nextAutopayText(0);
+            enableAutopay();
         }
     });
 
@@ -239,10 +239,10 @@
         openSubBtn.href = me.subscription_url || "#";
         const encoded = encodeURIComponent(me.subscription_url || "");
         autoImportBtn.href = encoded ? "../?open=1&auto=1&v=" + encoded : "../?open=1";
-        autopayText.textContent = me.autopay_enabled ? "автопродление включено" + (me.autopay_plan_id ? " · тариф " + me.autopay_plan_id : "") : "автопродление выключено";
+        autopayText.textContent = me.autopay_available ? (me.autopay_enabled ? "автопродление включено" : "карта привязана, автосписание выключено") : "карта не привязана";
         disableAutopayBtn.disabled = !me.autopay_enabled;
-        detachCardBtn.classList.toggle("hidden", !me.autopay_enabled);
-        if (me.autopay_enabled) {
+        detachCardBtn.classList.toggle("hidden", !me.autopay_available);
+        if (me.autopay_available) {
             showAutopayStatus(me);
         } else {
             autopaySetup.classList.add("hidden");
@@ -279,9 +279,9 @@
     }
 
     function showAutopayStatus(me) {
-        autopayToggle.checked = true;
+        autopayToggle.checked = Boolean(me.autopay_enabled);
         autopayPlanTitle.textContent = "Автопродление";
-        autopayNextText.textContent = "Следующее автосписание: " + nextAutopayText(0);
+        autopayNextText.textContent = me.autopay_enabled ? "Следующее автосписание: " + nextAutopayText(0) : "Карта привязана. Автосписание сейчас выключено.";
         autopaySetup.classList.remove("hidden");
     }
 
@@ -308,7 +308,7 @@
     }
 
     function openDetachConfirm() {
-        if (!currentMe || !currentMe.autopay_enabled) {
+        if (!currentMe || !currentMe.autopay_available) {
             showToast("карта не привязана", "error");
             return;
         }
@@ -317,15 +317,15 @@
 
     function closeDetachConfirm() {
         detachConfirmModal.classList.add("hidden");
-        if (currentMe && currentMe.autopay_enabled) {
-            autopayToggle.checked = true;
+        if (currentMe) {
+            autopayToggle.checked = Boolean(currentMe.autopay_enabled);
         }
     }
 
     async function detachCard() {
         confirmDetachBtn.disabled = true;
         try {
-            await api("/api/autopay/disable", { method: "POST", body: {} });
+            await api("/api/autopay/detach", { method: "POST", body: {} });
             closeDetachConfirm();
             selectedPlan = null;
             autopaySetup.classList.add("hidden");
@@ -335,6 +335,34 @@
             showToast(error.message || "не удалось отвязать карту", "error");
         } finally {
             confirmDetachBtn.disabled = false;
+        }
+    }
+
+    async function enableAutopay() {
+        autopayToggle.disabled = true;
+        try {
+            await api("/api/autopay/enable", { method: "POST", body: {} });
+            await loadMe();
+            showToast("автосписание включено");
+        } catch (error) {
+            autopayToggle.checked = false;
+            showToast(error.message || "не удалось включить автосписание", "error");
+        } finally {
+            autopayToggle.disabled = false;
+        }
+    }
+
+    async function disableAutopay() {
+        autopayToggle.disabled = true;
+        try {
+            await api("/api/autopay/disable", { method: "POST", body: {} });
+            await loadMe();
+            showToast("автосписание выключено");
+        } catch (error) {
+            autopayToggle.checked = true;
+            showToast(error.message || "не удалось выключить автосписание", "error");
+        } finally {
+            autopayToggle.disabled = false;
         }
     }
 
