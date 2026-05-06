@@ -117,7 +117,7 @@ a {
     justify-content: center;
     gap: 10px;
     color: var(--text-primary);
-    font-size: var(--type-big);
+    font-size: var(--type-small);
     font-weight: 800;
     text-decoration: none;
     cursor: pointer;
@@ -368,6 +368,13 @@ footer {
     padding: 12px;
 }
 
+.step-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+}
+
 @media (max-width: 780px) {
     .container {
         padding: 0 18px;
@@ -410,15 +417,16 @@ summary,
 .faq-content,
 .platform-name,
 .tag,
-.debug-log {
+.debug-log,
+button,
+.btn,
+.platform-card {
     font-size: var(--type-small) !important;
 }
 
 h1,
 h2,
 h3,
-button,
-.btn,
 .brand-link,
 .hero-text h1,
 .card h3,
@@ -428,7 +436,6 @@ button,
 .step-content h2,
 .step-title,
 .plan-card strong,
-.platform-card,
 .modal-card h2,
 #userMeta {
     font-size: var(--type-big) !important;

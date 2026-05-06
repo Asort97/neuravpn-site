@@ -6,8 +6,7 @@
             title: "Инструкция для Windows",
             intro: "Установка клиента NeuraVPN, импорт ключа и запуск подключения.",
             actions: [
-                { text: "Скачать Windows", href: "../../" },
-                { text: "Личный кабинет", href: "../../cabinet/" }
+                { text: "Скачать Windows", href: "../../" }
             ],
             steps: [
                 { media: "Windows/neuravpn_app/0.png", title: "Скачайте клиент", text: `скачайте последнюю версию neuravpn с сайта, нажав кнопку «скачать для windows».` },
@@ -22,8 +21,7 @@
             title: "Инструкция для Android",
             intro: "Установка V2RayTun из Google Play, импорт ключа и включение VPN.",
             actions: [
-                { text: "Скачать V2RayTun", href: "https://play.google.com/store/apps/details?id=com.v2raytun.android&hl=ru" },
-                { text: "Личный кабинет", href: "../../cabinet/" }
+                { text: "Скачать V2RayTun", href: "https://play.google.com/store/apps/details?id=com.v2raytun.android&hl=ru" }
             ],
             steps: [
                 { media: "Android/0.MP4", title: "Скачайте приложение", text: `скачайте <a href="https://play.google.com/store/apps/details?id=com.v2raytun.android&hl=ru">v2RayTun</a> из Google Play.` },
@@ -36,12 +34,10 @@
             title: "Инструкция для iOS",
             intro: "Установка V2RayTun из App Store, импорт ключа и включение VPN.",
             actions: [
-                { text: "Скачать V2RayTun", href: "https://apps.apple.com/kz/app/v2raytun/id6476628951" },
-                { text: "Сменить регион", href: "../ios-region/" },
-                { text: "Личный кабинет", href: "../../cabinet/" }
+                { text: "Скачать V2RayTun", href: "https://apps.apple.com/kz/app/v2raytun/id6476628951" }
             ],
             steps: [
-                { media: "Ios/0.MP4", title: "Скачайте приложение", text: `скачайте <a href="https://apps.apple.com/kz/app/v2raytun/id6476628951">v2RayTun</a> из App Store.<br><br><b>Важно:</b> если приложение недоступно в РФ, смените регион App Store.` },
+                { media: "Ios/0.MP4", title: "Скачайте приложение", text: `скачайте <a href="https://apps.apple.com/kz/app/v2raytun/id6476628951">v2RayTun</a> из App Store.<br><br><b>Важно:</b> если приложение недоступно в РФ, смените регион App Store.`, actions: [{ text: "Сменить регион", href: "../ios-region/" }] },
                 { media: "Ios/1.MP4", title: "Вставьте ключ", text: `зайдите в приложение и вставьте ключ из буфера обмена. предварительно скопируйте ключ подключения из личного кабинета.` },
                 { media: "Ios/2.MP4", title: "Включите VPN", text: `далее нажмите на кнопку включения. VPN начнёт работать.` }
             ]
@@ -51,8 +47,7 @@
             title: "Инструкция для macOS",
             intro: "Установка V2RayTun из App Store и импорт ключа подключения.",
             actions: [
-                { text: "Скачать V2RayTun", href: "https://apps.apple.com/kz/app/v2raytun/id6476628951" },
-                { text: "Личный кабинет", href: "../../cabinet/" }
+                { text: "Скачать V2RayTun", href: "https://apps.apple.com/kz/app/v2raytun/id6476628951" }
             ],
             steps: [
                 { title: "Скачайте приложение", text: `скачайте <a href="https://apps.apple.com/kz/app/v2raytun/id6476628951">v2RayTun</a> из App Store.` },
@@ -118,6 +113,22 @@
             '<h2>' + step.title + '</h2>',
             '<p>' + step.text + '</p>'
         ].join("");
+        if (step.actions && step.actions.length) {
+            const stepActions = document.createElement("div");
+            stepActions.className = "step-actions";
+            step.actions.forEach(function (action) {
+                const a = document.createElement("a");
+                a.className = "btn btn-secondary";
+                a.href = action.href;
+                a.textContent = action.text;
+                if (/^https?:\/\//.test(action.href)) {
+                    a.target = "_blank";
+                    a.rel = "noopener noreferrer";
+                }
+                stepActions.appendChild(a);
+            });
+            content.appendChild(stepActions);
+        }
         article.appendChild(content);
         steps.appendChild(article);
     });
