@@ -388,3 +388,48 @@ footer {
         margin: 0 14px 0 0;
     }
 }
+
+/* Final typography guard: every page uses only these two text sizes. */
+body,
+p,
+li,
+span,
+small,
+label,
+input,
+textarea,
+summary,
+.muted,
+.download-count,
+.status-line,
+.step-index,
+.instructions-nav,
+.cabinet-nav,
+.profile-kicker,
+.footer-links a,
+.faq-content,
+.platform-name,
+.tag,
+.debug-log {
+    font-size: var(--type-small) !important;
+}
+
+h1,
+h2,
+h3,
+button,
+.btn,
+.brand-link,
+.hero-text h1,
+.card h3,
+.guide-card strong,
+.guide-hero h1,
+.instructions-hero h1,
+.step-content h2,
+.step-title,
+.plan-card strong,
+.platform-card,
+.modal-card h2,
+#userMeta {
+    font-size: var(--type-big) !important;
+}
