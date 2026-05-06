@@ -11,7 +11,6 @@
     const accountChooser = document.getElementById("accountChooser");
     const accountList = document.getElementById("accountList");
     const userMeta = document.getElementById("userMeta");
-    const dashboardTitle = document.getElementById("dashboardTitle");
     const daysBig = document.getElementById("daysBig");
     const subState = document.getElementById("subState");
     const expireText = document.getElementById("expireText");
@@ -21,15 +20,30 @@
     const autoImportBtn = document.getElementById("autoImportBtn");
     const plansEl = document.getElementById("plans");
     const paymentStatus = document.getElementById("paymentStatus");
-    const saveCard = document.getElementById("saveCard");
+    const autopaySetup = document.getElementById("autopaySetup");
+    const autopayPlanTitle = document.getElementById("autopayPlanTitle");
+    const autopayNextText = document.getElementById("autopayNextText");
+    const autopayToggle = document.getElementById("autopayToggle");
+    const autopayPayBtn = document.getElementById("autopayPayBtn");
+    const detachCardBtn = document.getElementById("detachCardBtn");
     const autopayText = document.getElementById("autopayText");
     const disableAutopayBtn = document.getElementById("disableAutopayBtn");
     const logoutBtn = document.getElementById("logoutBtn");
     const toastEl = document.getElementById("toast");
+    const paymentChoiceModal = document.getElementById("paymentChoiceModal");
+    const paymentChoiceText = document.getElementById("paymentChoiceText");
+    const payAnyMethodBtn = document.getElementById("payAnyMethodBtn");
+    const payAutopayBtn = document.getElementById("payAutopayBtn");
+    const closePaymentModalBtn = document.getElementById("closePaymentModalBtn");
+    const detachConfirmModal = document.getElementById("detachConfirmModal");
+    const confirmDetachBtn = document.getElementById("confirmDetachBtn");
+    const cancelDetachBtn = document.getElementById("cancelDetachBtn");
 
     let pendingEmail = "";
     let selectedUserID = "";
     let toastTimer = 0;
+    let selectedPlan = null;
+    let currentMe = null;
 
     boot();
 
@@ -92,17 +106,49 @@
         showToast("вы вышли");
     });
 
-    disableAutopayBtn.addEventListener("click", async function () {
-        if (!confirm("Отключить автопродление?")) {
+    disableAutopayBtn.addEventListener("click", openDetachConfirm);
+    detachCardBtn.addEventListener("click", openDetachConfirm);
+    cancelDetachBtn.addEventListener("click", closeDetachConfirm);
+    confirmDetachBtn.addEventListener("click", detachCard);
+    closePaymentModalBtn.addEventListener("click", closePaymentChoice);
+    paymentChoiceModal.addEventListener("click", function (event) {
+        if (event.target === paymentChoiceModal) {
+            closePaymentChoice();
+        }
+    });
+    detachConfirmModal.addEventListener("click", function (event) {
+        if (event.target === detachConfirmModal) {
+            closeDetachConfirm();
+        }
+    });
+    payAnyMethodBtn.addEventListener("click", function () {
+        if (!selectedPlan) {
             return;
         }
-        try {
-            await api("/api/autopay/disable", { method: "POST", body: {} });
-            await loadMe();
-            showToast("автопродление отключено");
-        } catch (error) {
-            showToast(error.message || "не удалось отключить автопродление", "error");
+        closePaymentChoice();
+        createPayment(selectedPlan.id, false);
+    });
+    payAutopayBtn.addEventListener("click", function () {
+        if (!selectedPlan) {
+            return;
         }
+        closePaymentChoice();
+        showAutopaySetup(selectedPlan);
+    });
+    autopayPayBtn.addEventListener("click", function () {
+        if (!selectedPlan) {
+            showToast("сначала выберите тариф", "error");
+            return;
+        }
+        createPayment(selectedPlan.id, autopayToggle.checked);
+    });
+    autopayToggle.addEventListener("change", function () {
+        if (!selectedPlan) {
+            return;
+        }
+        autopayNextText.textContent = autopayToggle.checked
+            ? "Следующее автосписание: " + nextAutopayText(selectedPlan.days)
+            : "Автосписание не включится. Оплата пройдет как разовое продление.";
     });
 
     async function boot() {
@@ -166,13 +212,11 @@
     }
 
     function showDashboard(me) {
+        currentMe = me;
         authView.classList.add("hidden");
         dashboardView.classList.remove("hidden");
         const days = Number(me.days || 0);
         daysBig.textContent = String(days);
-        if (dashboardTitle) {
-            dashboardTitle.textContent = "Привет, " + displayName(me);
-        }
         userMeta.textContent = [me.email || "email не указан", me.masked_id || me.user_id || ""].filter(Boolean).join(" · ");
         subState.textContent = days > 0 ? "активна" : "нет активной подписки";
         subState.classList.toggle("is-active", days > 0);
@@ -183,6 +227,10 @@
         autoImportBtn.href = encoded ? "../?open=1&auto=1&v=" + encoded : "../?open=1";
         autopayText.textContent = me.autopay_enabled ? "автопродление включено" + (me.autopay_plan_id ? " · тариф " + me.autopay_plan_id : "") : "автопродление выключено";
         disableAutopayBtn.disabled = !me.autopay_enabled;
+        detachCardBtn.classList.toggle("hidden", !me.autopay_enabled);
+        if (!selectedPlan && me.autopay_enabled) {
+            showAutopayStatus(me);
+        }
     }
 
     async function loadPlans() {
@@ -194,7 +242,7 @@
                 button.className = "plan-card";
                 button.type = "button";
                 button.innerHTML = "<strong>" + escapeHTML(plan.title) + "</strong><span>" + Number(plan.amount).toFixed(0) + " ₽ · " + plan.days + " дней</span>";
-                button.addEventListener("click", function () { createPayment(plan.id); });
+                button.addEventListener("click", function () { openPaymentChoice(plan); });
                 plansEl.appendChild(button);
             });
         } catch (error) {
@@ -202,13 +250,43 @@
         }
     }
 
-    async function createPayment(planID) {
+    function openPaymentChoice(plan) {
+        selectedPlan = plan;
+        paymentChoiceText.textContent = plan.title + " · " + Number(plan.amount).toFixed(0) + " ₽";
+        paymentChoiceModal.classList.remove("hidden");
+        setStatus(paymentStatus, "", "");
+    }
+
+    function closePaymentChoice() {
+        paymentChoiceModal.classList.add("hidden");
+    }
+
+    function showAutopaySetup(plan) {
+        selectedPlan = plan;
+        autopayToggle.checked = true;
+        autopayPlanTitle.textContent = "Автопродление: " + plan.title;
+        autopayNextText.textContent = "Следующее автосписание: " + nextAutopayText(plan.days);
+        autopayPayBtn.textContent = "Перейти к оплате";
+        autopaySetup.classList.remove("hidden");
+        paymentStatus.scrollIntoView({ behavior: "smooth", block: "center" });
+        showToast("настройте автопродление");
+    }
+
+    function showAutopayStatus(me) {
+        autopayToggle.checked = true;
+        autopayPlanTitle.textContent = "Карта привязана для автопродления";
+        autopayNextText.textContent = "Следующее автосписание: " + nextAutopayText(0);
+        autopayPayBtn.textContent = "Выберите тариф выше";
+        autopaySetup.classList.remove("hidden");
+    }
+
+    async function createPayment(planID, enableAutopay) {
         setStatus(paymentStatus, "создаём платёж...", "");
         showToast("создаём платёж");
         try {
             const data = await api("/api/payments/create", {
                 method: "POST",
-                body: { plan_id: planID, save_card: saveCard.checked }
+                body: { plan_id: planID, save_card: enableAutopay }
             });
             if (data.confirmation_url) {
                 showToast("переходим к оплате");
@@ -220,6 +298,34 @@
         } catch (error) {
             setStatus(paymentStatus, error.message || "не удалось создать платёж", "error");
             showToast(error.message || "не удалось создать платёж", "error");
+        }
+    }
+
+    function openDetachConfirm() {
+        if (!currentMe || !currentMe.autopay_enabled) {
+            showToast("карта не привязана", "error");
+            return;
+        }
+        detachConfirmModal.classList.remove("hidden");
+    }
+
+    function closeDetachConfirm() {
+        detachConfirmModal.classList.add("hidden");
+    }
+
+    async function detachCard() {
+        confirmDetachBtn.disabled = true;
+        try {
+            await api("/api/autopay/disable", { method: "POST", body: {} });
+            closeDetachConfirm();
+            selectedPlan = null;
+            autopaySetup.classList.add("hidden");
+            await loadMe();
+            showToast("карта отвязана");
+        } catch (error) {
+            showToast(error.message || "не удалось отвязать карту", "error");
+        } finally {
+            confirmDetachBtn.disabled = false;
         }
     }
 
@@ -284,6 +390,27 @@
             return value;
         }
         return date.toLocaleDateString("ru-RU", { year: "numeric", month: "long", day: "numeric" });
+    }
+
+    function nextAutopayText(days) {
+        const daysToAdd = Number(days || 0);
+        const now = new Date();
+        let date = now;
+        if (currentMe && currentMe.expires_at) {
+            const expires = new Date(currentMe.expires_at);
+            if (!Number.isNaN(expires.getTime()) && expires > now) {
+                date = expires;
+            }
+        }
+        if (daysToAdd > 0) {
+            date = new Date(date.getTime());
+            date.setDate(date.getDate() + daysToAdd);
+            return formatDate(date.toISOString());
+        }
+        if (date > now) {
+            return formatDate(date.toISOString());
+        }
+        return "в день окончания подписки";
     }
 
     function escapeHTML(value) {

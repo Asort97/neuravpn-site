@@ -68,8 +68,7 @@
     margin-top: 30px;
 }
 
-.auth-form label,
-.save-card-row {
+.auth-form label {
     display: block;
     margin-bottom: 10px;
     color: var(--text-muted);
@@ -172,7 +171,7 @@ textarea:focus {
 .dashboard-hero {
     margin: 54px 0 30px;
     display: flex;
-    align-items: end;
+    align-items: center;
     justify-content: space-between;
     gap: 28px;
     background: transparent;
@@ -180,8 +179,23 @@ textarea:focus {
     box-shadow: none;
 }
 
-.dashboard-hero h1 {
-    margin-bottom: 0;
+.profile-summary {
+    min-width: 0;
+}
+
+.profile-kicker {
+    color: var(--text-muted);
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+#userMeta {
+    color: var(--text-primary);
+    font-size: clamp(1.15rem, 2.7vw, 1.45rem);
+    font-weight: 800;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 .active-pill {
@@ -329,18 +343,69 @@ textarea:focus {
     font-size: 0.92rem;
 }
 
-.save-card-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 16px;
-    text-transform: none;
-    color: var(--text-secondary);
+.autopay-setup {
+    display: grid;
+    gap: 16px;
+    margin-top: 20px;
+    padding: 22px;
+    border: 1px solid rgba(255, 42, 42, 0.3);
+    border-radius: 20px;
+    background: rgba(255, 42, 42, 0.045);
 }
 
-.save-card-row input {
-    width: auto;
-    min-height: auto;
+.autopay-setup h3 {
+    font-size: 1.2rem;
+    margin-bottom: 6px;
+}
+
+.toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    color: var(--text-primary);
+    font-weight: 800;
+}
+
+.toggle-row input {
+    appearance: none;
+    width: 58px;
+    min-height: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border-color: rgba(255, 42, 42, 0.38);
+    background: #08080a;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.toggle-row input::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--text-muted);
+    transition: transform 0.16s ease, background 0.16s ease;
+}
+
+.toggle-row input:checked {
+    background: rgba(255, 42, 42, 0.28);
+    border-color: var(--accent-glow);
+}
+
+.toggle-row input:checked::after {
+    background: #fff;
+    transform: translateX(26px);
+}
+
+.detach-button {
+    justify-self: start;
+    margin-top: 0;
+    color: #ff8d8d;
 }
 
 .instructions-panel {
@@ -416,6 +481,37 @@ textarea:focus {
     color: #ff9b9b;
 }
 
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.68);
+    backdrop-filter: blur(8px);
+}
+
+.modal-card {
+    width: min(560px, 100%);
+    padding: 28px;
+    border: 1px solid rgba(255, 42, 42, 0.32);
+    border-radius: 26px;
+    background: linear-gradient(135deg, rgba(15, 15, 18, 0.98), rgba(20, 14, 18, 0.98));
+    box-shadow: 0 34px 90px rgba(0, 0, 0, 0.55);
+}
+
+.modal-card h2 {
+    margin-bottom: 10px;
+}
+
+.modal-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 22px;
+}
+
 @media (max-width: 760px) {
     .cabinet-header,
     .dashboard-hero {
@@ -430,7 +526,8 @@ textarea:focus {
 
     .input-row,
     .plans-grid,
-    .platform-grid {
+    .platform-grid,
+    .modal-actions {
         grid-template-columns: 1fr;
     }
 

@@ -53,8 +53,8 @@
 
       <section id="dashboardView" class="hidden">
         <div class="dashboard-hero card-panel">
-          <div>
-            <h1 id="dashboardTitle">Привет</h1>
+          <div class="profile-summary">
+            <p class="profile-kicker">Личный кабинет</p>
             <p id="userMeta" class="muted">загрузка профиля...</p>
           </div>
           <div class="active-pill" aria-live="polite">
@@ -91,10 +91,18 @@
           <section class="card-panel payment-card">
             <h2>Продлить подписку</h2>
             <div id="plans" class="plans-grid"></div>
-            <label class="save-card-row">
-              <input id="saveCard" type="checkbox" checked>
-              <span>сохранить карту для автопродления</span>
-            </label>
+            <div id="autopaySetup" class="autopay-setup hidden">
+              <div>
+                <h3 id="autopayPlanTitle">Автопродление</h3>
+                <p id="autopayNextText" class="muted"></p>
+              </div>
+              <label class="toggle-row">
+                <span>включить автосписание</span>
+                <input id="autopayToggle" type="checkbox" checked>
+              </label>
+              <button id="autopayPayBtn" class="btn btn-primary" type="button">Перейти к оплате</button>
+              <button id="detachCardBtn" class="link-button detach-button hidden" type="button">отвязать карту</button>
+            </div>
             <p id="paymentStatus" class="status-line"></p>
           </section>
 
@@ -119,6 +127,27 @@
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="paymentChoiceModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="paymentChoiceTitle">
+    <div class="modal-card">
+      <h2 id="paymentChoiceTitle">Выберите способ оплаты</h2>
+      <p id="paymentChoiceText" class="muted"></p>
+      <div class="modal-actions">
+        <button id="payAnyMethodBtn" class="btn btn-secondary" type="button">Любым способом</button>
+        <button id="payAutopayBtn" class="btn btn-primary" type="button">Картой с автопродлением</button>
+      </div>
+      <button id="closePaymentModalBtn" class="link-button" type="button">отмена</button>
+    </div>
+  </div>
+  <div id="detachConfirmModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="detachConfirmTitle">
+    <div class="modal-card">
+      <h2 id="detachConfirmTitle">Отвязать карту?</h2>
+      <p class="muted">Автопродление отключится. Текущая подписка останется активной до конца оплаченного срока.</p>
+      <div class="modal-actions">
+        <button id="confirmDetachBtn" class="btn btn-primary" type="button">Да, отвязать</button>
+        <button id="cancelDetachBtn" class="btn btn-secondary" type="button">Отмена</button>
+      </div>
+    </div>
+  </div>
   <script src="../assets/js/cabinet.js"></script>
 </body>
 </html>
