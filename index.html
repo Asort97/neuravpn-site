@@ -2,7 +2,7 @@
     <meta charset="UTF-8" vid="2">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" vid="3">
     <title vid="4">neuravpn - подключение</title>
-    <link rel="stylesheet" href="assets/css/site.css">
+    <link rel="stylesheet" href="assets/css/site.css?v=20260506-8">
 </head>
 <body vid="9">
 
@@ -14,7 +14,7 @@
         
         
         <header style="padding: 24px 0; display: flex; justify-content: space-between; align-items: center;" vid="14">
-            <div style="font-weight: 800; font-size: 1.5rem; letter-spacing: -0.05em;" vid="15">
+            <div style="font-weight: 800; font-size: var(--type-big); letter-spacing: -0.05em;" vid="15">
                 neura<span style="color: var(--accent-glow)" vid="16">vpn</span>
             </div>
             <nav vid="17"></nav>
@@ -36,8 +36,8 @@
                         Если приложение не открылось, установите его и попробуйте снова.
                     </p>
                     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                        <a id="fallbackAndroidBtn" href="#" class="btn btn-secondary" style="font-size: 0.9rem; padding: 12px 20px;">Скачать Android</a>
-                        <a id="fallbackWindowsBtn" href="#" class="btn btn-secondary" style="font-size: 0.9rem; padding: 12px 20px;">Скачать Windows</a>
+                        <a id="fallbackAndroidBtn" href="#" class="btn btn-secondary" style=" padding: 12px 20px;">Скачать Android</a>
+                        <a id="fallbackWindowsBtn" href="#" class="btn btn-secondary" style=" padding: 12px 20px;">Скачать Windows</a>
                     </div>
                 </div>
             </div>
@@ -51,25 +51,25 @@
                     <p vid="23">Мы разработали собственный клиент для Windows и Android.</p>
                     
                     <div class="btn-group" style="flex-direction: column; align-items: center; gap: 12px;" vid="24">
-                        <!-- <a id="landingAutoConnectBtn" href="?open=1" class="btn btn-primary" style="width: 320px; justify-content: center; font-size: 1.05rem; letter-spacing: 0.08em;" vid="25">Авто-подключение</a> -->
+                        <!-- <a id="landingAutoConnectBtn" href="?open=1" class="btn btn-primary" style="width: 320px; justify-content: center; letter-spacing: 0.08em;" vid="25">Авто-подключение</a> -->
                         <div style="display: flex; gap: 12px;" vid="26">
                           <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
-                            <a id="landingDownloadAndroidBtn" href="#" class="btn btn-secondary" style="font-size: 0.85rem; padding: 12px 24px;" vid="27">Скачать для Android</a>
+                            <a id="landingDownloadAndroidBtn" href="#" class="btn btn-secondary" style=" padding: 12px 24px;" vid="27">Скачать для Android</a>
                             <span id="androidDownloadCount" class="download-count"></span>
                           </div>
                           <div style="display: flex; flex-direction: column; align-items: center; gap: 5px;">
-                            <a id="landingDownloadWindowsBtn" href="#" class="btn btn-secondary" style="font-size: 0.85rem; padding: 12px 24px;" vid="28">Скачать для Windows</a>
+                            <a id="landingDownloadWindowsBtn" href="#" class="btn btn-secondary" style=" padding: 12px 24px;" vid="28">Скачать для Windows</a>
                             <span id="windowsDownloadCount" class="download-count"></span>
                           </div>
                         </div>
-                        <a href="https://github.com/Asort97/neuravpn-client" target="_blank" class="btn btn-secondary" style="font-size: 0.8rem; padding: 10px 20px; width: 320px; justify-content: center; gap: 8px; border-color: #333; color: var(--text-secondary);" vid="29">
+                        <a href="https://github.com/Asort97/neuravpn-client" target="_blank" class="btn btn-secondary" style=" padding: 10px 20px; width: 320px; justify-content: center; gap: 8px; border-color: #333; color: var(--text-secondary);" vid="29">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0" vid="30"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" vid="31"></path></svg>
                           GitHub
                         </a>
-                        <a href="cabinet/" class="btn btn-primary" style="font-size: 0.8rem; padding: 10px 20px; width: 320px; justify-content: center; gap: 8px;">
+                        <a href="cabinet/" class="btn btn-primary" style=" padding: 10px 20px; width: 320px; justify-content: center; gap: 8px;">
                           Личный кабинет
                         </a>
-                        <a href="https://t.me/neuravpn_bot" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 0.8rem; padding: 10px 20px; width: 320px; justify-content: center; gap: 8px; border-color: var(--accent-red-mid); color: var(--text-primary);">
+                        <a href="https://t.me/neuravpn_bot" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style=" padding: 10px 20px; width: 320px; justify-content: center; gap: 8px; border-color: var(--accent-red-mid); color: var(--text-primary);">
                           Telegram-бот
                         </a>
                     </div>
@@ -89,15 +89,15 @@
                         <div class="interface-sim" vid="38">
                             
                             <div style="width: 60%; height: 2px; background: #F83D3F; margin-bottom: 10px; box-shadow: 0 0 10px #F83D3F;" vid="39"></div>
-                            <div style="font-family: 'JetBrains Mono'; font-size: 0.7rem; color: #fff;" vid="40">IP: 192.168.X.X</div>
-                            <div style="font-family: 'JetBrains Mono'; font-size: 0.7rem; color: #666;" vid="41">ENCRYPTED</div>
+                            <div style="font-family: 'JetBrains Mono'; color: #fff;" vid="40">IP: 192.168.X.X</div>
+                            <div style="font-family: 'JetBrains Mono'; color: #666;" vid="41">ENCRYPTED</div>
                         </div>
                     </div>
 
                     
                     <div class="lens-container lens-secondary" vid="42">
                         <div class="interface-sim" vid="43">
-                            <div style="border: 1px solid #F83D3F; padding: 5px 10px; color: #F83D3F; font-size: 0.8rem; font-family: 'JetBrains Mono';" vid="44">
+                            <div style="border: 1px solid #F83D3F; padding: 5px 10px; color: #F83D3F; font-family: 'JetBrains Mono';" vid="44">
                                 48ms
                             </div>
                         </div>
@@ -169,19 +169,19 @@
                 <div class="step-item" vid="92">
                     <div class="step-node" vid="93">01</div>
                     <div class="step-title" vid="94">Подключение в нашем <a href="https://t.me/neuravpn_bot">Telegram-боте</a></div>
-                    <div style="color: #666; font-size: 0.9rem;" vid="95">Бот выдает уникальную ссылку доступа</div>
+                    <div style="color: #666;" vid="95">Бот выдает уникальную ссылку доступа</div>
                 </div>
 
                 <div class="step-item" vid="96">
                     <div class="step-node" vid="97">02</div>
                     <div class="step-title" vid="98">Переход по ссылке</div>
-                    <div style="color: #666; font-size: 0.9rem;" vid="99">Кликните "Открыть" на устройстве</div>
+                    <div style="color: #666;" vid="99">Кликните "Открыть" на устройстве</div>
                 </div>
 
                 <div class="step-item" vid="100">
                     <div class="step-node" vid="101">03</div>
                     <div class="step-title" vid="102">Авто-импорт</div>
-                    <div style="color: #666; font-size: 0.9rem;" vid="103">Приложение само настроит конфиг</div>
+                    <div style="color: #666;" vid="103">Приложение само настроит конфиг</div>
                 </div>
             </div>
         </section>
@@ -243,7 +243,7 @@
             <div class="footer-content" vid="135">
                 <div style="font-family: var(--font-tech); color: #666;" vid="136">
                     © 2026 neuravpn<br vid="137">
-                    <span style="font-size: 0.8rem" vid="138">SECURE CONNECTION ESTABLISHED</span>
+                    <span style="" vid="138">SECURE CONNECTION ESTABLISHED</span>
                 </div>
                 <div class="footer-links" vid="139">
                     <a href="https://github.com/Asort97/neuravpn-client/blob/master/PRIVACY_POLICY.md" vid="140">Privacy Policy</a>
@@ -255,7 +255,9 @@
 
     </div>
 
-    <script src="assets/js/site.js"></script>
+    <script src="assets/js/site.js?v=20260506-8"></script>
 
 </body></html>
+
+
 

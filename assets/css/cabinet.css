@@ -1,13 +1,8 @@
-:root {
-    --cabinet-type-big: clamp(1.1rem, 2.4vw, 1.3rem);
-    --cabinet-type-small: 0.92rem;
-}
-
 .cabinet-shell {
     min-height: 100vh;
     max-width: 760px;
     padding-bottom: 44px;
-    font-size: var(--cabinet-type-small);
+    font-size: var(--type-small);
 }
 
 .cabinet-header {
@@ -22,7 +17,7 @@
     color: var(--text-primary);
     text-decoration: none;
     font-weight: 800;
-    font-size: var(--cabinet-type-big);
+    font-size: var(--type-big);
     letter-spacing: -0.06em;
 }
 
@@ -33,7 +28,7 @@
 .cabinet-nav {
     display: flex;
     gap: 20px;
-    font-size: var(--cabinet-type-small);
+    font-size: var(--type-small);
     font-weight: 700;
 }
 
@@ -61,13 +56,13 @@
 .cabinet-shell .btn,
 .modal-card .btn,
 .account-button {
-    font-size: var(--cabinet-type-big);
+    font-size: var(--type-big);
 }
 
 .cabinet-shell .muted,
 .modal-card .muted,
 .profile-kicker {
-    font-size: var(--cabinet-type-small);
+    font-size: var(--type-small);
 }
 
 .cabinet-auth {
@@ -78,7 +73,7 @@
 
 .cabinet-auth h1,
 .dashboard-hero h1 {
-    font-size: var(--cabinet-type-big);
+    font-size: var(--type-big);
     line-height: 0.98;
     margin-bottom: 18px;
 }
@@ -92,7 +87,7 @@
     margin-bottom: 10px;
     color: var(--text-muted);
     font-family: var(--font-tech);
-    font-size: var(--cabinet-type-small);
+    font-size: var(--type-small);
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }
@@ -117,7 +112,7 @@ textarea {
 input {
     min-height: 58px;
     padding: 0 18px;
-    font-size: var(--cabinet-type-small);
+    font-size: var(--type-small);
 }
 
 textarea {
@@ -126,7 +121,7 @@ textarea {
     padding: 14px;
     color: var(--text-secondary);
     font-family: var(--font-tech);
-    font-size: var(--cabinet-type-small);
+    font-size: var(--type-small);
     line-height: 1.45;
 }
 
@@ -140,7 +135,7 @@ textarea:focus {
     margin-top: 18px;
     min-height: 24px;
     color: var(--text-secondary);
-    font-size: var(--cabinet-type-small);
+    font-size: var(--type-small);
     font-weight: 600;
 }
 
@@ -159,7 +154,7 @@ textarea:focus {
     color: var(--accent-glow);
     cursor: pointer;
     font-family: var(--font-tech);
-    font-size: var(--cabinet-type-small);
+    font-size: var(--type-small);
     transition: color 0.16s ease, transform 0.16s ease;
 }
 
@@ -217,7 +212,7 @@ textarea:focus {
 
 #userMeta {
     color: var(--text-primary);
-    font-size: var(--cabinet-type-big);
+    font-size: var(--type-big);
     font-weight: 800;
     line-height: 1.12;
     overflow-wrap: anywhere;
@@ -234,7 +229,7 @@ textarea:focus {
     border-radius: 999px;
     padding: 9px 16px;
     color: #4ade80;
-    font-size: var(--cabinet-type-small);
+    font-size: var(--type-small);
     box-shadow: 0 12px 34px rgba(34, 197, 94, 0.08);
     white-space: nowrap;
 }
@@ -273,7 +268,7 @@ textarea:focus {
 .payment-card h2,
 .instructions-panel h2 {
     margin-bottom: 7px;
-    font-size: var(--cabinet-type-big);
+    font-size: var(--type-big);
 }
 
 .state-pill,
@@ -293,7 +288,7 @@ textarea:focus {
     width: 100%;
     min-height: 54px;
     border-radius: 14px;
-    font-size: var(--cabinet-type-big);
+    font-size: var(--type-big);
 }
 
 .secret-actions .btn-secondary {
@@ -333,7 +328,7 @@ textarea:focus {
     display: grid;
     place-items: center;
     color: var(--text-secondary);
-    font-size: 1.1rem;
+    font-size: var(--type-big);
     font-weight: 400;
 }
 
@@ -349,13 +344,13 @@ textarea:focus {
 
 .plan-card strong {
     display: block;
-    font-size: var(--cabinet-type-big);
+    font-size: var(--type-big);
     margin-bottom: 2px;
 }
 
 .plan-card span {
     color: var(--text-muted);
-    font-size: var(--cabinet-type-small);
+    font-size: var(--type-small);
 }
 
 .autopay-setup {
@@ -371,7 +366,7 @@ textarea:focus {
 }
 
 .autopay-setup h3 {
-    font-size: var(--cabinet-type-big);
+    font-size: var(--type-big);
     margin-bottom: 3px;
 }
 
@@ -391,7 +386,7 @@ textarea:focus {
     align-items: center;
     gap: 10px;
     color: var(--text-primary);
-    font-size: var(--cabinet-type-small);
+    font-size: var(--type-small);
     font-weight: 800;
 }
 
@@ -464,7 +459,7 @@ textarea:focus {
     text-align: center;
     display: grid;
     place-items: center;
-    font-size: var(--cabinet-type-big);
+    font-size: var(--type-big);
     font-weight: 700;
     transition: border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease, transform 0.16s ease;
 }
@@ -494,7 +489,7 @@ textarea:focus {
     background: rgba(8, 8, 10, 0.92);
     color: #8dffb1;
     box-shadow: 0 18px 55px rgba(0, 0, 0, 0.42);
-    font-size: var(--cabinet-type-small);
+    font-size: var(--type-small);
     font-weight: 800;
     opacity: 0;
     pointer-events: none;
@@ -534,7 +529,7 @@ textarea:focus {
 
 .modal-card h2 {
     margin-bottom: 10px;
-    font-size: var(--cabinet-type-big);
+    font-size: var(--type-big);
 }
 
 .modal-actions {
@@ -561,7 +556,7 @@ textarea:focus {
     }
 
     #userMeta {
-        font-size: var(--cabinet-type-big);
+        font-size: var(--type-big);
     }
 
     .autopay-setup,
@@ -581,3 +576,4 @@ textarea:focus {
         gap: 16px;
     }
 }
+

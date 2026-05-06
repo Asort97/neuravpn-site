@@ -16,6 +16,8 @@
     --font-main: 'Inter', sans-serif;
     --font-tech: 'JetBrains Mono', monospace;
     --grid-line: rgba(255, 42, 42, 0.028);
+    --type-big: clamp(1.1rem, 2.4vw, 1.3rem);
+    --type-small: 0.92rem;
 }
 
 * {
@@ -33,6 +35,7 @@ body {
     background: var(--bg-dark);
     color: var(--text-primary);
     font-family: var(--font-main);
+    font-size: var(--type-small);
     line-height: 1.5;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -86,12 +89,9 @@ body::selection,
 h1,
 h2,
 h3 {
+    font-size: var(--type-big);
     font-weight: 800;
     letter-spacing: -0.045em;
-}
-
-h2 {
-    font-size: clamp(1.35rem, 3vw, 1.7rem);
 }
 
 a {
@@ -117,6 +117,7 @@ a {
     justify-content: center;
     gap: 10px;
     color: var(--text-primary);
+    font-size: var(--type-big);
     font-weight: 800;
     text-decoration: none;
     cursor: pointer;
@@ -177,7 +178,7 @@ textarea:focus-visible {
     min-height: 1em;
     color: var(--text-muted);
     font-family: var(--font-tech);
-    font-size: 0.72rem;
+    font-size: var(--type-small);
 }
 
 /* Landing */
@@ -195,14 +196,14 @@ header[style] {
 }
 
 .hero-text h1 {
-    font-size: clamp(3rem, 8vw, 5.5rem);
+    font-size: var(--type-big);
     line-height: 0.96;
     margin-bottom: 18px;
 }
 
 .hero-text p {
     color: var(--text-secondary);
-    font-size: 1.08rem;
+    font-size: var(--type-small);
 }
 
 .features,
@@ -252,7 +253,7 @@ details:hover,
 }
 
 .card h3 {
-    font-size: 1.2rem;
+    font-size: var(--type-big);
     margin-bottom: 8px;
 }
 
@@ -361,7 +362,7 @@ footer {
 .debug-log {
     color: var(--text-secondary);
     font-family: var(--font-tech);
-    font-size: 0.75rem;
+    font-size: var(--type-small);
     max-height: 220px;
     overflow: auto;
     padding: 12px;
