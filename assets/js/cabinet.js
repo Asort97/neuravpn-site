@@ -37,12 +37,17 @@
     const detachConfirmModal = document.getElementById("detachConfirmModal");
     const confirmDetachBtn = document.getElementById("confirmDetachBtn");
     const cancelDetachBtn = document.getElementById("cancelDetachBtn");
+    const paymentReturnModal = document.getElementById("paymentReturnModal");
+    const paymentReturnText = document.getElementById("paymentReturnText");
+    const enableReturnAutopayBtn = document.getElementById("enableReturnAutopayBtn");
+    const skipReturnAutopayBtn = document.getElementById("skipReturnAutopayBtn");
 
     let pendingEmail = "";
     let selectedUserID = "";
     let toastTimer = 0;
     let selectedPlan = null;
     let currentMe = null;
+    let paymentReturnShown = false;
 
     boot();
     window.addEventListener("pageshow", clearPendingPaymentStatus);
@@ -115,6 +120,8 @@
     detachCardBtn.addEventListener("click", openDetachConfirm);
     cancelDetachBtn.addEventListener("click", closeDetachConfirm);
     confirmDetachBtn.addEventListener("click", detachCard);
+    enableReturnAutopayBtn.addEventListener("click", enableAutopayFromReturn);
+    skipReturnAutopayBtn.addEventListener("click", closePaymentReturnModal);
     closePaymentModalBtn.addEventListener("click", closePaymentChoice);
     paymentChoiceModal.addEventListener("click", function (event) {
         if (event.target === paymentChoiceModal) {
@@ -155,8 +162,12 @@
     async function boot() {
         try {
             await loadMe();
+            showPaymentReturnIfNeeded();
         } catch (error) {
             showAuth();
+            if (isPaymentReturn()) {
+                setStatus(authStatus, "оплата прошла. Войдите, чтобы увидеть обновлённую подписку.", "ok");
+            }
         }
     }
 
@@ -178,6 +189,7 @@
                 return;
             }
             await loadMe();
+            showPaymentReturnIfNeeded();
             showToast("вход выполнен");
         } catch (error) {
             setStatus(authStatus, error.message || "код не подошёл", "error");
@@ -324,6 +336,50 @@
         } finally {
             confirmDetachBtn.disabled = false;
         }
+    }
+
+    function showPaymentReturnIfNeeded() {
+        if (paymentReturnShown || !isPaymentReturn() || !currentMe) {
+            return;
+        }
+        paymentReturnShown = true;
+        showToast("оплата прошла");
+        if (currentMe.autopay_enabled) {
+            paymentReturnText.textContent = "Подписка обновляется. Автосписание уже включено.";
+            enableReturnAutopayBtn.classList.add("hidden");
+        } else if (currentMe.autopay_available) {
+            paymentReturnText.textContent = "Подписка обновляется. Можно включить автосписание, чтобы доступ продлевался автоматически.";
+            enableReturnAutopayBtn.classList.remove("hidden");
+        } else {
+            paymentReturnText.textContent = "Подписка обновляется. Автосписание можно будет включить после оплаты картой с сохранением карты.";
+            enableReturnAutopayBtn.classList.add("hidden");
+        }
+        paymentReturnModal.classList.remove("hidden");
+        window.history.replaceState({}, document.title, window.location.pathname);
+        window.setTimeout(loadMe, 2500);
+    }
+
+    function closePaymentReturnModal() {
+        paymentReturnModal.classList.add("hidden");
+    }
+
+    async function enableAutopayFromReturn() {
+        enableReturnAutopayBtn.disabled = true;
+        try {
+            await api("/api/autopay/enable", { method: "POST", body: {} });
+            await loadMe();
+            paymentReturnText.textContent = "Автосписание включено. Следующее списание будет ближе к окончанию подписки.";
+            enableReturnAutopayBtn.classList.add("hidden");
+            showToast("автосписание включено");
+        } catch (error) {
+            showToast(error.message || "не удалось включить автосписание", "error");
+        } finally {
+            enableReturnAutopayBtn.disabled = false;
+        }
+    }
+
+    function isPaymentReturn() {
+        return new URLSearchParams(window.location.search).get("payment") === "return";
     }
 
     async function api(path, options) {

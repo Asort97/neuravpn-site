@@ -101,6 +101,7 @@ func main() {
 	mux.HandleFunc("/api/me", a.requireAuth(a.handleMe))
 	mux.HandleFunc("/api/plans", a.requireAuth(a.handlePlans))
 	mux.HandleFunc("/api/payments/create", a.requireAuth(a.handleCreatePayment))
+	mux.HandleFunc("/api/autopay/enable", a.requireAuth(a.handleEnableAutopay))
 	mux.HandleFunc("/api/autopay/disable", a.requireAuth(a.handleDisableAutopay))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, http.StatusOK, map[string]any{"ok": true}) })
 
@@ -266,12 +267,12 @@ func (a *app) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) handleMe(w http.ResponseWriter, r *http.Request, userID string) {
-	var email, subID, autopayPlan string
+	var email, subID, autopayPlan, autopayMethod string
 	var days int64
 	var autopay bool
 	err := a.db.QueryRow(r.Context(), `
-SELECT COALESCE(email,''), days, COALESCE(subscription_id,''), autopay_enabled, COALESCE(autopay_plan_id,'')
-FROM users WHERE id=$1`, userID).Scan(&email, &days, &subID, &autopay, &autopayPlan)
+SELECT COALESCE(email,''), days, COALESCE(subscription_id,''), autopay_enabled, COALESCE(autopay_plan_id,''), COALESCE(autopay_method_id,'')
+FROM users WHERE id=$1`, userID).Scan(&email, &days, &subID, &autopay, &autopayPlan, &autopayMethod)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, errResp("пользователь не найден"))
 		return
@@ -281,15 +282,16 @@ FROM users WHERE id=$1`, userID).Scan(&email, &days, &subID, &autopay, &autopayP
 		expiresAt = time.Now().Add(time.Duration(days) * 24 * time.Hour).Format(time.RFC3339)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"user_id":          userID,
-		"masked_id":        maskID(userID),
-		"email":            email,
-		"days":             days,
-		"expires_at":       expiresAt,
-		"subscription_id":  subID,
-		"subscription_url": a.subscriptionURL(userID, subID),
-		"autopay_enabled":  autopay,
-		"autopay_plan_id":  autopayPlan,
+		"user_id":           userID,
+		"masked_id":         maskID(userID),
+		"email":             email,
+		"days":              days,
+		"expires_at":        expiresAt,
+		"subscription_id":   subID,
+		"subscription_url":  a.subscriptionURL(userID, subID),
+		"autopay_enabled":   autopay,
+		"autopay_available": autopayMethod != "",
+		"autopay_plan_id":   autopayPlan,
 	})
 }
 
@@ -325,7 +327,7 @@ func (a *app) handleCreatePayment(w http.ResponseWriter, r *http.Request, userID
 	}
 	var email string
 	_ = a.db.QueryRow(r.Context(), `SELECT COALESCE(email,'') FROM users WHERE id=$1`, userID).Scan(&email)
-	paymentURL, paymentID, err := a.createYooPayment(r.Context(), userID, email, p, req.SaveCard)
+	paymentURL, paymentID, err := a.createYooPayment(r.Context(), userID, email, p, req.SaveCard, a.paymentReturnBase(r))
 	if err != nil {
 		log.Printf("web payment create failed user=%s plan=%s: %v", userID, p.ID, err)
 		writeJSON(w, http.StatusBadGateway, errResp("не удалось создать платёж"))
@@ -339,12 +341,30 @@ func (a *app) handleDisableAutopay(w http.ResponseWriter, r *http.Request, userI
 		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
 		return
 	}
-	_, err := a.db.Exec(r.Context(), `UPDATE users SET autopay_enabled=FALSE, updated_at=NOW() WHERE id=$1`, userID)
+	_, err := a.db.Exec(r.Context(), `UPDATE users SET autopay_enabled=FALSE, autopay_method_id=NULL, autopay_plan_id=NULL, updated_at=NOW() WHERE id=$1`, userID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, errResp("не удалось отключить автопродление"))
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (a *app) handleEnableAutopay(w http.ResponseWriter, r *http.Request, userID string) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
+		return
+	}
+	var planID string
+	err := a.db.QueryRow(r.Context(), `
+UPDATE users
+SET autopay_enabled=TRUE, updated_at=NOW()
+WHERE id=$1 AND COALESCE(autopay_method_id,'') <> ''
+RETURNING COALESCE(autopay_plan_id,'')`, userID).Scan(&planID)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, errResp("сохранённая карта не найдена"))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "autopay_plan_id": planID})
 }
 
 func (a *app) requireAuth(next func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
@@ -432,10 +452,10 @@ func (a *app) subscriptionURL(userID, subID string) string {
 	return ""
 }
 
-func (a *app) createYooPayment(ctx context.Context, userID, email string, p plan, saveCard bool) (string, string, error) {
+func (a *app) createYooPayment(ctx context.Context, userID, email string, p plan, saveCard bool, returnBase string) (string, string, error) {
 	chatID, _ := strconv.ParseInt(userID, 10, 64)
-	returnURL := a.publicBase + "/cabinet/?payment=return"
-	if a.publicBase == "" {
+	returnURL := strings.TrimRight(returnBase, "/") + "/cabinet/?payment=return"
+	if returnBase == "" {
 		returnURL = "https://t.me/neuravpn_bot"
 	}
 	reqBody := map[string]any{
@@ -487,6 +507,16 @@ func (a *app) createYooPayment(ctx context.Context, userID, email string, p plan
 		return "", data.ID, errors.New("confirmation_url is empty")
 	}
 	return confirmationURL, data.ID, nil
+}
+
+func (a *app) paymentReturnBase(r *http.Request) string {
+	origin := strings.TrimRight(strings.TrimSpace(r.Header.Get("Origin")), "/")
+	if origin != "" {
+		if u, err := url.Parse(origin); err == nil && (u.Scheme == "http" || u.Scheme == "https") && u.Host != "" {
+			return origin
+		}
+	}
+	return a.publicBase
 }
 
 func receipt(email string, p plan) map[string]any {

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>neuravpn - личный кабинет</title>
   <link rel="stylesheet" href="../assets/css/site.css">
-  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260506-4">
+  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260506-5">
 </head>
 <body>
   <div class="grid-overlay"></div>
@@ -149,6 +149,16 @@
       </div>
     </div>
   </div>
-  <script src="../assets/js/cabinet.js?v=20260506-4"></script>
+  <div id="paymentReturnModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="paymentReturnTitle">
+    <div class="modal-card">
+      <h2 id="paymentReturnTitle">Оплата прошла</h2>
+      <p id="paymentReturnText" class="muted">Мы обновляем подписку. Обычно это занимает несколько секунд.</p>
+      <div class="modal-actions">
+        <button id="enableReturnAutopayBtn" class="btn btn-primary" type="button">Включить автосписание</button>
+        <button id="skipReturnAutopayBtn" class="btn btn-secondary" type="button">Не сейчас</button>
+      </div>
+    </div>
+  </div>
+  <script src="../assets/js/cabinet.js?v=20260506-5"></script>
 </body>
 </html>
