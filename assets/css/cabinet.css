@@ -1,5 +1,5 @@
 :root {
-    --cabinet-type-big: clamp(1.38rem, 3vw, 1.62rem);
+    --cabinet-type-big: clamp(1.1rem, 2.4vw, 1.3rem);
     --cabinet-type-small: 0.92rem;
 }
 
