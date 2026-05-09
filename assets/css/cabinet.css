@@ -1,7 +1,7 @@
 .cabinet-shell {
     min-height: 100vh;
-    max-width: 760px;
-    padding-bottom: 44px;
+    max-width: 820px;
+    padding-bottom: 52px;
     font-size: var(--type-small);
 }
 
@@ -45,10 +45,12 @@
 }
 
 .card-panel {
-    background: linear-gradient(135deg, rgba(15, 15, 18, 0.98), rgba(20, 14, 18, 0.98));
+    background:
+        radial-gradient(circle at top right, rgba(255, 42, 42, 0.075), transparent 34%),
+        linear-gradient(135deg, rgba(15, 15, 18, 0.98), rgba(18, 14, 17, 0.98));
     border: 1px solid var(--border);
-    border-radius: 20px;
-    box-shadow: 0 20px 46px rgba(0, 0, 0, 0.3);
+    border-radius: 22px;
+    box-shadow: 0 24px 58px rgba(0, 0, 0, 0.32);
     overflow: hidden;
     transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
@@ -186,16 +188,18 @@ textarea:focus {
 }
 
 .dashboard-hero {
-    margin: 34px 0 20px;
+    margin: 28px 0 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 18px;
-    background: transparent;
-    border: 0;
-    box-shadow: none;
+    background:
+        linear-gradient(90deg, rgba(255, 42, 42, 0.08), transparent 38%),
+        rgba(10, 10, 12, 0.58);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 20px 70px rgba(0, 0, 0, 0.24);
     overflow: visible;
-    padding: 0 4px;
+    padding: 16px 18px;
 }
 
 .profile-summary {
@@ -207,7 +211,7 @@ textarea:focus {
 .profile-kicker {
     color: var(--text-muted);
     font-weight: 800;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
 }
 
 #userMeta {
@@ -245,39 +249,84 @@ textarea:focus {
 .cabinet-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 18px;
+    gap: 14px;
 }
 
 .cabinet-grid .card-panel,
 .instructions-panel {
-    padding: 22px;
+    padding: 20px;
 }
 
 .cabinet-grid .card-panel:hover,
-.cabinet-auth:hover {
+.cabinet-auth:hover,
+.instructions-panel:hover {
     border-color: rgba(255, 42, 42, 0.42);
     box-shadow: 0 30px 82px rgba(255, 42, 42, 0.08), 0 28px 70px rgba(0, 0, 0, 0.34);
 }
 
-.quick-card,
 .autopay-card {
     display: none;
 }
 
-.subscription-card h2,
-.payment-card h2,
-.instructions-panel h2 {
-    margin-bottom: 7px;
+.section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.section-head h2 {
+    margin-bottom: 4px;
     font-size: var(--type-big);
 }
 
-.state-pill,
 .warning-text {
     display: none;
 }
 
+.state-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 6px 12px;
+    border: 1px solid rgba(255, 42, 42, 0.28);
+    border-radius: 999px;
+    background: rgba(255, 42, 42, 0.07);
+    color: #ff9b9b;
+    font-size: var(--type-small);
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.state-pill.is-active {
+    border-color: rgba(34, 197, 94, 0.34);
+    background: rgba(34, 197, 94, 0.12);
+    color: #8dffb1;
+}
+
 .secret-box {
-    margin-top: 16px;
+    margin-top: 8px;
+}
+
+.secret-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    color: var(--text-muted);
+    font-family: var(--font-tech);
+    font-size: var(--type-small);
+}
+
+.subscription-card textarea {
+    min-height: 86px;
+    border-radius: 16px;
+    background:
+        linear-gradient(135deg, rgba(255, 42, 42, 0.035), transparent 42%),
+        #070708;
+    border-color: rgba(255, 255, 255, 0.08);
 }
 
 .secret-actions {
@@ -286,8 +335,8 @@ textarea:focus {
 
 .secret-actions .btn-primary {
     width: 100%;
-    min-height: 54px;
-    border-radius: 14px;
+    min-height: 50px;
+    border-radius: 16px;
     font-size: var(--type-small);
 }
 
@@ -295,19 +344,55 @@ textarea:focus {
     display: none;
 }
 
+.action-dock {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.dock-action {
+    min-height: 42px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.018);
+    color: var(--text-secondary);
+    font: inherit;
+    font-weight: 800;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color 0.16s ease, color 0.16s ease, transform 0.16s ease, background 0.16s ease;
+}
+
+.dock-action:hover {
+    border-color: rgba(255, 42, 42, 0.5);
+    background: rgba(255, 42, 42, 0.055);
+    color: #fff;
+    transform: translateY(-2px);
+}
+
+.dock-action:active {
+    transform: translateY(0) scale(0.985);
+}
+
 .plans-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 14px;
+    gap: 10px;
+    margin-top: 10px;
 }
 
 .plan-card {
-    min-height: 68px;
-    padding: 15px 52px 15px 18px;
+    min-height: 78px;
+    padding: 16px 52px 16px 18px;
     border: 1px solid var(--border);
-    border-radius: 14px;
-    background: var(--bg-panel);
+    border-radius: 18px;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.025), transparent 42%),
+        var(--bg-panel);
     color: var(--text-primary);
     cursor: pointer;
     text-align: left;
@@ -324,6 +409,7 @@ textarea:focus {
     height: 28px;
     border-radius: 999px;
     border: 1px solid var(--border);
+    background: #09090b;
     transform: translateY(-50%);
     display: grid;
     place-items: center;
@@ -333,9 +419,17 @@ textarea:focus {
 }
 
 .plan-card:hover {
-    border-color: rgba(255, 42, 42, 0.5);
-    box-shadow: 0 18px 45px rgba(255, 42, 42, 0.08);
+    border-color: rgba(255, 42, 42, 0.62);
+    background:
+        linear-gradient(135deg, rgba(255, 42, 42, 0.08), transparent 45%),
+        var(--bg-panel);
+    box-shadow: 0 18px 50px rgba(255, 42, 42, 0.1);
     transform: translateY(-2px);
+}
+
+.plan-card:hover::after {
+    border-color: rgba(255, 42, 42, 0.65);
+    color: #fff;
 }
 
 .plan-card:active {
@@ -358,8 +452,8 @@ textarea:focus {
     align-items: center;
     justify-content: space-between;
     gap: 14px;
-    margin-top: 14px;
-    padding: 14px 16px;
+    margin-top: 12px;
+    padding: 14px;
     border: 1px solid rgba(255, 42, 42, 0.3);
     border-radius: 16px;
     background: rgba(255, 42, 42, 0.045);
@@ -433,12 +527,11 @@ textarea:focus {
 }
 
 .instructions-panel {
-    margin-top: 18px;
-    background: transparent;
-    border: 0;
-    box-shadow: none;
-    padding-left: 0;
-    padding-right: 0;
+    margin-top: 14px;
+    background:
+        radial-gradient(circle at top left, rgba(255, 42, 42, 0.08), transparent 32%),
+        rgba(10, 10, 12, 0.62);
+    border-color: rgba(255, 255, 255, 0.05);
 }
 
 .platform-grid {
@@ -449,12 +542,14 @@ textarea:focus {
 }
 
 .platform-card {
-    min-height: 72px;
-    padding: 14px;
+    min-height: 84px;
+    padding: 14px 10px;
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 16px;
     color: var(--text-secondary);
-    background: var(--bg-panel);
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.028), transparent 44%),
+        var(--bg-panel);
     text-decoration: none;
     text-align: center;
     display: grid;
@@ -462,12 +557,12 @@ textarea:focus {
     place-items: center;
     font-size: var(--type-small);
     font-weight: 700;
-    transition: border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease, transform 0.16s ease;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease, transform 0.16s ease, background 0.16s ease;
 }
 
 .platform-icon {
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     fill: currentColor;
 }
 
@@ -477,6 +572,12 @@ textarea:focus {
     color: #fff;
     box-shadow: 0 16px 42px rgba(255, 42, 42, 0.08);
     transform: translateY(-2px);
+}
+
+.platform-card:hover {
+    background:
+        linear-gradient(145deg, rgba(255, 42, 42, 0.08), transparent 44%),
+        var(--bg-panel);
 }
 
 .platform-card:active,
@@ -530,7 +631,9 @@ textarea:focus {
     padding: 28px;
     border: 1px solid rgba(255, 42, 42, 0.32);
     border-radius: 26px;
-    background: linear-gradient(135deg, rgba(15, 15, 18, 0.98), rgba(20, 14, 18, 0.98));
+    background:
+        radial-gradient(circle at top right, rgba(255, 42, 42, 0.1), transparent 36%),
+        linear-gradient(135deg, rgba(15, 15, 18, 0.98), rgba(20, 14, 18, 0.98));
     box-shadow: 0 34px 90px rgba(0, 0, 0, 0.55);
 }
 
@@ -554,8 +657,9 @@ textarea:focus {
     }
 
     .cabinet-auth,
-    .cabinet-grid .card-panel {
-        padding: 22px;
+    .cabinet-grid .card-panel,
+    .instructions-panel {
+        padding: 18px;
     }
 
     .cabinet-shell {
@@ -566,6 +670,7 @@ textarea:focus {
         font-size: var(--type-big);
     }
 
+    .section-head,
     .autopay-setup,
     .autopay-controls {
         align-items: stretch;
@@ -575,7 +680,8 @@ textarea:focus {
     .input-row,
     .plans-grid,
     .platform-grid,
-    .modal-actions {
+    .modal-actions,
+    .action-dock {
         grid-template-columns: 1fr;
     }
 
@@ -583,4 +689,3 @@ textarea:focus {
         gap: 16px;
     }
 }
-

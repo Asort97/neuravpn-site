@@ -257,7 +257,10 @@
                 const button = document.createElement("button");
                 button.className = "plan-card";
                 button.type = "button";
-                button.innerHTML = "<strong>" + escapeHTML(plan.title) + "</strong><span>" + Number(plan.amount).toFixed(0) + " ₽ · " + plan.days + " дней</span>";
+                button.innerHTML = [
+                    "<strong>" + escapeHTML(plan.title) + "</strong>",
+                    "<span>" + Number(plan.amount).toFixed(0) + " ₽ · " + plan.days + " дней</span>"
+                ].join("");
                 button.addEventListener("click", function () { openPaymentChoice(plan); });
                 plansEl.appendChild(button);
             });

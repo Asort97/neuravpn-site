@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>neuravpn - личный кабинет</title>
-  <link rel="stylesheet" href="../assets/css/site.css?v=20260506-10">
-  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260506-10">
+  <link rel="stylesheet" href="../assets/css/site.css?v=20260509-1">
+  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260509-1">
 </head>
 <body>
   <div class="grid-overlay"></div>
@@ -65,31 +65,40 @@
 
         <div class="cabinet-grid">
           <section class="card-panel subscription-card">
-            <h2>Ваш доступ к VPN</h2>
-            <div id="subState" class="state-pill">проверка</div>
-            <p id="expireText" class="muted"></p>
+            <div class="section-head">
+              <div>
+                <h2>Ваш доступ к VPN</h2>
+                <p id="expireText" class="muted"></p>
+              </div>
+              <div id="subState" class="state-pill">проверка</div>
+            </div>
             <div class="secret-box">
+              <div class="secret-label">
+                <span>личный ключ</span>
+                <span>только для вас</span>
+              </div>
               <textarea id="subLink" readonly placeholder="Ссылка появится после загрузки"></textarea>
               <div class="secret-actions">
                 <button id="copySubBtn" class="btn btn-primary" type="button">Скопировать ссылку</button>
                 <a id="openSubBtn" class="btn btn-secondary" href="#" target="_blank" rel="noopener noreferrer">открыть</a>
               </div>
             </div>
+            <div class="action-dock" aria-label="Быстрые действия">
+              <a class="dock-action" href="../?open=1" id="autoImportBtn">авто-импорт</a>
+              <a class="dock-action" href="../instructions/">инструкции</a>
+              <a class="dock-action" href="../">приложение</a>
+              <button id="logoutBtn" class="dock-action" type="button">выйти</button>
+            </div>
             <p class="warning-text">Не передавайте подписочную ссылку другим людям. Это ваш личный ключ доступа.</p>
           </section>
 
-          <section class="card-panel quick-card">
-            <h2>Быстрые действия</h2>
-            <div class="action-stack">
-              <a class="btn btn-secondary" href="../?open=1" id="autoImportBtn">авто-импорт</a>
-              <a class="btn btn-secondary" href="../" >скачать приложение</a>
-              <a class="btn btn-secondary" href="../instructions/">инструкции</a>
-              <button id="logoutBtn" class="btn btn-secondary" type="button">выйти</button>
-            </div>
-          </section>
-
           <section class="card-panel payment-card">
-            <h2>Продлить подписку</h2>
+            <div class="section-head payment-head">
+              <div>
+                <h2>Продлить подписку</h2>
+                <p class="muted">Выберите срок. После клика откроется выбор способа оплаты.</p>
+              </div>
+            </div>
             <div id="plans" class="plans-grid"></div>
             <div id="autopaySetup" class="autopay-setup hidden">
               <div class="autopay-info">
@@ -115,7 +124,12 @@
         </div>
 
         <section id="instructions" class="card-panel instructions-panel">
-          <h2>Инструкции по подключению</h2>
+          <div class="section-head">
+            <div>
+              <h2>Инструкции по подключению</h2>
+              <p class="muted">Короткие шаги с видео для вашей платформы.</p>
+            </div>
+          </div>
           <div class="platform-grid">
             <a href="../instructions/windows/" class="platform-card" aria-label="Инструкция Windows">
               <svg class="platform-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -179,6 +193,6 @@
       </div>
     </div>
   </div>
-  <script src="../assets/js/cabinet.js?v=20260506-10"></script>
+  <script src="../assets/js/cabinet.js?v=20260509-1"></script>
 </body>
 </html>
