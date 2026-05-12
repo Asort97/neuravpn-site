@@ -201,6 +201,7 @@ textarea:focus-visible {
 
 .download-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
 }
 
 .download-links {
@@ -211,12 +212,14 @@ textarea:focus-visible {
     display: grid;
     gap: 5px;
     justify-items: center;
+    grid-template-rows: auto 1em;
 }
 
 .download-btn,
 .download-wide {
     width: 100%;
     justify-content: center;
+    white-space: nowrap;
 }
 
 .download-btn {
@@ -271,22 +274,18 @@ header[style] {
 }
 
 .features,
-.steps-section,
 .compat-section,
 .faq-section {
     padding: 54px 0;
 }
 
 .features h2,
-.steps-section h2,
 .faq-section h2 {
     margin-bottom: 18px;
 }
 
 .grid-2x2,
-.steps-container,
-.platform-logos,
-.tags-row {
+.platform-logos {
     display: grid;
     gap: 18px;
 }
@@ -309,9 +308,7 @@ details,
 .card:hover,
 details:hover,
 .onboarding-card:hover,
-.step-item:hover,
-.platform-item:hover,
-.tag:hover {
+.platform-item:hover {
     border-color: rgba(255, 42, 42, 0.5);
     box-shadow: 0 26px 70px rgba(255, 42, 42, 0.08), 0 24px 70px rgba(0, 0, 0, 0.32);
     transform: translateY(-2px);
@@ -332,41 +329,21 @@ details:hover,
     color: var(--text-secondary);
 }
 
-.steps-container {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.step-item {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 22px;
-    padding: 22px;
-    min-height: 132px;
-    transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
-}
-
-.step-node {
-    color: var(--accent-glow);
-    font-family: var(--font-tech);
-    margin-bottom: 12px;
-}
-
-.platform-logos,
-.tags-row {
+.platform-logos {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .compat-section {
     display: grid;
     gap: 16px;
+    padding-top: 18px;
 }
 
 .platform-logos {
     align-items: stretch;
 }
 
-.platform-item,
-.tag {
+.platform-item {
     background: var(--bg-panel);
     border: 1px solid var(--border);
     border-radius: 18px;
@@ -379,17 +356,6 @@ details:hover,
     align-items: center;
     gap: 12px;
     min-height: 76px;
-}
-
-.tags-row {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-}
-
-.tag {
-    min-height: 54px;
-    display: flex;
-    align-items: center;
 }
 
 summary {
@@ -466,22 +432,13 @@ footer {
     padding: 12px;
 }
 
-.step-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 16px;
-}
-
 @media (max-width: 780px) {
     .container {
         padding: 0 18px;
     }
 
     .grid-2x2,
-    .steps-container,
     .platform-logos,
-    .tags-row,
     .download-row {
         grid-template-columns: 1fr;
     }
@@ -506,19 +463,12 @@ footer {
     }
 
     .features,
-    .steps-section,
     .compat-section,
     .faq-section {
         padding: 38px 0;
     }
 
-    .steps-container {
-        gap: 10px;
-    }
-
-    .step-item,
     .platform-item,
-    .tag,
     details {
         padding: 16px;
         min-height: auto;
@@ -538,14 +488,12 @@ summary,
 .muted,
 .download-count,
 .status-line,
-.step-index,
 .instructions-nav,
 .cabinet-nav,
 .profile-kicker,
 .footer-links a,
 .faq-content,
 .platform-name,
-.tag,
 .debug-log,
 button,
 .btn,
@@ -562,8 +510,6 @@ h3,
 .guide-card strong,
 .guide-hero h1,
 .instructions-hero h1,
-.step-content h2,
-.step-title,
 .plan-card strong,
 .modal-card h2,
 #userMeta {
