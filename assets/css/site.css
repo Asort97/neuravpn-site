@@ -222,6 +222,15 @@ textarea:focus-visible {
 .download-btn {
     min-height: 48px;
     padding: 12px 16px;
+    background: var(--accent-red-bright);
+    border-color: var(--accent-red-bright);
+    color: #fff;
+    box-shadow: 0 12px 34px rgba(255, 42, 42, 0.18);
+}
+
+.download-btn:hover {
+    background: var(--accent-glow);
+    border-color: var(--accent-glow);
 }
 
 .download-wide {
@@ -265,7 +274,13 @@ header[style] {
 .steps-section,
 .compat-section,
 .faq-section {
-    padding: 64px 0;
+    padding: 54px 0;
+}
+
+.features h2,
+.steps-section h2,
+.faq-section h2 {
+    margin-bottom: 18px;
 }
 
 .grid-2x2,
@@ -326,6 +341,7 @@ details:hover,
     border: 1px solid var(--border);
     border-radius: 22px;
     padding: 22px;
+    min-height: 132px;
     transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
@@ -340,6 +356,15 @@ details:hover,
     grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.compat-section {
+    display: grid;
+    gap: 16px;
+}
+
+.platform-logos {
+    align-items: stretch;
+}
+
 .platform-item,
 .tag {
     background: var(--bg-panel);
@@ -347,6 +372,24 @@ details:hover,
     border-radius: 18px;
     padding: 18px;
     transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.platform-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 76px;
+}
+
+.tags-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.tag {
+    min-height: 54px;
+    display: flex;
+    align-items: center;
 }
 
 summary {
@@ -449,6 +492,36 @@ footer {
 
     .footer-links a {
         margin: 0 14px 0 0;
+    }
+}
+
+@media (max-width: 620px) {
+    .hero {
+        min-height: auto;
+        padding: 54px 0;
+    }
+
+    .download-panel {
+        padding: 14px;
+    }
+
+    .features,
+    .steps-section,
+    .compat-section,
+    .faq-section {
+        padding: 38px 0;
+    }
+
+    .steps-container {
+        gap: 10px;
+    }
+
+    .step-item,
+    .platform-item,
+    .tag,
+    details {
+        padding: 16px;
+        min-height: auto;
     }
 }
 
