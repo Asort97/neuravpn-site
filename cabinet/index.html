@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>neuravpn - личный кабинет</title>
-  <link rel="stylesheet" href="../assets/css/site.css?v=20260509-1">
-  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260509-1">
+  <link rel="stylesheet" href="../assets/css/site.css?v=20260516-1">
+  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260516-1">
 </head>
 <body>
   <div class="grid-overlay"></div>
@@ -14,10 +14,16 @@
 
   <div class="container cabinet-shell">
     <header class="cabinet-header">
-      <a href="../" class="brand-link">neura<span>vpn</span></a>
+      <a href="../" class="brand-link"><span class="brand-main">neura</span><span class="brand-accent">vpn</span></a>
       <nav class="cabinet-nav">
         <a href="../">главная</a>
         <a href="https://t.me/asortiment97" target="_blank" rel="noopener noreferrer">поддержка</a>
+        <button id="logoutBtn" class="nav-logout hidden" type="button" aria-label="Выйти из личного кабинета">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M14 3H6.8C5.8 3 5 3.8 5 4.8v14.4c0 1 .8 1.8 1.8 1.8H14v-2H7V5h7V3Zm3.6 5.4-1.4 1.4 1.7 1.7H10v2h7.9l-1.7 1.7 1.4 1.4L22 12l-4.4-3.6Z"/>
+          </svg>
+          <span>выйти</span>
+        </button>
       </nav>
     </header>
 
@@ -82,12 +88,6 @@
                 <button id="copySubBtn" class="btn btn-primary" type="button">Скопировать ссылку</button>
                 <a id="openSubBtn" class="btn btn-secondary" href="#" target="_blank" rel="noopener noreferrer">открыть</a>
               </div>
-            </div>
-            <div class="action-dock" aria-label="Быстрые действия">
-              <a class="dock-action" href="../?open=1" id="autoImportBtn">авто-импорт</a>
-              <a class="dock-action" href="../instructions/">инструкции</a>
-              <a class="dock-action" href="../">приложение</a>
-              <button id="logoutBtn" class="dock-action" type="button">выйти</button>
             </div>
             <p class="warning-text">Не передавайте подписочную ссылку другим людям. Это ваш личный ключ доступа.</p>
           </section>
@@ -193,6 +193,6 @@
       </div>
     </div>
   </div>
-  <script src="../assets/js/cabinet.js?v=20260509-1"></script>
+  <script src="../assets/js/cabinet.js?v=20260516-1"></script>
 </body>
 </html>

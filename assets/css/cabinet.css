@@ -14,6 +14,8 @@
 }
 
 .brand-link {
+    display: inline-flex;
+    align-items: baseline;
     color: var(--text-primary);
     text-decoration: none;
     font-weight: 800;
@@ -21,27 +23,49 @@
     letter-spacing: -0.06em;
 }
 
-.brand-link span {
+.brand-link .brand-main,
+.brand-link .brand-accent {
+    font-size: inherit !important;
+    line-height: 1;
+}
+
+.brand-link .brand-accent {
     color: var(--accent-glow);
 }
 
 .cabinet-nav {
     display: flex;
     gap: 20px;
+    align-items: center;
     font-size: var(--type-small);
     font-weight: 700;
 }
 
-.cabinet-nav a {
+.cabinet-nav a,
+.nav-logout {
     display: inline-flex;
+    align-items: center;
+    gap: 6px;
     color: var(--text-muted);
+    background: transparent;
+    border: 0;
+    font: inherit;
+    font-weight: inherit;
     text-decoration: none;
+    cursor: pointer;
     transition: color 0.16s ease, transform 0.16s ease;
 }
 
-.cabinet-nav a:hover {
+.cabinet-nav a:hover,
+.nav-logout:hover {
     color: #fff;
     transform: translateY(-1px);
+}
+
+.nav-logout svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
 }
 
 .card-panel {
@@ -342,40 +366,6 @@ textarea:focus {
 
 .secret-actions .btn-secondary {
     display: none;
-}
-
-.action-dock {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 12px;
-}
-
-.dock-action {
-    min-height: 42px;
-    border: 1px solid var(--border);
-    border-radius: 13px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.018);
-    color: var(--text-secondary);
-    font: inherit;
-    font-weight: 800;
-    text-decoration: none;
-    cursor: pointer;
-    transition: border-color 0.16s ease, color 0.16s ease, transform 0.16s ease, background 0.16s ease;
-}
-
-.dock-action:hover {
-    border-color: rgba(255, 42, 42, 0.5);
-    background: rgba(255, 42, 42, 0.055);
-    color: #fff;
-    transform: translateY(-2px);
-}
-
-.dock-action:active {
-    transform: translateY(0) scale(0.985);
 }
 
 .plans-grid {
@@ -680,8 +670,7 @@ textarea:focus {
     .input-row,
     .plans-grid,
     .platform-grid,
-    .modal-actions,
-    .action-dock {
+    .modal-actions {
         grid-template-columns: 1fr;
     }
 

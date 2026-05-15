@@ -17,7 +17,6 @@
     const subLink = document.getElementById("subLink");
     const copySubBtn = document.getElementById("copySubBtn");
     const openSubBtn = document.getElementById("openSubBtn");
-    const autoImportBtn = document.getElementById("autoImportBtn");
     const plansEl = document.getElementById("plans");
     const paymentStatus = document.getElementById("paymentStatus");
     const autopaySetup = document.getElementById("autopaySetup");
@@ -222,6 +221,7 @@
     function showAuth() {
         authView.classList.remove("hidden");
         dashboardView.classList.add("hidden");
+        logoutBtn.classList.add("hidden");
     }
 
     function showDashboard(me) {
@@ -229,6 +229,7 @@
         clearPendingPaymentStatus();
         authView.classList.add("hidden");
         dashboardView.classList.remove("hidden");
+        logoutBtn.classList.remove("hidden");
         const days = Number(me.days || 0);
         daysBig.textContent = String(days);
         userMeta.textContent = [me.email || "email не указан", me.masked_id || me.user_id || ""].filter(Boolean).join(" · ");
@@ -237,8 +238,6 @@
         expireText.textContent = me.expires_at ? "примерная дата окончания: " + formatDate(me.expires_at) : "остаток синхронизируется из Xray через бота";
         subLink.value = me.subscription_url || "";
         openSubBtn.href = me.subscription_url || "#";
-        const encoded = encodeURIComponent(me.subscription_url || "");
-        autoImportBtn.href = encoded ? "../?open=1&auto=1&v=" + encoded : "../?open=1";
         autopayText.textContent = me.autopay_available ? (me.autopay_enabled ? "автопродление включено" : "карта привязана, автосписание выключено") : "карта не привязана";
         disableAutopayBtn.disabled = !me.autopay_enabled;
         detachCardBtn.classList.toggle("hidden", !me.autopay_available);
