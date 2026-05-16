@@ -289,14 +289,7 @@
     function openPaymentChoice(plan) {
         selectedPlan = plan;
         paymentChoiceText.textContent = plan.title + " · " + Number(plan.amount).toFixed(0) + " ₽";
-        if (currentMe && currentMe.autopay_available) {
-            const last4 = String(currentMe.autopay_card_last4 || "").trim();
-            payAutopayBtn.innerHTML = last4
-                ? "Оплатить привязанной картой<br><span>****" + escapeHTML(last4) + "</span>"
-                : "Оплатить привязанной картой<br><span>карта уже сохранена</span>";
-        } else {
-            payAutopayBtn.innerHTML = "Картой с автопродлением<br><span>сохранить карту для следующих списаний</span>";
-        }
+        payAutopayBtn.innerHTML = "Картой с автопродлением<br><span>сохранить карту для следующих списаний</span>";
         paymentChoiceModal.classList.remove("hidden");
         setStatus(paymentStatus, "", "");
     }

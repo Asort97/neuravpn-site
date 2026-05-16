@@ -315,22 +315,17 @@ FROM users WHERE id=$1`, userID).Scan(&email, &days, &subID, &autopay, &autopayP
 	if days > 0 {
 		expiresAt = time.Now().Add(time.Duration(days) * 24 * time.Hour).Format(time.RFC3339)
 	}
-	cardLast4 := ""
-	if autopayMethod != "" {
-		cardLast4 = a.yooPaymentMethodLast4(r.Context(), autopayMethod)
-	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"user_id":            userID,
-		"masked_id":          maskID(userID),
-		"email":              email,
-		"days":               days,
-		"expires_at":         expiresAt,
-		"subscription_id":    subID,
-		"subscription_url":   a.subscriptionURL(userID, subID),
-		"autopay_enabled":    autopay,
-		"autopay_available":  autopayMethod != "",
-		"autopay_plan_id":    autopayPlan,
-		"autopay_card_last4": cardLast4,
+		"user_id":           userID,
+		"masked_id":         maskID(userID),
+		"email":             email,
+		"days":              days,
+		"expires_at":        expiresAt,
+		"subscription_id":   subID,
+		"subscription_url":  a.subscriptionURL(userID, subID),
+		"autopay_enabled":   autopay,
+		"autopay_available": autopayMethod != "",
+		"autopay_plan_id":   autopayPlan,
 	})
 }
 
@@ -572,39 +567,6 @@ func (a *app) createYooPayment(ctx context.Context, userID, email string, p plan
 		return "", data.ID, errors.New("confirmation_url is empty")
 	}
 	return confirmationURL, data.ID, nil
-}
-
-func (a *app) yooPaymentMethodLast4(ctx context.Context, methodID string) string {
-	methodID = strings.TrimSpace(methodID)
-	if methodID == "" || a.yooShopID == "" || a.yooSecret == "" {
-		return ""
-	}
-	ctx, cancel := context.WithTimeout(ctx, 4*time.Second)
-	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.yookassa.ru/v3/payment_methods/"+url.PathEscape(methodID), nil)
-	if err != nil {
-		return ""
-	}
-	auth := base64.StdEncoding.EncodeToString([]byte(a.yooShopID + ":" + a.yooSecret))
-	req.Header.Set("Authorization", "Basic "+auth)
-	resp, err := (&http.Client{Timeout: 4 * time.Second}).Do(req)
-	if err != nil {
-		log.Printf("web payment method lookup failed: %v", err)
-		return ""
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return ""
-	}
-	var data struct {
-		Card struct {
-			Last4 string `json:"last4"`
-		} `json:"card"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return ""
-	}
-	return strings.TrimSpace(data.Card.Last4)
 }
 
 func (a *app) paymentReturnBase(r *http.Request) string {
