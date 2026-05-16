@@ -11,6 +11,7 @@
     const resendCodeBtn = document.getElementById("resendCodeBtn");
     const accountChooser = document.getElementById("accountChooser");
     const accountList = document.getElementById("accountList");
+    const signupOffer = document.getElementById("signupOffer");
     const userMeta = document.getElementById("userMeta");
     const daysBig = document.getElementById("daysBig");
     const subState = document.getElementById("subState");
@@ -73,6 +74,7 @@
         codeForm.classList.add("hidden");
         emailForm.classList.remove("hidden");
         accountChooser.classList.add("hidden");
+        signupOffer.classList.add("hidden");
         codeInput.value = "";
         stopResendTimer();
         setStatus(authStatus, "", "");
@@ -196,6 +198,7 @@
         selectedUserID = "";
         setStatus(authStatus, "", "");
         accountChooser.classList.add("hidden");
+        signupOffer.classList.add("hidden");
         showToast(isResend ? "отправляем новый код" : "отправляем код");
         try {
             await api("/api/auth/request-code", {
@@ -209,6 +212,14 @@
             showToast("код отправлен");
             startResendTimer(120);
         } catch (error) {
+            if (error.code === "account_not_found") {
+                codeForm.classList.add("hidden");
+                emailForm.classList.remove("hidden");
+                signupOffer.classList.remove("hidden");
+                setStatus(authStatus, "аккаунт с этим email не найден", "error");
+                showToast("аккаунт не найден", "error");
+                return;
+            }
             setStatus(authStatus, error.message || "не удалось отправить код", "error");
             showToast("не удалось отправить код", "error");
         }
@@ -485,7 +496,10 @@
             try { data = JSON.parse(text); } catch (error) { data = { error: text }; }
         }
         if (!response.ok) {
-            throw new Error(data.error || "API error " + response.status);
+            const error = new Error(data.error || "API error " + response.status);
+            error.code = data.code || "";
+            error.data = data;
+            throw error;
         }
         return data;
     }

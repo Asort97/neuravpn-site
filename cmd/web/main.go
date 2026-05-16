@@ -181,6 +181,20 @@ func (a *app) handleRequestCode(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, errResp("некорректный email"))
 		return
 	}
+	accounts, err := a.usersByEmail(r.Context(), email)
+	if err != nil {
+		log.Printf("users by email failed: %v", err)
+		writeJSON(w, http.StatusInternalServerError, errResp("ошибка поиска аккаунта"))
+		return
+	}
+	if len(accounts) == 0 {
+		writeJSON(w, http.StatusNotFound, map[string]any{
+			"error":      "аккаунт с этим email не найден",
+			"code":       "account_not_found",
+			"can_create": true,
+		})
+		return
+	}
 
 	code := randomDigits(6)
 	hash := a.codeHash(email, code)
@@ -197,7 +211,7 @@ func (a *app) handleRequestCode(w http.ResponseWriter, r *http.Request) {
 		log.Printf("email login code sent email=%s", email)
 	}
 	logUserID := ""
-	if accounts, err := a.usersByEmail(r.Context(), email); err == nil && len(accounts) == 1 {
+	if len(accounts) == 1 {
 		logUserID = accounts[0].ID
 	}
 	a.sendWebLog(r, logUserID, email, "запросил код входа", "")
