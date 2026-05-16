@@ -24,6 +24,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -42,6 +43,20 @@ type app struct {
 	adminIDs     map[string]bool
 	botToken     string
 	webLogChatID string
+	webLogMu     sync.Mutex
+	webLogs      map[string]*webLogSession
+}
+
+type webLogSession struct {
+	MsgID   int
+	Start   time.Time
+	Last    time.Time
+	UserID  string
+	Email   string
+	IP      string
+	Actions []string
+	Sending bool
+	Dirty   bool
 }
 
 type plan struct {
@@ -94,6 +109,7 @@ func main() {
 		adminIDs:     parseAdminIDs(os.Getenv("ADMIN_IDS")),
 		botToken:     strings.TrimSpace(os.Getenv("TG_BOT_TOKEN")),
 		webLogChatID: strings.TrimSpace(os.Getenv("WEB_LOG_CHAT_ID")),
+		webLogs:      make(map[string]*webLogSession),
 	}
 	if err := a.initSchema(context.Background()); err != nil {
 		log.Fatalf("schema init failed: %v", err)
@@ -179,7 +195,11 @@ func (a *app) handleRequestCode(w http.ResponseWriter, r *http.Request) {
 	} else {
 		log.Printf("email login code sent email=%s", email)
 	}
-	a.sendWebLog(r, "", email, "запросил код входа", "")
+	logUserID := ""
+	if accounts, err := a.usersByEmail(r.Context(), email); err == nil && len(accounts) == 1 {
+		logUserID = accounts[0].ID
+	}
+	a.sendWebLog(r, logUserID, email, "запросил код входа", "")
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
@@ -598,56 +618,177 @@ func (a *app) sendWebLog(r *http.Request, userID, email, action, details string)
 	if a.botToken == "" || a.webLogChatID == "" {
 		return
 	}
-	text := a.webLogText(r, userID, email, action, details)
-	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
-		defer cancel()
+	now := time.Now()
+	ip := clientIP(r)
+	key := webLogKey(userID, email, ip)
+	action = webActionText(action, details)
 
-		form := url.Values{}
-		form.Set("chat_id", a.webLogChatID)
-		form.Set("text", text)
-		form.Set("parse_mode", "HTML")
-		form.Set("disable_web_page_preview", "true")
-
-		endpoint := "https://api.telegram.org/bot" + a.botToken + "/sendMessage"
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
-		if err != nil {
-			log.Printf("web log build request failed: %v", err)
-			return
-		}
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-		resp, err := (&http.Client{Timeout: 8 * time.Second}).Do(req)
-		if err != nil {
-			log.Printf("web log send failed: %v", err)
-			return
-		}
-		defer resp.Body.Close()
-		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-			log.Printf("web log send status=%s", resp.Status)
-		}
-	}()
-}
-
-func (a *app) webLogText(r *http.Request, userID, email, action, details string) string {
-	var b strings.Builder
-	b.WriteString("🌐 <b>С сайта</b>\n")
+	a.webLogMu.Lock()
+	s := a.webLogs[key]
+	if s == nil || now.Sub(s.Last) > 10*time.Minute {
+		s = &webLogSession{Start: now, Last: now}
+		a.webLogs[key] = s
+	}
+	s.Last = now
 	if userID != "" {
-		b.WriteString("👤 user: " + telegramUserLink(userID) + "\n")
+		s.UserID = strings.TrimSpace(userID)
 	}
 	if email != "" {
-		b.WriteString("📧 email: <code>" + html.EscapeString(email) + "</code>\n")
+		s.Email = strings.TrimSpace(email)
 	}
-	if action != "" {
-		b.WriteString("🔗 действие: <b>" + html.EscapeString(action) + "</b>\n")
+	if ip != "" {
+		s.IP = ip
 	}
-	if details != "" {
-		b.WriteString("ℹ️ " + html.EscapeString(details) + "\n")
+	if action != "" && (len(s.Actions) == 0 || s.Actions[len(s.Actions)-1] != action) {
+		s.Actions = append(s.Actions, action)
 	}
-	if ip := clientIP(r); ip != "" {
-		b.WriteString("ip: <code>" + html.EscapeString(ip) + "</code>")
+	if s.Sending {
+		s.Dirty = true
+		a.webLogMu.Unlock()
+		return
+	}
+	s.Sending = true
+	a.webLogMu.Unlock()
+
+	go a.flushWebLogSession(key)
+}
+
+func (a *app) flushWebLogSession(key string) {
+	for {
+		a.webLogMu.Lock()
+		s := a.webLogs[key]
+		if s == nil {
+			a.webLogMu.Unlock()
+			return
+		}
+		text := webLogText(s)
+		msgID := s.MsgID
+		s.Dirty = false
+		a.webLogMu.Unlock()
+
+		newMsgID := 0
+		var err error
+		if msgID == 0 {
+			newMsgID, err = a.telegramSendMessage(text)
+		} else {
+			err = a.telegramEditMessage(msgID, text)
+		}
+		if err != nil {
+			log.Printf("web log telegram failed: %v", err)
+		}
+
+		a.webLogMu.Lock()
+		s = a.webLogs[key]
+		if s == nil {
+			a.webLogMu.Unlock()
+			return
+		}
+		if newMsgID != 0 {
+			s.MsgID = newMsgID
+		}
+		if s.Dirty {
+			a.webLogMu.Unlock()
+			continue
+		}
+		s.Sending = false
+		a.webLogMu.Unlock()
+		return
+	}
+}
+
+func webLogText(s *webLogSession) string {
+	var b strings.Builder
+	b.WriteString("🌐 <b>С сайта</b>\n")
+	if s.UserID != "" {
+		b.WriteString("👤 " + telegramUserLink(s.UserID))
+		if s.Email != "" {
+			b.WriteString(" · <code>" + html.EscapeString(s.Email) + "</code>")
+		}
+		b.WriteByte('\n')
+	} else if s.Email != "" {
+		b.WriteString("👤 <code>" + html.EscapeString(s.Email) + "</code>\n")
+	}
+
+	mins := int(math.Round(s.Last.Sub(s.Start).Round(time.Minute).Minutes()))
+	if mins < 1 {
+		mins = 1
+	}
+	b.WriteString(fmt.Sprintf("🕒 %s–%s · сессия %s\n", s.Start.Format("15:04"), s.Last.Format("15:04"), minutesLabel(mins)))
+
+	actions := "—"
+	if len(s.Actions) > 0 {
+		actions = strings.Join(s.Actions, " → ")
+	}
+	b.WriteString("🔗 действия: " + html.EscapeString(actions))
+	if s.IP != "" {
+		b.WriteString("\nip: <code>" + html.EscapeString(s.IP) + "</code>")
 	}
 	return strings.TrimSpace(b.String())
+}
+
+func (a *app) telegramSendMessage(text string) (int, error) {
+	var data struct {
+		OK     bool `json:"ok"`
+		Result struct {
+			MessageID int `json:"message_id"`
+		} `json:"result"`
+		Description string `json:"description"`
+	}
+	if err := a.telegramRequest("sendMessage", 0, text, &data); err != nil {
+		return 0, err
+	}
+	if !data.OK {
+		return 0, fmt.Errorf("sendMessage: %s", data.Description)
+	}
+	return data.Result.MessageID, nil
+}
+
+func (a *app) telegramEditMessage(messageID int, text string) error {
+	var data struct {
+		OK          bool   `json:"ok"`
+		Description string `json:"description"`
+	}
+	if err := a.telegramRequest("editMessageText", messageID, text, &data); err != nil {
+		return err
+	}
+	if !data.OK && !strings.Contains(strings.ToLower(data.Description), "message is not modified") {
+		return fmt.Errorf("editMessageText: %s", data.Description)
+	}
+	return nil
+}
+
+func (a *app) telegramRequest(method string, messageID int, text string, dst any) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+
+	form := url.Values{}
+	form.Set("chat_id", a.webLogChatID)
+	form.Set("text", text)
+	form.Set("parse_mode", "HTML")
+	form.Set("disable_web_page_preview", "true")
+	if messageID > 0 {
+		form.Set("message_id", strconv.Itoa(messageID))
+	}
+
+	endpoint := "https://api.telegram.org/bot" + a.botToken + "/" + method
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := (&http.Client{Timeout: 8 * time.Second}).Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if err := json.NewDecoder(resp.Body).Decode(dst); err != nil {
+		return err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("%s status=%s", method, resp.Status)
+	}
+	return nil
 }
 
 func telegramUserLink(userID string) string {
@@ -656,6 +797,35 @@ func telegramUserLink(userID string) string {
 		return fmt.Sprintf(`<a href="tg://user?id=%d">ID:%s</a>`, id, escaped)
 	}
 	return "<code>" + html.EscapeString(userID) + "</code>"
+}
+
+func webLogKey(userID, email, ip string) string {
+	if strings.TrimSpace(userID) != "" {
+		return "u:" + strings.TrimSpace(userID)
+	}
+	if strings.TrimSpace(email) != "" {
+		return "e:" + strings.ToLower(strings.TrimSpace(email))
+	}
+	return "ip:" + strings.TrimSpace(ip)
+}
+
+func webActionText(action, details string) string {
+	action = strings.TrimSpace(action)
+	details = strings.TrimSpace(details)
+	if details == "" {
+		return action
+	}
+	if action == "" {
+		return details
+	}
+	return action + ": " + details
+}
+
+func minutesLabel(mins int) string {
+	if mins%10 == 1 && mins%100 != 11 {
+		return fmt.Sprintf("%d мин", mins)
+	}
+	return fmt.Sprintf("%d мин", mins)
 }
 
 func clientIP(r *http.Request) string {
