@@ -16,6 +16,7 @@ import (
 	"html"
 	"log"
 	"math"
+	"mime"
 	"net"
 	"net/http"
 	"net/mail"
@@ -314,17 +315,22 @@ FROM users WHERE id=$1`, userID).Scan(&email, &days, &subID, &autopay, &autopayP
 	if days > 0 {
 		expiresAt = time.Now().Add(time.Duration(days) * 24 * time.Hour).Format(time.RFC3339)
 	}
+	cardLast4 := ""
+	if autopayMethod != "" {
+		cardLast4 = a.yooPaymentMethodLast4(r.Context(), autopayMethod)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"user_id":           userID,
-		"masked_id":         maskID(userID),
-		"email":             email,
-		"days":              days,
-		"expires_at":        expiresAt,
-		"subscription_id":   subID,
-		"subscription_url":  a.subscriptionURL(userID, subID),
-		"autopay_enabled":   autopay,
-		"autopay_available": autopayMethod != "",
-		"autopay_plan_id":   autopayPlan,
+		"user_id":            userID,
+		"masked_id":          maskID(userID),
+		"email":              email,
+		"days":               days,
+		"expires_at":         expiresAt,
+		"subscription_id":    subID,
+		"subscription_url":   a.subscriptionURL(userID, subID),
+		"autopay_enabled":    autopay,
+		"autopay_available":  autopayMethod != "",
+		"autopay_plan_id":    autopayPlan,
+		"autopay_card_last4": cardLast4,
 	})
 }
 
@@ -370,7 +376,7 @@ func (a *app) handleCreatePayment(w http.ResponseWriter, r *http.Request, userID
 	if req.SaveCard {
 		saveCardText = "да"
 	}
-	a.sendWebLog(r, userID, email, "создал счёт", fmt.Sprintf("%s · %.0f ₽ · save card: %s · payment: %s", p.Title, p.Amount, saveCardText, paymentID))
+	a.sendWebLog(r, userID, email, "создал счёт", fmt.Sprintf("%s · %.0f ₽ · save card: %s", p.Title, p.Amount, saveCardText))
 	writeJSON(w, http.StatusOK, map[string]any{"payment_id": paymentID, "confirmation_url": paymentURL})
 }
 
@@ -566,6 +572,39 @@ func (a *app) createYooPayment(ctx context.Context, userID, email string, p plan
 		return "", data.ID, errors.New("confirmation_url is empty")
 	}
 	return confirmationURL, data.ID, nil
+}
+
+func (a *app) yooPaymentMethodLast4(ctx context.Context, methodID string) string {
+	methodID = strings.TrimSpace(methodID)
+	if methodID == "" || a.yooShopID == "" || a.yooSecret == "" {
+		return ""
+	}
+	ctx, cancel := context.WithTimeout(ctx, 4*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.yookassa.ru/v3/payment_methods/"+url.PathEscape(methodID), nil)
+	if err != nil {
+		return ""
+	}
+	auth := base64.StdEncoding.EncodeToString([]byte(a.yooShopID + ":" + a.yooSecret))
+	req.Header.Set("Authorization", "Basic "+auth)
+	resp, err := (&http.Client{Timeout: 4 * time.Second}).Do(req)
+	if err != nil {
+		log.Printf("web payment method lookup failed: %v", err)
+		return ""
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return ""
+	}
+	var data struct {
+		Card struct {
+			Last4 string `json:"last4"`
+		} `json:"card"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(data.Card.Last4)
 }
 
 func (a *app) paymentReturnBase(r *http.Request) string {
@@ -923,7 +962,12 @@ func sendLoginCode(email, code string) error {
 		port = "587"
 	}
 	addr := net.JoinHostPort(host, port)
-	msg := []byte("From: " + from + "\r\nTo: " + email + "\r\nSubject: NeuraVPN login code\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\nКод входа в NeuraVPN: " + code + "\r\nОн действует 10 минут.\r\n")
+	subject := mime.QEncoding.Encode("UTF-8", "neuravpn код от личного кабинета.")
+	body := "никому не сообщайте код от входа в личный кабинет!\r\n" +
+		"код в neuravpn: " + code + "\r\n" +
+		"Он действует 10 минут.\r\n" +
+		"По вопросам поддержки пишите в телеграм -> https://t.me/neuravpn_support\r\n"
+	msg := []byte("From: " + from + "\r\nTo: " + email + "\r\nSubject: " + subject + "\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n" + body)
 	auth := smtp.PlainAuth("", user, pass, host)
 	if port == "465" {
 		conn, err := tls.Dial("tcp", addr, &tls.Config{ServerName: host, MinVersion: tls.VersionTLS12})

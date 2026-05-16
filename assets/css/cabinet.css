@@ -189,6 +189,22 @@ textarea:focus {
     transform: translateX(2px);
 }
 
+.auth-hint {
+    margin-top: 12px;
+    color: var(--text-secondary);
+    font-size: var(--type-small);
+}
+
+.resend-code {
+    margin-right: 18px;
+}
+
+.resend-code:disabled {
+    color: var(--text-muted);
+    cursor: not-allowed;
+    transform: none;
+}
+
 .account-chooser {
     margin-top: 24px;
 }
@@ -614,6 +630,7 @@ textarea:focus {
     padding: 20px;
     background: rgba(0, 0, 0, 0.68);
     backdrop-filter: blur(8px);
+    animation: modalFadeIn 0.18s ease both;
 }
 
 .modal-card {
@@ -625,6 +642,7 @@ textarea:focus {
         radial-gradient(circle at top right, rgba(255, 42, 42, 0.1), transparent 36%),
         linear-gradient(135deg, rgba(15, 15, 18, 0.98), rgba(20, 14, 18, 0.98));
     box-shadow: 0 34px 90px rgba(0, 0, 0, 0.55);
+    animation: modalPopIn 0.22s cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
 }
 
 .modal-card h2 {
@@ -634,9 +652,42 @@ textarea:focus {
 
 .modal-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 12px;
     margin-top: 22px;
+}
+
+.modal-actions .btn {
+    width: 100%;
+}
+
+.modal-actions .btn span {
+    display: block;
+    color: currentColor;
+    opacity: 0.72;
+    font-size: var(--type-small) !important;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes modalPopIn {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 @media (max-width: 760px) {
@@ -669,8 +720,7 @@ textarea:focus {
 
     .input-row,
     .plans-grid,
-    .platform-grid,
-    .modal-actions {
+    .platform-grid {
         grid-template-columns: 1fr;
     }
 

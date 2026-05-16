@@ -13,6 +13,8 @@
 }
 
 .brand-link {
+    display: inline-flex;
+    align-items: baseline;
     color: var(--text-primary);
     text-decoration: none;
     font-weight: 800;
@@ -22,6 +24,8 @@
 
 .brand-link span {
     color: var(--accent-glow);
+    font-size: inherit !important;
+    line-height: 1;
 }
 
 .instructions-nav {
@@ -39,9 +43,21 @@
     transition: color 0.16s ease, transform 0.16s ease;
 }
 
+.guide-back {
+    margin-bottom: 22px;
+    padding: 12px 16px;
+    border: 1px solid rgba(255, 42, 42, 0.28);
+    border-radius: 999px;
+    background: rgba(255, 42, 42, 0.06);
+    color: var(--text-primary);
+    font-weight: 800;
+    box-shadow: 0 12px 32px rgba(255, 42, 42, 0.08);
+}
+
 .instructions-nav a:hover,
 .guide-back:hover {
     color: #fff;
+    border-color: rgba(255, 42, 42, 0.58);
     transform: translateY(-1px);
 }
 

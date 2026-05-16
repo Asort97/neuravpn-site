@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>neuravpn - личный кабинет</title>
-  <link rel="stylesheet" href="../assets/css/site.css?v=20260516-1">
-  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260516-1">
+  <link rel="stylesheet" href="../assets/css/site.css?v=20260516-2">
+  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260516-2">
 </head>
 <body>
   <div class="grid-overlay"></div>
@@ -17,7 +17,7 @@
       <a href="../" class="brand-link"><span class="brand-main">neura</span><span class="brand-accent">vpn</span></a>
       <nav class="cabinet-nav">
         <a href="../">главная</a>
-        <a href="https://t.me/asortiment97" target="_blank" rel="noopener noreferrer">поддержка</a>
+        <a href="https://t.me/neuravpn_support" target="_blank" rel="noopener noreferrer">поддержка</a>
         <button id="logoutBtn" class="nav-logout hidden" type="button" aria-label="Выйти из личного кабинета">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M14 3H6.8C5.8 3 5 3.8 5 4.8v14.4c0 1 .8 1.8 1.8 1.8H14v-2H7V5h7V3Zm3.6 5.4-1.4 1.4 1.7 1.7H10v2h7.9l-1.7 1.7 1.4 1.4L22 12l-4.4-3.6Z"/>
@@ -46,6 +46,10 @@
             <input id="codeInput" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="000000" required>
             <button class="btn btn-primary" type="submit">войти</button>
           </div>
+          <p class="auth-hint">Если письма нет, проверьте папку «Спам».</p>
+          <button id="resendCodeBtn" class="link-button resend-code" type="button" disabled>
+            получить код заново через <span id="resendTimer">120</span> сек.
+          </button>
           <button id="changeEmailBtn" class="link-button" type="button">изменить email</button>
         </form>
 
@@ -167,8 +171,8 @@
       <h2 id="paymentChoiceTitle">Выберите способ оплаты</h2>
       <p id="paymentChoiceText" class="muted"></p>
       <div class="modal-actions">
-        <button id="payAnyMethodBtn" class="btn btn-secondary" type="button">Любым способом</button>
-        <button id="payAutopayBtn" class="btn btn-primary" type="button">Картой с автопродлением</button>
+        <button id="payAnyMethodBtn" class="btn btn-primary" type="button">Любым способом</button>
+        <button id="payAutopayBtn" class="btn btn-secondary" type="button">Картой с автопродлением</button>
       </div>
       <button id="closePaymentModalBtn" class="link-button" type="button">отмена</button>
     </div>
@@ -193,6 +197,6 @@
       </div>
     </div>
   </div>
-  <script src="../assets/js/cabinet.js?v=20260516-1"></script>
+  <script src="../assets/js/cabinet.js?v=20260516-2"></script>
 </body>
 </html>

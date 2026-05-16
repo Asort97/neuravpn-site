@@ -170,6 +170,12 @@ textarea:focus-visible {
     color: #fff;
 }
 
+.brand-link span,
+header[style] div span {
+    font-size: inherit !important;
+    line-height: 1;
+}
+
 .hidden {
     display: none !important;
 }

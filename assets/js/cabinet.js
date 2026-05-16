@@ -8,6 +8,7 @@
     const codeInput = document.getElementById("codeInput");
     const authStatus = document.getElementById("authStatus");
     const changeEmailBtn = document.getElementById("changeEmailBtn");
+    const resendCodeBtn = document.getElementById("resendCodeBtn");
     const accountChooser = document.getElementById("accountChooser");
     const accountList = document.getElementById("accountList");
     const userMeta = document.getElementById("userMeta");
@@ -47,6 +48,8 @@
     let selectedPlan = null;
     let currentMe = null;
     let paymentReturnShown = false;
+    let resendTimerID = 0;
+    let resendLeft = 0;
 
     boot();
     window.addEventListener("pageshow", clearPendingPaymentStatus);
@@ -58,24 +61,7 @@
 
     emailForm.addEventListener("submit", async function (event) {
         event.preventDefault();
-        pendingEmail = emailInput.value.trim();
-        selectedUserID = "";
-        setStatus(authStatus, "отправляем код...", "");
-        accountChooser.classList.add("hidden");
-        try {
-            await api("/api/auth/request-code", {
-                method: "POST",
-                body: { email: pendingEmail }
-            });
-            emailForm.classList.add("hidden");
-            codeForm.classList.remove("hidden");
-            codeInput.focus();
-            setStatus(authStatus, "код отправлен. Если SMTP не настроен, код будет в логах web-сервиса.", "ok");
-            showToast("код отправлен");
-        } catch (error) {
-            setStatus(authStatus, error.message || "не удалось отправить код", "error");
-            showToast("не удалось отправить код", "error");
-        }
+        await requestCode(false);
     });
 
     codeForm.addEventListener("submit", async function (event) {
@@ -88,9 +74,17 @@
         emailForm.classList.remove("hidden");
         accountChooser.classList.add("hidden");
         codeInput.value = "";
+        stopResendTimer();
         setStatus(authStatus, "", "");
         emailInput.focus();
         showToast("email можно изменить");
+    });
+
+    resendCodeBtn.addEventListener("click", async function () {
+        if (resendCodeBtn.disabled) {
+            return;
+        }
+        await requestCode(true);
     });
 
     copySubBtn.addEventListener("click", async function () {
@@ -171,7 +165,8 @@
     }
 
     async function verifyCode(userID) {
-        setStatus(authStatus, "проверяем код...", "");
+        setStatus(authStatus, "", "");
+        showToast("проверяем код");
         try {
             const response = await api("/api/auth/verify-code", {
                 method: "POST",
@@ -193,6 +188,29 @@
         } catch (error) {
             setStatus(authStatus, error.message || "код не подошёл", "error");
             showToast(error.message || "код не подошёл", "error");
+        }
+    }
+
+    async function requestCode(isResend) {
+        pendingEmail = emailInput.value.trim() || pendingEmail;
+        selectedUserID = "";
+        setStatus(authStatus, "", "");
+        accountChooser.classList.add("hidden");
+        showToast(isResend ? "отправляем новый код" : "отправляем код");
+        try {
+            await api("/api/auth/request-code", {
+                method: "POST",
+                body: { email: pendingEmail }
+            });
+            emailForm.classList.add("hidden");
+            codeForm.classList.remove("hidden");
+            codeInput.focus();
+            setStatus(authStatus, "код отправлен. Проверьте почту и папку «Спам».", "ok");
+            showToast("код отправлен");
+            startResendTimer(120);
+        } catch (error) {
+            setStatus(authStatus, error.message || "не удалось отправить код", "error");
+            showToast("не удалось отправить код", "error");
         }
     }
 
@@ -271,6 +289,14 @@
     function openPaymentChoice(plan) {
         selectedPlan = plan;
         paymentChoiceText.textContent = plan.title + " · " + Number(plan.amount).toFixed(0) + " ₽";
+        if (currentMe && currentMe.autopay_available) {
+            const last4 = String(currentMe.autopay_card_last4 || "").trim();
+            payAutopayBtn.innerHTML = last4
+                ? "Оплатить привязанной картой<br><span>****" + escapeHTML(last4) + "</span>"
+                : "Оплатить привязанной картой<br><span>карта уже сохранена</span>";
+        } else {
+            payAutopayBtn.innerHTML = "Картой с автопродлением<br><span>сохранить карту для следующих списаний</span>";
+        }
         paymentChoiceModal.classList.remove("hidden");
         setStatus(paymentStatus, "", "");
     }
@@ -278,6 +304,42 @@
     function closePaymentChoice() {
         paymentChoiceModal.classList.add("hidden");
         clearPendingPaymentStatus();
+    }
+
+    function startResendTimer(seconds) {
+        stopResendTimer();
+        resendLeft = seconds;
+        updateResendButton();
+        resendTimerID = window.setInterval(function () {
+            resendLeft -= 1;
+            updateResendButton();
+            if (resendLeft <= 0) {
+                stopResendTimer(false);
+                updateResendButton();
+            }
+        }, 1000);
+    }
+
+    function stopResendTimer(reset) {
+        window.clearInterval(resendTimerID);
+        resendTimerID = 0;
+        if (reset !== false) {
+            resendLeft = 0;
+        }
+        updateResendButton();
+    }
+
+    function updateResendButton() {
+        if (!resendCodeBtn) {
+            return;
+        }
+        if (resendLeft > 0) {
+            resendCodeBtn.disabled = true;
+            resendCodeBtn.innerHTML = 'получить код заново через <span id="resendTimer">' + resendLeft + '</span> сек.';
+        } else {
+            resendCodeBtn.disabled = false;
+            resendCodeBtn.textContent = "получить код заново";
+        }
     }
 
     function showAutopayStatus(me) {
