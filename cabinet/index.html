@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>neuravpn - личный кабинет</title>
-  <link rel="stylesheet" href="../assets/css/site.css?v=20260516-2">
-  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260516-2">
+  <link rel="stylesheet" href="../assets/css/site.css?v=20260516-4">
+  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260516-4">
 </head>
 <body>
   <div class="grid-overlay"></div>
@@ -30,10 +30,10 @@
     <main>
       <section id="authView" class="cabinet-auth card-panel">
         <h1>Вход в личный кабинет</h1>
-        <p class="muted">Введите email, который использовали при оплате. Мы отправим одноразовый код для входа.</p>
+        <p class="muted">Введите email, который подтвердили в Telegram-боте. Мы отправим одноразовый код для входа.</p>
 
         <form id="emailForm" class="auth-form">
-          <label for="emailInput">email для чека</label>
+          <label for="emailInput">подтверждённый email</label>
           <div class="input-row">
             <input id="emailInput" name="email" type="email" autocomplete="email" placeholder="name@example.com" required>
             <button class="btn btn-primary" type="submit">получить код</button>
@@ -197,6 +197,6 @@
       </div>
     </div>
   </div>
-  <script src="../assets/js/cabinet.js?v=20260516-3"></script>
+  <script src="../assets/js/cabinet.js?v=20260516-4"></script>
 </body>
 </html>

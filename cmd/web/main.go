@@ -467,7 +467,7 @@ type account struct {
 }
 
 func (a *app) usersByEmail(ctx context.Context, email string) ([]account, error) {
-	rows, err := a.db.Query(ctx, `SELECT id, days FROM users WHERE lower(email)=lower($1) ORDER BY created_at DESC`, email)
+	rows, err := a.db.Query(ctx, `SELECT id, days FROM users WHERE lower(verified_email)=lower($1) ORDER BY verified_email_at DESC NULLS LAST, created_at DESC`, email)
 	if err != nil {
 		return nil, err
 	}
