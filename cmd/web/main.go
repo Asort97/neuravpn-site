@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"log"
 	"math"
 	"net"
@@ -39,6 +40,8 @@ type app struct {
 	yooShopID    string
 	yooSecret    string
 	adminIDs     map[string]bool
+	botToken     string
+	webLogChatID string
 }
 
 type plan struct {
@@ -89,6 +92,8 @@ func main() {
 		yooShopID:    strings.TrimSpace(os.Getenv("YOOKASSA_STORE_ID")),
 		yooSecret:    strings.TrimSpace(os.Getenv("YOOKASSA_API_KEY")),
 		adminIDs:     parseAdminIDs(os.Getenv("ADMIN_IDS")),
+		botToken:     strings.TrimSpace(os.Getenv("TG_BOT_TOKEN")),
+		webLogChatID: strings.TrimSpace(os.Getenv("WEB_LOG_CHAT_ID")),
 	}
 	if err := a.initSchema(context.Background()); err != nil {
 		log.Fatalf("schema init failed: %v", err)
@@ -174,6 +179,7 @@ func (a *app) handleRequestCode(w http.ResponseWriter, r *http.Request) {
 	} else {
 		log.Printf("email login code sent email=%s", email)
 	}
+	a.sendWebLog(r, "", email, "запросил код входа", "")
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
@@ -256,14 +262,20 @@ ORDER BY created_at DESC LIMIT 1`, email).Scan(&id, &codeHash, &attempts)
 		return
 	}
 	setSessionCookie(w, token, expires)
+	a.sendWebLog(r, userID, email, "вошёл в личный кабинет", "")
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 func (a *app) handleLogout(w http.ResponseWriter, r *http.Request) {
+	userID := ""
 	if cookie, err := r.Cookie("nvpn_session"); err == nil {
+		userID, _ = a.sessionUserID(r.Context(), cookie.Value)
 		_, _ = a.db.Exec(r.Context(), `DELETE FROM web_sessions WHERE token_hash=$1`, sessionHash(cookie.Value))
 	}
 	clearSessionCookie(w)
+	if userID != "" {
+		a.sendWebLog(r, userID, "", "вышел из личного кабинета", "")
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
@@ -334,6 +346,11 @@ func (a *app) handleCreatePayment(w http.ResponseWriter, r *http.Request, userID
 		writeJSON(w, http.StatusBadGateway, errResp("не удалось создать платёж"))
 		return
 	}
+	saveCardText := "нет"
+	if req.SaveCard {
+		saveCardText = "да"
+	}
+	a.sendWebLog(r, userID, email, "создал счёт", fmt.Sprintf("%s · %.0f ₽ · save card: %s · payment: %s", p.Title, p.Amount, saveCardText, paymentID))
 	writeJSON(w, http.StatusOK, map[string]any{"payment_id": paymentID, "confirmation_url": paymentURL})
 }
 
@@ -347,6 +364,7 @@ func (a *app) handleDisableAutopay(w http.ResponseWriter, r *http.Request, userI
 		writeJSON(w, http.StatusInternalServerError, errResp("не удалось отключить автопродление"))
 		return
 	}
+	a.sendWebLog(r, userID, "", "выключил автосписание", "")
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
@@ -360,6 +378,7 @@ func (a *app) handleDetachAutopay(w http.ResponseWriter, r *http.Request, userID
 		writeJSON(w, http.StatusInternalServerError, errResp("не удалось отвязать карту"))
 		return
 	}
+	a.sendWebLog(r, userID, "", "отвязал карту", "")
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
@@ -378,6 +397,7 @@ RETURNING COALESCE(autopay_plan_id,'')`, userID).Scan(&planID)
 		writeJSON(w, http.StatusBadRequest, errResp("сохранённая карта не найдена"))
 		return
 	}
+	a.sendWebLog(r, userID, "", "включил автосписание", fmt.Sprintf("plan: %s", planID))
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "autopay_plan_id": planID})
 }
 
@@ -388,8 +408,7 @@ func (a *app) requireAuth(next func(http.ResponseWriter, *http.Request, string))
 			writeJSON(w, http.StatusUnauthorized, errResp("нужен вход"))
 			return
 		}
-		var userID string
-		err = a.db.QueryRow(r.Context(), `SELECT user_id FROM web_sessions WHERE token_hash=$1 AND expires_at > NOW()`, sessionHash(cookie.Value)).Scan(&userID)
+		userID, err := a.sessionUserID(r.Context(), cookie.Value)
 		if err != nil {
 			clearSessionCookie(w)
 			writeJSON(w, http.StatusUnauthorized, errResp("сессия истекла"))
@@ -397,6 +416,12 @@ func (a *app) requireAuth(next func(http.ResponseWriter, *http.Request, string))
 		}
 		next(w, r, userID)
 	}
+}
+
+func (a *app) sessionUserID(ctx context.Context, token string) (string, error) {
+	var userID string
+	err := a.db.QueryRow(ctx, `SELECT user_id FROM web_sessions WHERE token_hash=$1 AND expires_at > NOW()`, sessionHash(token)).Scan(&userID)
+	return userID, err
 }
 
 func (a *app) withCORS(next http.Handler) http.Handler {
@@ -567,6 +592,85 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+func (a *app) sendWebLog(r *http.Request, userID, email, action, details string) {
+	if a.botToken == "" || a.webLogChatID == "" {
+		return
+	}
+	text := a.webLogText(r, userID, email, action, details)
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+		defer cancel()
+
+		form := url.Values{}
+		form.Set("chat_id", a.webLogChatID)
+		form.Set("text", text)
+		form.Set("parse_mode", "HTML")
+		form.Set("disable_web_page_preview", "true")
+
+		endpoint := "https://api.telegram.org/bot" + a.botToken + "/sendMessage"
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
+		if err != nil {
+			log.Printf("web log build request failed: %v", err)
+			return
+		}
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+		resp, err := (&http.Client{Timeout: 8 * time.Second}).Do(req)
+		if err != nil {
+			log.Printf("web log send failed: %v", err)
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			log.Printf("web log send status=%s", resp.Status)
+		}
+	}()
+}
+
+func (a *app) webLogText(r *http.Request, userID, email, action, details string) string {
+	var b strings.Builder
+	b.WriteString("🌐 <b>С сайта</b>\n")
+	if userID != "" {
+		b.WriteString("👤 user: " + telegramUserLink(userID) + "\n")
+	}
+	if email != "" {
+		b.WriteString("📧 email: <code>" + html.EscapeString(email) + "</code>\n")
+	}
+	if action != "" {
+		b.WriteString("🔗 действие: <b>" + html.EscapeString(action) + "</b>\n")
+	}
+	if details != "" {
+		b.WriteString("ℹ️ " + html.EscapeString(details) + "\n")
+	}
+	if ip := clientIP(r); ip != "" {
+		b.WriteString("ip: <code>" + html.EscapeString(ip) + "</code>")
+	}
+	return strings.TrimSpace(b.String())
+}
+
+func telegramUserLink(userID string) string {
+	if id, err := strconv.ParseInt(strings.TrimSpace(userID), 10, 64); err == nil && id > 0 {
+		escaped := html.EscapeString(userID)
+		return fmt.Sprintf(`<a href="tg://user?id=%d">ID:%s</a>`, id, escaped)
+	}
+	return "<code>" + html.EscapeString(userID) + "</code>"
+}
+
+func clientIP(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	if forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); forwarded != "" {
+		parts := strings.Split(forwarded, ",")
+		return strings.TrimSpace(parts[0])
+	}
+	host, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
+	if err == nil {
+		return host
+	}
+	return strings.TrimSpace(r.RemoteAddr)
 }
 
 func normalizeEmail(value string) (string, error) {
