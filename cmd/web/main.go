@@ -46,6 +46,7 @@ type app struct {
 	webLogChatID string
 	webLogMu     sync.Mutex
 	webLogs      map[string]*webLogSession
+	botUsername  string
 }
 
 type webLogSession struct {
@@ -111,6 +112,7 @@ func main() {
 		botToken:     strings.TrimSpace(os.Getenv("TG_BOT_TOKEN")),
 		webLogChatID: strings.TrimSpace(os.Getenv("WEB_LOG_CHAT_ID")),
 		webLogs:      make(map[string]*webLogSession),
+		botUsername:  strings.TrimPrefix(strings.TrimSpace(envOrDefault("TG_BOT_USERNAME", "neuravpn_bot")), "@"),
 	}
 	if err := a.initSchema(context.Background()); err != nil {
 		log.Fatalf("schema init failed: %v", err)
@@ -119,6 +121,8 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/auth/request-code", a.handleRequestCode)
 	mux.HandleFunc("/api/auth/verify-code", a.handleVerifyCode)
+	mux.HandleFunc("/api/auth/telegram/start", a.handleTelegramLoginStart)
+	mux.HandleFunc("/api/auth/telegram/check", a.handleTelegramLoginCheck)
 	mux.HandleFunc("/api/auth/logout", a.handleLogout)
 	mux.HandleFunc("/api/me", a.requireAuth(a.handleMe))
 	mux.HandleFunc("/api/plans", a.requireAuth(a.handlePlans))
@@ -158,8 +162,17 @@ CREATE TABLE IF NOT EXISTS web_sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_web_sessions_user_id ON web_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_web_sessions_expires_at ON web_sessions(expires_at);
+CREATE TABLE IF NOT EXISTS web_login_tokens (
+    token_hash TEXT PRIMARY KEY,
+    user_id TEXT REFERENCES users(id),
+    expires_at TIMESTAMPTZ NOT NULL,
+    confirmed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_web_login_tokens_expires_at ON web_login_tokens(expires_at);
 DELETE FROM email_login_codes WHERE expires_at < NOW() - INTERVAL '1 day';
 DELETE FROM web_sessions WHERE expires_at < NOW();
+DELETE FROM web_login_tokens WHERE expires_at < NOW() - INTERVAL '1 day';
 `)
 	return err
 }
@@ -299,6 +312,78 @@ ORDER BY created_at DESC LIMIT 1`, email).Scan(&id, &codeHash, &attempts)
 	setSessionCookie(w, token, expires)
 	a.sendWebLog(r, userID, email, "вошёл в личный кабинет", "")
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (a *app) handleTelegramLoginStart(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
+		return
+	}
+	token := randomToken(32)
+	expires := time.Now().Add(5 * time.Minute)
+	_, err := a.db.Exec(r.Context(), `
+INSERT INTO web_login_tokens (token_hash, expires_at)
+VALUES ($1, $2)
+ON CONFLICT (token_hash) DO UPDATE SET user_id=NULL, confirmed_at=NULL, expires_at=EXCLUDED.expires_at, created_at=NOW()`,
+		sessionHash(token), expires)
+	if err != nil {
+		log.Printf("telegram login token insert failed: %v", err)
+		writeJSON(w, http.StatusInternalServerError, errResp("не удалось создать вход через Telegram"))
+		return
+	}
+	a.sendWebLog(r, "", "", "начал вход через Telegram", "")
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":         true,
+		"token":      token,
+		"bot_url":    fmt.Sprintf("https://t.me/%s?start=web_login_%s", a.botUsername, url.QueryEscape(token)),
+		"expires_in": 300,
+	})
+}
+
+func (a *app) handleTelegramLoginCheck(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
+		return
+	}
+	var req struct {
+		Token string `json:"token"`
+	}
+	if err := readJSON(r, &req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errResp("bad json"))
+		return
+	}
+	token := strings.TrimSpace(req.Token)
+	if len(token) < 24 {
+		writeJSON(w, http.StatusBadRequest, errResp("некорректный токен"))
+		return
+	}
+	var userID string
+	var confirmed bool
+	err := a.db.QueryRow(r.Context(), `
+SELECT COALESCE(user_id, ''), confirmed_at IS NOT NULL
+FROM web_login_tokens
+WHERE token_hash=$1 AND expires_at > NOW()`, sessionHash(token)).Scan(&userID, &confirmed)
+	if err != nil {
+		writeJSON(w, http.StatusGone, errResp("вход через Telegram истёк"))
+		return
+	}
+	if userID == "" || !confirmed {
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "confirmed": false})
+		return
+	}
+	sessionToken := randomToken(32)
+	sessionExpires := time.Now().Add(30 * 24 * time.Hour)
+	_, err = a.db.Exec(r.Context(), `INSERT INTO web_sessions (token_hash, user_id, expires_at) VALUES ($1,$2,$3)`,
+		sessionHash(sessionToken), userID, sessionExpires)
+	if err != nil {
+		log.Printf("telegram session insert failed: %v", err)
+		writeJSON(w, http.StatusInternalServerError, errResp("не удалось создать сессию"))
+		return
+	}
+	_, _ = a.db.Exec(r.Context(), `DELETE FROM web_login_tokens WHERE token_hash=$1`, sessionHash(token))
+	setSessionCookie(w, sessionToken, sessionExpires)
+	a.sendWebLog(r, userID, "", "вошёл через Telegram", "")
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "confirmed": true})
 }
 
 func (a *app) handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -919,6 +1004,13 @@ func parseAdminIDs(raw string) map[string]bool {
 		}
 	}
 	return ids
+}
+
+func envOrDefault(key, fallback string) string {
+	if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+		return value
+	}
+	return fallback
 }
 
 func sendLoginCode(email, code string) error {

@@ -12,6 +12,9 @@
     const accountChooser = document.getElementById("accountChooser");
     const accountList = document.getElementById("accountList");
     const signupOffer = document.getElementById("signupOffer");
+    const telegramLoginBox = document.getElementById("telegramLoginBox");
+    const telegramLoginBtn = document.getElementById("telegramLoginBtn");
+    const telegramLoginStatus = document.getElementById("telegramLoginStatus");
     const userMeta = document.getElementById("userMeta");
     const daysBig = document.getElementById("daysBig");
     const subState = document.getElementById("subState");
@@ -51,6 +54,8 @@
     let paymentReturnShown = false;
     let resendTimerID = 0;
     let resendLeft = 0;
+    let telegramPollTimer = 0;
+    let telegramLoginDeadline = 0;
 
     boot();
     window.addEventListener("pageshow", clearPendingPaymentStatus);
@@ -88,6 +93,8 @@
         }
         await requestCode(true);
     });
+
+    telegramLoginBtn.addEventListener("click", startTelegramLogin);
 
     copySubBtn.addEventListener("click", async function () {
         const value = subLink.value.trim();
@@ -251,10 +258,12 @@
         authView.classList.remove("hidden");
         dashboardView.classList.add("hidden");
         logoutBtn.classList.add("hidden");
+        telegramLoginBox.classList.remove("hidden");
     }
 
     function showDashboard(me) {
         currentMe = me;
+        stopTelegramPolling();
         clearPendingPaymentStatus();
         authView.classList.add("hidden");
         dashboardView.classList.remove("hidden");
@@ -274,6 +283,70 @@
             showAutopayStatus(me);
         } else {
             autopaySetup.classList.add("hidden");
+        }
+    }
+
+    async function startTelegramLogin() {
+        stopTelegramPolling();
+        setStatus(authStatus, "", "");
+        setStatus(telegramLoginStatus, "", "");
+        telegramLoginBtn.disabled = true;
+        showToast("открываем Telegram");
+        try {
+            const data = await api("/api/auth/telegram/start", { method: "POST", body: {} });
+            if (!data.token || !data.bot_url) {
+                throw new Error("не пришла ссылка Telegram");
+            }
+            const opened = window.open(data.bot_url, "_blank", "noopener");
+            if (!opened) {
+                window.location.href = data.bot_url;
+                return;
+            }
+            telegramLoginDeadline = Date.now() + Number(data.expires_in || 300) * 1000;
+            setStatus(telegramLoginStatus, "подтвердите вход в Telegram-боте", "ok");
+            telegramPollTimer = window.setInterval(function () {
+                checkTelegramLogin(data.token);
+            }, 2000);
+            checkTelegramLogin(data.token);
+        } catch (error) {
+            telegramLoginBtn.disabled = false;
+            setStatus(telegramLoginStatus, error.message || "не удалось начать вход через Telegram", "error");
+            showToast(error.message || "Telegram вход не запустился", "error");
+        }
+    }
+
+    async function checkTelegramLogin(token) {
+        if (!token) {
+            return;
+        }
+        if (Date.now() > telegramLoginDeadline) {
+            stopTelegramPolling();
+            setStatus(telegramLoginStatus, "вход через Telegram истёк. Нажмите кнопку ещё раз.", "error");
+            showToast("Telegram вход истёк", "error");
+            return;
+        }
+        try {
+            const data = await api("/api/auth/telegram/check", { method: "POST", body: { token: token } });
+            if (!data.confirmed) {
+                return;
+            }
+            stopTelegramPolling();
+            await loadMe();
+            showPaymentReturnIfNeeded();
+            showToast("вход через Telegram выполнен");
+        } catch (error) {
+            stopTelegramPolling();
+            setStatus(telegramLoginStatus, error.message || "Telegram вход не выполнен", "error");
+            showToast(error.message || "Telegram вход не выполнен", "error");
+        }
+    }
+
+    function stopTelegramPolling() {
+        window.clearInterval(telegramPollTimer);
+        telegramPollTimer = 0;
+        telegramLoginDeadline = 0;
+        if (telegramLoginBtn) {
+            telegramLoginBtn.disabled = false;
         }
     }
 

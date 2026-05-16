@@ -222,6 +222,33 @@ textarea:focus {
     width: 100%;
 }
 
+.telegram-login {
+    margin-top: 22px;
+}
+
+.telegram-login .btn {
+    width: 100%;
+}
+
+.telegram-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    color: var(--text-muted);
+    font-family: var(--font-tech);
+    font-size: var(--type-small);
+    text-transform: uppercase;
+}
+
+.telegram-divider::before,
+.telegram-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
 .account-list {
     display: grid;
     gap: 10px;

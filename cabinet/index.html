@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>neuravpn - личный кабинет</title>
-  <link rel="stylesheet" href="../assets/css/site.css?v=20260516-4">
-  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260516-5">
+  <link rel="stylesheet" href="../assets/css/site.css?v=20260517-1">
+  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260517-1">
 </head>
 <body>
   <div class="grid-overlay"></div>
@@ -39,6 +39,12 @@
             <button class="btn btn-primary" type="submit">получить код</button>
           </div>
         </form>
+
+        <div id="telegramLoginBox" class="telegram-login">
+          <div class="telegram-divider"><span>или</span></div>
+          <button id="telegramLoginBtn" class="btn btn-secondary" type="button">войти через Telegram</button>
+          <p id="telegramLoginStatus" class="status-line"></p>
+        </div>
 
         <form id="codeForm" class="auth-form hidden">
           <label for="codeInput">код из письма</label>
@@ -202,6 +208,6 @@
       </div>
     </div>
   </div>
-  <script src="../assets/js/cabinet.js?v=20260516-5"></script>
+  <script src="../assets/js/cabinet.js?v=20260517-1"></script>
 </body>
 </html>
