@@ -701,7 +701,11 @@
     }
 
     function logUI(action, details) {
-        const payload = JSON.stringify({ action: action, details: details || "" });
+        const payload = JSON.stringify({
+            action: action,
+            details: details || "",
+            source: IS_MINI_APP ? "miniapp" : "site"
+        });
         if (navigator.sendBeacon) {
             const blob = new Blob([payload], { type: "application/json" });
             navigator.sendBeacon(API_BASE + "/api/log/ui", blob);

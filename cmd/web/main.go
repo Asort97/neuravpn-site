@@ -58,6 +58,7 @@ type webLogSession struct {
 	Username string
 	Email    string
 	IP       string
+	Source   string
 	Actions  []string
 	Sending  bool
 	Dirty    bool
@@ -336,7 +337,6 @@ ON CONFLICT (token_hash) DO UPDATE SET user_id=NULL, confirmed_at=NULL, expires_
 		writeJSON(w, http.StatusInternalServerError, errResp("не удалось создать вход через Telegram"))
 		return
 	}
-	a.sendWebLog(r, "", "", "начал вход через Telegram", "")
 	writeJSON(w, http.StatusOK, map[string]any{
 		"ok":         true,
 		"token":      token,
@@ -459,7 +459,7 @@ func (a *app) handleTelegramWebAppAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setSessionCookie(w, token, expires)
-	a.sendWebLogWithUsername(r, tgUser.ID, tgUser.Username, "", "Профиль MiniApp", "")
+	a.sendWebLogWithSource(r, tgUser.ID, tgUser.Username, "", "Профиль MiniApp", "", "miniapp")
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
@@ -606,6 +606,7 @@ func (a *app) handleUILog(w http.ResponseWriter, r *http.Request, userID string)
 	var req struct {
 		Action  string `json:"action"`
 		Details string `json:"details"`
+		Source  string `json:"source"`
 	}
 	if err := readJSON(r, &req); err != nil {
 		writeJSON(w, http.StatusBadRequest, errResp("bad json"))
@@ -616,7 +617,7 @@ func (a *app) handleUILog(w http.ResponseWriter, r *http.Request, userID string)
 		writeJSON(w, http.StatusBadRequest, errResp("unknown action"))
 		return
 	}
-	a.sendWebLog(r, userID, "", action, strings.TrimSpace(req.Details))
+	a.sendWebLogWithSource(r, userID, "", "", action, strings.TrimSpace(req.Details), req.Source)
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
@@ -968,21 +969,27 @@ func (a *app) sendWebLog(r *http.Request, userID, email, action, details string)
 }
 
 func (a *app) sendWebLogWithUsername(r *http.Request, userID, username, email, action, details string) {
+	a.sendWebLogWithSource(r, userID, username, email, action, details, "site")
+}
+
+func (a *app) sendWebLogWithSource(r *http.Request, userID, username, email, action, details, source string) {
 	if a.botToken == "" || a.webLogChatID == "" {
 		return
 	}
 	now := time.Now()
 	ip := clientIP(r)
-	key := webLogKey(userID, email, ip)
+	source = normalizeWebLogSource(source)
+	key := source + ":" + webLogKey(userID, email, ip)
 	action = webActionText(action, details)
 
 	a.webLogMu.Lock()
 	s := a.webLogs[key]
 	if s == nil || now.Sub(s.Last) > 10*time.Minute {
-		s = &webLogSession{Start: now, Last: now}
+		s = &webLogSession{Start: now, Last: now, Source: source}
 		a.webLogs[key] = s
 	}
 	s.Last = now
+	s.Source = source
 	if userID != "" {
 		s.UserID = strings.TrimSpace(userID)
 	}
@@ -1054,7 +1061,11 @@ func (a *app) flushWebLogSession(key string) {
 
 func webLogText(s *webLogSession) string {
 	var b strings.Builder
-	b.WriteString("🌐 <b>С сайта</b>\n")
+	if s.Source == "miniapp" {
+		b.WriteString("📱 <b>С MiniApp</b>\n")
+	} else {
+		b.WriteString("🌐 <b>С сайта</b>\n")
+	}
 	if s.UserID != "" {
 		b.WriteString("👤 " + telegramUserLink(s.UserID, s.Username))
 		if s.Email != "" {
@@ -1077,6 +1088,15 @@ func webLogText(s *webLogSession) string {
 	}
 	b.WriteString("🔗 действия: " + html.EscapeString(actions))
 	return strings.TrimSpace(b.String())
+}
+
+func normalizeWebLogSource(source string) string {
+	switch strings.ToLower(strings.TrimSpace(source)) {
+	case "miniapp", "mini_app", "mini-app":
+		return "miniapp"
+	default:
+		return "site"
+	}
 }
 
 func (a *app) telegramSendMessage(text string) (int, error) {
