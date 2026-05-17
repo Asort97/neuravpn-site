@@ -168,7 +168,7 @@
     document.querySelectorAll(".platform-card[data-platform]").forEach(function (link) {
         link.addEventListener("click", function (event) {
             event.preventDefault();
-            const href = link.href;
+            const href = IS_MINI_APP ? withMiniAppParam(link.href) : link.href;
             const platform = link.getAttribute("data-platform") || link.textContent.trim();
             logUI("instruction_open", platform);
             window.setTimeout(function () {
@@ -818,5 +818,15 @@
     function detectMiniApp() {
         const params = new URLSearchParams(window.location.search);
         return params.get("mini_app") === "1" || Boolean(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData);
+    }
+
+    function withMiniAppParam(href) {
+        try {
+            const url = new URL(href, window.location.href);
+            url.searchParams.set("mini_app", "1");
+            return url.href;
+        } catch (error) {
+            return href;
+        }
     }
 })();

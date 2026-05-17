@@ -12,6 +12,18 @@
     gap: 20px;
 }
 
+body.is-mini-app .instructions-shell {
+    padding-top: 8px;
+}
+
+body.is-mini-app .instructions-header {
+    display: none;
+}
+
+body.is-mini-app .guide-hero {
+    margin-top: 0;
+}
+
 .brand-link {
     display: inline-flex;
     align-items: baseline;

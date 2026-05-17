@@ -1,5 +1,9 @@
 (function () {
     const mediaBase = "../../assets/instructions/";
+    const isMiniApp = detectMiniApp();
+    if (isMiniApp) {
+        document.body.classList.add("is-mini-app");
+    }
     const guides = {
         windows: {
             label: "Windows",
@@ -218,7 +222,7 @@
                 button.textContent = "Войти в кабинет";
                 button.disabled = false;
                 button.addEventListener("click", function () {
-                    window.location.href = "../../cabinet/";
+                    window.location.href = isMiniApp ? "../../cabinet/?mini_app=1" : "../../cabinet/";
                 }, { once: true });
                 return;
             }
@@ -265,6 +269,11 @@
             return window.location.protocol + "//" + window.location.hostname + ":8090";
         }
         return "";
+    }
+
+    function detectMiniApp() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("mini_app") === "1" || Boolean(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData);
     }
 
     async function copyValue(value, input) {
