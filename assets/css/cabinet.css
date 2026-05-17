@@ -115,6 +115,10 @@ body.is-mini-app .cabinet-nav a {
     display: none;
 }
 
+body.is-mini-app .nav-logout {
+    display: none !important;
+}
+
 body.is-mini-app .cabinet-auth {
     margin: 18px auto;
     padding: 22px;
@@ -432,12 +436,22 @@ textarea:focus {
 }
 
 .subscription-card textarea {
-    min-height: 86px;
+    min-height: 50px;
+    height: 50px;
     border-radius: 16px;
     background:
         linear-gradient(135deg, rgba(255, 42, 42, 0.035), transparent 42%),
         #070708;
     border-color: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+    resize: none;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    scrollbar-width: none;
+}
+
+.subscription-card textarea::-webkit-scrollbar {
+    display: none;
 }
 
 .secret-actions {
