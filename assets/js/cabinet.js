@@ -162,6 +162,10 @@
     });
 
     async function boot() {
+        if (await completeTelegramLoginFromURL()) {
+            showPaymentReturnIfNeeded();
+            return;
+        }
         try {
             await loadMe();
             showPaymentReturnIfNeeded();
@@ -170,6 +174,32 @@
             if (isPaymentReturn()) {
                 setStatus(authStatus, "оплата прошла. Войдите, чтобы увидеть обновлённую подписку.", "ok");
             }
+        }
+    }
+
+    async function completeTelegramLoginFromURL() {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get("telegram_login");
+        if (!token) {
+            return false;
+        }
+        params.delete("telegram_login");
+        const cleanURL = window.location.pathname + (params.toString() ? "?" + params.toString() : "") + window.location.hash;
+        window.history.replaceState({}, document.title, cleanURL);
+        showToast("завершаем вход через Telegram");
+        try {
+            const data = await api("/api/auth/telegram/check", { method: "POST", body: { token: token } });
+            if (!data.confirmed) {
+                setStatus(authStatus, "подтверждение Telegram ещё не найдено. Нажмите вход через Telegram ещё раз.", "error");
+                return false;
+            }
+            await loadMe();
+            showToast("вход через Telegram выполнен");
+            return true;
+        } catch (error) {
+            setStatus(authStatus, error.message || "Telegram вход не выполнен", "error");
+            showToast(error.message || "Telegram вход не выполнен", "error");
+            return false;
         }
     }
 

@@ -380,7 +380,6 @@ WHERE token_hash=$1 AND expires_at > NOW()`, sessionHash(token)).Scan(&userID, &
 		writeJSON(w, http.StatusInternalServerError, errResp("не удалось создать сессию"))
 		return
 	}
-	_, _ = a.db.Exec(r.Context(), `DELETE FROM web_login_tokens WHERE token_hash=$1`, sessionHash(token))
 	setSessionCookie(w, sessionToken, sessionExpires)
 	a.sendWebLog(r, userID, "", "вошёл через Telegram", "")
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "confirmed": true})
