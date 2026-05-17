@@ -51,15 +51,16 @@ type app struct {
 }
 
 type webLogSession struct {
-	MsgID   int
-	Start   time.Time
-	Last    time.Time
-	UserID  string
-	Email   string
-	IP      string
-	Actions []string
-	Sending bool
-	Dirty   bool
+	MsgID    int
+	Start    time.Time
+	Last     time.Time
+	UserID   string
+	Username string
+	Email    string
+	IP       string
+	Actions  []string
+	Sending  bool
+	Dirty    bool
 }
 
 type plan struct {
@@ -404,12 +405,12 @@ func (a *app) handleTelegramWebAppAuth(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, errResp("bad json"))
 		return
 	}
-	userID, err := a.validateTelegramWebAppInitData(req.InitData)
+	tgUser, err := a.validateTelegramWebAppInitData(req.InitData)
 	if err != nil {
 		writeJSON(w, http.StatusUnauthorized, errResp("Telegram вход не подтверждён"))
 		return
 	}
-	if err := a.ensureWebUser(r.Context(), userID); err != nil {
+	if err := a.ensureWebUser(r.Context(), tgUser.ID); err != nil {
 		log.Printf("webapp ensure user failed: %v", err)
 		writeJSON(w, http.StatusInternalServerError, errResp("не удалось подготовить аккаунт"))
 		return
@@ -417,14 +418,14 @@ func (a *app) handleTelegramWebAppAuth(w http.ResponseWriter, r *http.Request) {
 	token := randomToken(32)
 	expires := time.Now().Add(30 * 24 * time.Hour)
 	_, err = a.db.Exec(r.Context(), `INSERT INTO web_sessions (token_hash, user_id, expires_at) VALUES ($1,$2,$3)`,
-		sessionHash(token), userID, expires)
+		sessionHash(token), tgUser.ID, expires)
 	if err != nil {
 		log.Printf("webapp session insert failed: %v", err)
 		writeJSON(w, http.StatusInternalServerError, errResp("не удалось создать сессию"))
 		return
 	}
 	setSessionCookie(w, token, expires)
-	a.sendWebLog(r, userID, "", "вошёл через Telegram Mini App", "")
+	a.sendWebLogWithUsername(r, tgUser.ID, tgUser.Username, "", "Профиль MiniApp", "")
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
@@ -654,23 +655,28 @@ ON CONFLICT (id) DO NOTHING`, userID)
 	return err
 }
 
-func (a *app) validateTelegramWebAppInitData(initData string) (string, error) {
+type telegramWebAppUser struct {
+	ID       string
+	Username string
+}
+
+func (a *app) validateTelegramWebAppInitData(initData string) (telegramWebAppUser, error) {
 	values, err := url.ParseQuery(strings.TrimSpace(initData))
 	if err != nil {
-		return "", err
+		return telegramWebAppUser{}, err
 	}
 	hash := values.Get("hash")
 	if hash == "" {
-		return "", errors.New("missing hash")
+		return telegramWebAppUser{}, errors.New("missing hash")
 	}
 	authDateRaw := values.Get("auth_date")
 	authUnix, err := strconv.ParseInt(authDateRaw, 10, 64)
 	if err != nil {
-		return "", err
+		return telegramWebAppUser{}, err
 	}
 	authDate := time.Unix(authUnix, 0)
 	if time.Since(authDate) > 24*time.Hour || time.Until(authDate) > 5*time.Minute {
-		return "", errors.New("expired init data")
+		return telegramWebAppUser{}, errors.New("expired init data")
 	}
 
 	keys := make([]string, 0, len(values))
@@ -694,19 +700,23 @@ func (a *app) validateTelegramWebAppInitData(initData string) (string, error) {
 	_, _ = dataMAC.Write([]byte(checkString))
 	expected := hex.EncodeToString(dataMAC.Sum(nil))
 	if subtle.ConstantTimeCompare([]byte(expected), []byte(hash)) != 1 {
-		return "", errors.New("bad hash")
+		return telegramWebAppUser{}, errors.New("bad hash")
 	}
 
 	var tgUser struct {
-		ID int64 `json:"id"`
+		ID       int64  `json:"id"`
+		Username string `json:"username"`
 	}
 	if err := json.Unmarshal([]byte(values.Get("user")), &tgUser); err != nil {
-		return "", err
+		return telegramWebAppUser{}, err
 	}
 	if tgUser.ID <= 0 {
-		return "", errors.New("missing user")
+		return telegramWebAppUser{}, errors.New("missing user")
 	}
-	return strconv.FormatInt(tgUser.ID, 10), nil
+	return telegramWebAppUser{
+		ID:       strconv.FormatInt(tgUser.ID, 10),
+		Username: sanitizeTelegramUsername(tgUser.Username),
+	}, nil
 }
 
 func publicAccounts(accounts []account) []map[string]any {
@@ -842,6 +852,10 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 }
 
 func (a *app) sendWebLog(r *http.Request, userID, email, action, details string) {
+	a.sendWebLogWithUsername(r, userID, "", email, action, details)
+}
+
+func (a *app) sendWebLogWithUsername(r *http.Request, userID, username, email, action, details string) {
 	if a.botToken == "" || a.webLogChatID == "" {
 		return
 	}
@@ -859,6 +873,9 @@ func (a *app) sendWebLog(r *http.Request, userID, email, action, details string)
 	s.Last = now
 	if userID != "" {
 		s.UserID = strings.TrimSpace(userID)
+	}
+	if username != "" {
+		s.Username = sanitizeTelegramUsername(username)
 	}
 	if email != "" {
 		s.Email = strings.TrimSpace(email)
@@ -927,7 +944,7 @@ func webLogText(s *webLogSession) string {
 	var b strings.Builder
 	b.WriteString("🌐 <b>С сайта</b>\n")
 	if s.UserID != "" {
-		b.WriteString("👤 " + telegramUserLink(s.UserID))
+		b.WriteString("👤 " + telegramUserLink(s.UserID, s.Username))
 		if s.Email != "" {
 			b.WriteString(" · <code>" + html.EscapeString(s.Email) + "</code>")
 		}
@@ -1015,9 +1032,12 @@ func (a *app) telegramRequest(method string, messageID int, text string, dst any
 	return nil
 }
 
-func telegramUserLink(userID string) string {
+func telegramUserLink(userID, username string) string {
 	if id, err := strconv.ParseInt(strings.TrimSpace(userID), 10, 64); err == nil && id > 0 {
 		escaped := html.EscapeString(userID)
+		if username != "" {
+			return fmt.Sprintf(`<a href="https://t.me/%s">@%s</a> (ID:%s)`, html.EscapeString(username), html.EscapeString(username), escaped)
+		}
 		return fmt.Sprintf(`<a href="tg://user?id=%d">ID:%s</a>`, id, escaped)
 	}
 	return "<code>" + html.EscapeString(userID) + "</code>"
@@ -1036,6 +1056,7 @@ func webLogKey(userID, email, ip string) string {
 func webActionText(action, details string) string {
 	action = strings.TrimSpace(action)
 	details = strings.TrimSpace(details)
+	action = webActionEmoji(action)
 	if details == "" {
 		return action
 	}
@@ -1043,6 +1064,35 @@ func webActionText(action, details string) string {
 		return details
 	}
 	return action + ": " + details
+}
+
+func webActionEmoji(action string) string {
+	switch action {
+	case "Профиль MiniApp", "вошёл в личный кабинет", "вошёл через Telegram", "вошёл через Telegram Mini App":
+		return "👤 " + action
+	case "начал вход через Telegram":
+		return "🔐 " + action
+	case "вышел из личного кабинета":
+		return "🚪 " + action
+	case "создал счёт":
+		return "🔗 счёт создан"
+	case "выбрал тариф":
+		return "💰 " + action
+	case "скопировал ключ":
+		return "📋 " + action
+	case "открыл инструкцию":
+		return "🛠 инструкция"
+	case "включил автосписание":
+		return "🔄 " + action
+	case "выключил автосписание":
+		return "⏸ " + action
+	case "отвязал карту":
+		return "💳 " + action
+	case "запросил код входа":
+		return "📧 " + action
+	default:
+		return action
+	}
 }
 
 func normalizeUILogAction(action string) string {
@@ -1056,6 +1106,20 @@ func normalizeUILogAction(action string) string {
 	default:
 		return ""
 	}
+}
+
+func sanitizeTelegramUsername(username string) string {
+	username = strings.TrimPrefix(strings.TrimSpace(username), "@")
+	if username == "" {
+		return ""
+	}
+	for _, r := range username {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' {
+			continue
+		}
+		return ""
+	}
+	return username
 }
 
 func minutesLabel(mins int) string {
