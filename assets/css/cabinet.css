@@ -132,6 +132,38 @@ body.is-mini-app .card-panel {
     border-radius: 18px;
 }
 
+body.is-mini-app .subscription-card .state-pill {
+    display: none;
+}
+
+body.is-mini-app .instructions-panel {
+    padding: 16px;
+}
+
+body.is-mini-app .instructions-panel .muted {
+    margin-top: 4px;
+}
+
+body.is-mini-app .platform-grid {
+    gap: 8px;
+    margin-top: 10px;
+}
+
+body.is-mini-app .platform-card {
+    min-height: 46px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+body.is-mini-app .platform-icon {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+}
+
 .cabinet-auth h1,
 .dashboard-hero h1 {
     font-size: var(--type-big);
@@ -804,9 +836,16 @@ textarea:focus {
     }
 
     .input-row,
-    .plans-grid,
+    .plans-grid {
+        grid-template-columns: 1fr;
+    }
+
     .platform-grid {
         grid-template-columns: 1fr;
+    }
+
+    body.is-mini-app .platform-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .cabinet-nav {
