@@ -72,10 +72,10 @@ type plan struct {
 }
 
 var plans = []plan{
-	{ID: "30d", Title: "30 дней", Amount: 99, Days: 30},
-	{ID: "60d", Title: "60 дней", Amount: 169, Days: 60},
-	{ID: "90d", Title: "90 дней", Amount: 249, Days: 90},
-	{ID: "365d", Title: "365 дней", Amount: 949, Days: 365},
+	{ID: "30d", Title: "30 дней", Amount: 149, Days: 30},
+	{ID: "60d", Title: "60 дней", Amount: 289, Days: 60},
+	{ID: "90d", Title: "90 дней", Amount: 419, Days: 90},
+	{ID: "365d", Title: "365 дней", Amount: 1499, Days: 365},
 }
 
 var testPlan = plan{ID: "test_1d", Title: "Тест 1 день", Amount: 1, Days: 1}
