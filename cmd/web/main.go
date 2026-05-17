@@ -23,6 +23,7 @@ import (
 	"net/smtp"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -123,6 +124,7 @@ func main() {
 	mux.HandleFunc("/api/auth/verify-code", a.handleVerifyCode)
 	mux.HandleFunc("/api/auth/telegram/start", a.handleTelegramLoginStart)
 	mux.HandleFunc("/api/auth/telegram/check", a.handleTelegramLoginCheck)
+	mux.HandleFunc("/api/auth/telegram-webapp", a.handleTelegramWebAppAuth)
 	mux.HandleFunc("/api/auth/logout", a.handleLogout)
 	mux.HandleFunc("/api/me", a.requireAuth(a.handleMe))
 	mux.HandleFunc("/api/plans", a.requireAuth(a.handlePlans))
@@ -385,6 +387,46 @@ WHERE token_hash=$1 AND expires_at > NOW()`, sessionHash(token)).Scan(&userID, &
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "confirmed": true})
 }
 
+func (a *app) handleTelegramWebAppAuth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
+		return
+	}
+	if a.botToken == "" {
+		writeJSON(w, http.StatusInternalServerError, errResp("Telegram Mini App не настроен"))
+		return
+	}
+	var req struct {
+		InitData string `json:"init_data"`
+	}
+	if err := readJSON(r, &req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errResp("bad json"))
+		return
+	}
+	userID, err := a.validateTelegramWebAppInitData(req.InitData)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, errResp("Telegram вход не подтверждён"))
+		return
+	}
+	if err := a.ensureWebUser(r.Context(), userID); err != nil {
+		log.Printf("webapp ensure user failed: %v", err)
+		writeJSON(w, http.StatusInternalServerError, errResp("не удалось подготовить аккаунт"))
+		return
+	}
+	token := randomToken(32)
+	expires := time.Now().Add(30 * 24 * time.Hour)
+	_, err = a.db.Exec(r.Context(), `INSERT INTO web_sessions (token_hash, user_id, expires_at) VALUES ($1,$2,$3)`,
+		sessionHash(token), userID, expires)
+	if err != nil {
+		log.Printf("webapp session insert failed: %v", err)
+		writeJSON(w, http.StatusInternalServerError, errResp("не удалось создать сессию"))
+		return
+	}
+	setSessionCookie(w, token, expires)
+	a.sendWebLog(r, userID, "", "вошёл через Telegram Mini App", "")
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (a *app) handleLogout(w http.ResponseWriter, r *http.Request) {
 	userID := ""
 	if cookie, err := r.Cookie("nvpn_session"); err == nil {
@@ -579,6 +621,69 @@ func (a *app) usersByEmail(ctx context.Context, email string) ([]account, error)
 		out = append(out, ac)
 	}
 	return out, rows.Err()
+}
+
+func (a *app) ensureWebUser(ctx context.Context, userID string) error {
+	_, err := a.db.Exec(ctx, `
+INSERT INTO users (id, last_deduct, updated_at)
+VALUES ($1, NOW(), NOW())
+ON CONFLICT (id) DO NOTHING`, userID)
+	return err
+}
+
+func (a *app) validateTelegramWebAppInitData(initData string) (string, error) {
+	values, err := url.ParseQuery(strings.TrimSpace(initData))
+	if err != nil {
+		return "", err
+	}
+	hash := values.Get("hash")
+	if hash == "" {
+		return "", errors.New("missing hash")
+	}
+	authDateRaw := values.Get("auth_date")
+	authUnix, err := strconv.ParseInt(authDateRaw, 10, 64)
+	if err != nil {
+		return "", err
+	}
+	authDate := time.Unix(authUnix, 0)
+	if time.Since(authDate) > 24*time.Hour || time.Until(authDate) > 5*time.Minute {
+		return "", errors.New("expired init data")
+	}
+
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		if key == "hash" {
+			continue
+		}
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	checkParts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		checkParts = append(checkParts, key+"="+values.Get(key))
+	}
+	checkString := strings.Join(checkParts, "\n")
+
+	secretMAC := hmac.New(sha256.New, []byte("WebAppData"))
+	_, _ = secretMAC.Write([]byte(a.botToken))
+	secret := secretMAC.Sum(nil)
+	dataMAC := hmac.New(sha256.New, secret)
+	_, _ = dataMAC.Write([]byte(checkString))
+	expected := hex.EncodeToString(dataMAC.Sum(nil))
+	if subtle.ConstantTimeCompare([]byte(expected), []byte(hash)) != 1 {
+		return "", errors.New("bad hash")
+	}
+
+	var tgUser struct {
+		ID int64 `json:"id"`
+	}
+	if err := json.Unmarshal([]byte(values.Get("user")), &tgUser); err != nil {
+		return "", err
+	}
+	if tgUser.ID <= 0 {
+		return "", errors.New("missing user")
+	}
+	return strconv.FormatInt(tgUser.ID, 10), nil
 }
 
 func publicAccounts(accounts []account) []map[string]any {

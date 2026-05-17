@@ -97,6 +97,37 @@
     padding: 28px;
 }
 
+body.is-mini-app .grid-overlay,
+body.is-mini-app .scan-line {
+    display: none;
+}
+
+body.is-mini-app .cabinet-shell {
+    max-width: 100%;
+    padding: 0 14px 28px;
+}
+
+body.is-mini-app .cabinet-header {
+    height: 48px;
+}
+
+body.is-mini-app .cabinet-nav a {
+    display: none;
+}
+
+body.is-mini-app .cabinet-auth {
+    margin: 18px auto;
+    padding: 22px;
+}
+
+body.is-mini-app .dashboard-hero {
+    margin-top: 16px;
+}
+
+body.is-mini-app .card-panel {
+    border-radius: 18px;
+}
+
 .cabinet-auth h1,
 .dashboard-hero h1 {
     font-size: var(--type-big);

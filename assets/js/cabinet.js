@@ -1,5 +1,7 @@
 (function () {
     const API_BASE = detectAPIBase();
+    const TG_WEBAPP = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    const IS_MINI_APP = detectMiniApp();
     const authView = document.getElementById("authView");
     const dashboardView = document.getElementById("dashboardView");
     const emailForm = document.getElementById("emailForm");
@@ -56,6 +58,14 @@
     let resendLeft = 0;
     let telegramPollTimer = 0;
     let telegramLoginDeadline = 0;
+
+    if (IS_MINI_APP) {
+        document.body.classList.add("is-mini-app");
+        if (TG_WEBAPP) {
+            TG_WEBAPP.ready();
+            TG_WEBAPP.expand();
+        }
+    }
 
     boot();
     window.addEventListener("pageshow", clearPendingPaymentStatus);
@@ -166,6 +176,10 @@
             showPaymentReturnIfNeeded();
             return;
         }
+        if (await completeTelegramMiniAppLogin()) {
+            showPaymentReturnIfNeeded();
+            return;
+        }
         try {
             await loadMe();
             showPaymentReturnIfNeeded();
@@ -173,8 +187,44 @@
             showAuth();
             if (isPaymentReturn()) {
                 setStatus(authStatus, "оплата прошла. Войдите, чтобы увидеть обновлённую подписку.", "ok");
+            } else if (IS_MINI_APP) {
+                setStatus(authStatus, "Откройте личный кабинет через кнопку в Telegram-боте.", "error");
             }
         }
+    }
+
+    async function completeTelegramMiniAppLogin() {
+        if (!IS_MINI_APP) {
+            return false;
+        }
+        const initData = TG_WEBAPP && TG_WEBAPP.initData ? TG_WEBAPP.initData : "";
+        if (!initData) {
+            return false;
+        }
+        showMiniAppLoading();
+        showToast("входим через Telegram");
+        try {
+            await api("/api/auth/telegram-webapp", { method: "POST", body: { init_data: initData } });
+            await loadMe();
+            showToast("вход выполнен");
+            return true;
+        } catch (error) {
+            showAuth();
+            setStatus(authStatus, error.message || "Telegram Mini App не подтвердил вход", "error");
+            showToast(error.message || "Mini App вход не выполнен", "error");
+            return false;
+        }
+    }
+
+    function showMiniAppLoading() {
+        authView.classList.remove("hidden");
+        dashboardView.classList.add("hidden");
+        emailForm.classList.add("hidden");
+        codeForm.classList.add("hidden");
+        telegramLoginBox.classList.add("hidden");
+        accountChooser.classList.add("hidden");
+        signupOffer.classList.add("hidden");
+        setStatus(authStatus, "входим через Telegram...", "ok");
     }
 
     async function completeTelegramLoginFromURL() {
@@ -288,7 +338,16 @@
         authView.classList.remove("hidden");
         dashboardView.classList.add("hidden");
         logoutBtn.classList.add("hidden");
-        telegramLoginBox.classList.remove("hidden");
+        if (IS_MINI_APP) {
+            emailForm.classList.add("hidden");
+            codeForm.classList.add("hidden");
+            telegramLoginBox.classList.add("hidden");
+            signupOffer.classList.add("hidden");
+            accountChooser.classList.add("hidden");
+        } else {
+            emailForm.classList.remove("hidden");
+            telegramLoginBox.classList.remove("hidden");
+        }
     }
 
     function showDashboard(me) {
@@ -704,5 +763,10 @@
             return window.location.protocol + "//" + window.location.hostname + ":8090";
         }
         return "";
+    }
+
+    function detectMiniApp() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("mini_app") === "1" || Boolean(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData);
     }
 })();
