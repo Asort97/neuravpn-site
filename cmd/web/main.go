@@ -132,6 +132,7 @@ func main() {
 	mux.HandleFunc("/api/autopay/enable", a.requireAuth(a.handleEnableAutopay))
 	mux.HandleFunc("/api/autopay/disable", a.requireAuth(a.handleDisableAutopay))
 	mux.HandleFunc("/api/autopay/detach", a.requireAuth(a.handleDetachAutopay))
+	mux.HandleFunc("/api/log/ui", a.requireAuth(a.handleUILog))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, http.StatusOK, map[string]any{"ok": true}) })
 
 	port := strings.TrimSpace(os.Getenv("WEB_PORT"))
@@ -562,6 +563,28 @@ RETURNING COALESCE(autopay_plan_id,'')`, userID).Scan(&planID)
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "autopay_plan_id": planID})
 }
 
+func (a *app) handleUILog(w http.ResponseWriter, r *http.Request, userID string) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
+		return
+	}
+	var req struct {
+		Action  string `json:"action"`
+		Details string `json:"details"`
+	}
+	if err := readJSON(r, &req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errResp("bad json"))
+		return
+	}
+	action := normalizeUILogAction(req.Action)
+	if action == "" {
+		writeJSON(w, http.StatusBadRequest, errResp("unknown action"))
+		return
+	}
+	a.sendWebLog(r, userID, "", action, strings.TrimSpace(req.Details))
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 func (a *app) requireAuth(next func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("nvpn_session")
@@ -924,9 +947,6 @@ func webLogText(s *webLogSession) string {
 		actions = strings.Join(s.Actions, " → ")
 	}
 	b.WriteString("🔗 действия: " + html.EscapeString(actions))
-	if s.IP != "" {
-		b.WriteString("\nip: <code>" + html.EscapeString(s.IP) + "</code>")
-	}
 	return strings.TrimSpace(b.String())
 }
 
@@ -1023,6 +1043,19 @@ func webActionText(action, details string) string {
 		return details
 	}
 	return action + ": " + details
+}
+
+func normalizeUILogAction(action string) string {
+	switch strings.TrimSpace(action) {
+	case "plan_selected":
+		return "выбрал тариф"
+	case "copy_key":
+		return "скопировал ключ"
+	case "instruction_open":
+		return "открыл инструкцию"
+	default:
+		return ""
+	}
 }
 
 func minutesLabel(mins int) string {

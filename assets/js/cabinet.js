@@ -114,6 +114,7 @@
         }
         try {
             await copyText(value);
+            logUI("copy_key", "");
             copySubBtn.textContent = "скопировано";
             showToast("ключ скопирован");
             window.setTimeout(function () { copySubBtn.textContent = "Скопировать ссылку"; }, 1400);
@@ -158,6 +159,17 @@
         }
         closePaymentChoice();
         createPayment(selectedPlan.id, true);
+    });
+    document.querySelectorAll(".platform-card[data-platform]").forEach(function (link) {
+        link.addEventListener("click", function (event) {
+            event.preventDefault();
+            const href = link.href;
+            const platform = link.getAttribute("data-platform") || link.textContent.trim();
+            logUI("instruction_open", platform);
+            window.setTimeout(function () {
+                window.location.href = href;
+            }, 80);
+        });
     });
     autopayToggle.addEventListener("change", function () {
         if (!currentMe || !currentMe.autopay_available) {
@@ -461,6 +473,7 @@
 
     function openPaymentChoice(plan) {
         selectedPlan = plan;
+        logUI("plan_selected", plan.title + " · " + Number(plan.amount).toFixed(0) + " ₽");
         paymentChoiceText.textContent = plan.title + " · " + Number(plan.amount).toFixed(0) + " ₽";
         payAutopayBtn.innerHTML = "Картой с автопродлением<br><span>сохранить карту для следующих списаний</span>";
         paymentChoiceModal.classList.remove("hidden");
@@ -664,6 +677,22 @@
             throw error;
         }
         return data;
+    }
+
+    function logUI(action, details) {
+        const payload = JSON.stringify({ action: action, details: details || "" });
+        if (navigator.sendBeacon) {
+            const blob = new Blob([payload], { type: "application/json" });
+            navigator.sendBeacon(API_BASE + "/api/log/ui", blob);
+            return;
+        }
+        fetch(API_BASE + "/api/log/ui", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+            keepalive: true
+        }).catch(function () {});
     }
 
     function setStatus(el, text, kind) {
