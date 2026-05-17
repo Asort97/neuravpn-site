@@ -104,14 +104,10 @@ body.is-mini-app .scan-line {
 
 body.is-mini-app .cabinet-shell {
     max-width: 100%;
-    padding: 0 14px 28px;
+    padding: 8px 14px 28px;
 }
 
 body.is-mini-app .cabinet-header {
-    height: 48px;
-}
-
-body.is-mini-app .cabinet-nav a {
     display: none;
 }
 
@@ -120,12 +116,13 @@ body.is-mini-app .nav-logout {
 }
 
 body.is-mini-app .cabinet-auth {
-    margin: 18px auto;
+    margin: 0 auto 14px;
     padding: 22px;
 }
 
 body.is-mini-app .dashboard-hero {
-    margin-top: 16px;
+    margin-top: 0;
+    margin-bottom: 12px;
 }
 
 body.is-mini-app .card-panel {
