@@ -37,7 +37,7 @@
                 { text: "Скачать V2RayTun", href: "https://apps.apple.com/kz/app/v2raytun/id6476628951" }
             ],
             steps: [
-                { media: "Ios/0.MP4", title: "Скачайте приложение", text: `скачайте <a href="https://apps.apple.com/kz/app/v2raytun/id6476628951">v2RayTun</a> из App Store.<br><br><b>Важно:</b> если приложение недоступно в РФ, смените регион App Store.`, actions: [{ text: "Сменить регион", href: "../ios-region/" }] },
+                { media: "Ios/0.MP4", title: "Скачайте приложение", text: `скачайте <a href="https://apps.apple.com/kz/app/v2raytun/id6476628951">v2RayTun</a> из App Store.<br><br><b>Важно:</b> если приложение недоступно в РФ, смените регион App Store.`, actions: [{ text: "Сменить регион", href: "../ios-region/", primary: true }] },
                 { media: "Ios/1.MP4", title: "Вставьте ключ", text: `зайдите в приложение и вставьте ключ из буфера обмена. предварительно скопируйте ключ подключения из личного кабинета.` },
                 { media: "Ios/2.MP4", title: "Включите VPN", text: `далее нажмите на кнопку включения. VPN начнёт работать.` }
             ]
@@ -60,8 +60,7 @@
             title: "Смена региона App Store",
             intro: "Если V2RayTun недоступен в вашем App Store, смените регион на Казахстан.",
             actions: [
-                { text: "Назад к iOS", href: "../ios/" },
-                { text: "App Store", href: "https://apps.apple.com/kz/app/v2raytun/id6476628951" }
+                { text: "Назад к iOS", href: "../ios/" }
             ],
             steps: [
                 { media: "ChangeRegion/0.png", title: "Откройте профиль", text: `зайдите в <b>App Store</b> и нажмите на иконку профиля.` },
@@ -78,6 +77,13 @@
     if (!guide) {
         return;
     }
+    const keyStepMap = {
+        windows: [3],
+        android: [1],
+        ios: [1],
+        macos: [1]
+    };
+    let subscriptionKeyPromise = null;
 
     document.title = "neuravpn - " + guide.label;
     document.getElementById("guideTitle").textContent = guide.title;
@@ -118,7 +124,7 @@
             stepActions.className = "step-actions";
             step.actions.forEach(function (action) {
                 const a = document.createElement("a");
-                a.className = "btn btn-secondary";
+                a.className = action.primary ? "btn btn-primary" : "btn btn-secondary";
                 a.href = action.href;
                 a.textContent = action.text;
                 if (/^https?:\/\//.test(action.href)) {
@@ -128,6 +134,9 @@
                 stepActions.appendChild(a);
             });
             content.appendChild(stepActions);
+        }
+        if (shouldShowKeyBlock(guideID, index)) {
+            content.appendChild(renderKeyCopyBlock());
         }
         article.appendChild(content);
         steps.appendChild(article);
@@ -178,6 +187,97 @@
         try {
             img.loading = "lazy";
         } catch (error) {}
+    }
+
+    function shouldShowKeyBlock(id, index) {
+        return (keyStepMap[id] || []).indexOf(index) !== -1;
+    }
+
+    function renderKeyCopyBlock() {
+        const box = document.createElement("div");
+        box.className = "step-key-box";
+
+        const input = document.createElement("input");
+        input.className = "step-key-input";
+        input.type = "text";
+        input.readOnly = true;
+        input.value = "загружаем ключ...";
+
+        const button = document.createElement("button");
+        button.className = "btn btn-primary step-key-copy";
+        button.type = "button";
+        button.textContent = "Скопировать ключ";
+        button.disabled = true;
+
+        box.appendChild(input);
+        box.appendChild(button);
+
+        getSubscriptionKey().then(function (key) {
+            if (!key) {
+                input.value = "ключ доступен после входа в кабинет";
+                button.textContent = "Войти в кабинет";
+                button.disabled = false;
+                button.addEventListener("click", function () {
+                    window.location.href = "../../cabinet/";
+                }, { once: true });
+                return;
+            }
+            input.value = key;
+            button.disabled = false;
+            button.addEventListener("click", function () {
+                copyValue(key, input).then(function () {
+                    button.textContent = "Скопировано";
+                    window.setTimeout(function () { button.textContent = "Скопировать ключ"; }, 1400);
+                }).catch(function () {
+                    button.textContent = "Не скопировано";
+                    window.setTimeout(function () { button.textContent = "Скопировать ключ"; }, 1400);
+                });
+            });
+        });
+
+        return box;
+    }
+
+    function getSubscriptionKey() {
+        if (!subscriptionKeyPromise) {
+            subscriptionKeyPromise = fetch(apiBase() + "/api/me", {
+                credentials: "include",
+                headers: { "Accept": "application/json" }
+            }).then(function (response) {
+                if (!response.ok) {
+                    return "";
+                }
+                return response.json();
+            }).then(function (me) {
+                return me && me.subscription_url ? String(me.subscription_url) : "";
+            }).catch(function () {
+                return "";
+            });
+        }
+        return subscriptionKeyPromise;
+    }
+
+    function apiBase() {
+        if (window.NEURAVPN_API_BASE) {
+            return window.NEURAVPN_API_BASE;
+        }
+        if (window.location.port === "8085") {
+            return window.location.protocol + "//" + window.location.hostname + ":8090";
+        }
+        return "";
+    }
+
+    async function copyValue(value, input) {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(value);
+            return;
+        }
+        input.focus();
+        input.select();
+        if (!document.execCommand("copy")) {
+            throw new Error("copy failed");
+        }
+        window.getSelection().removeAllRanges();
     }
 
     function startInstructionVideos() {

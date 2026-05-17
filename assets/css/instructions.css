@@ -214,6 +214,34 @@
     font-weight: 800;
 }
 
+.step-key-box {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.step-key-input {
+    min-width: 0;
+    height: 48px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    background:
+        linear-gradient(135deg, rgba(255, 42, 42, 0.035), transparent 42%),
+        #070708;
+    color: var(--text-secondary);
+    font-family: var(--font-tech);
+    font-size: var(--type-small);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.step-key-copy {
+    min-height: 48px;
+    white-space: nowrap;
+}
+
 .platform-note {
     color: var(--text-muted);
     margin-top: 12px;
@@ -236,6 +264,10 @@
     .guide-hero,
     .guide-step {
         padding: 22px;
+    }
+
+    .step-key-box {
+        grid-template-columns: 1fr;
     }
 }
 

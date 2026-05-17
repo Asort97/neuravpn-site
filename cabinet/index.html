@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>neuravpn - личный кабинет</title>
   <link rel="stylesheet" href="../assets/css/site.css?v=20260517-9">
-  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260517-9">
+  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260517-10">
 </head>
 <body>
   <div class="grid-overlay"></div>
@@ -95,24 +95,18 @@
               <div id="subState" class="state-pill">проверка</div>
             </div>
             <div class="secret-box">
-              <div class="secret-label">
-                <span>личный ключ</span>
-                <span>только для вас</span>
-              </div>
               <textarea id="subLink" readonly placeholder="Ссылка появится после загрузки"></textarea>
               <div class="secret-actions">
                 <button id="copySubBtn" class="btn btn-primary" type="button">Скопировать ссылку</button>
                 <a id="openSubBtn" class="btn btn-secondary" href="#" target="_blank" rel="noopener noreferrer">открыть</a>
               </div>
             </div>
-            <p class="warning-text">Не передавайте подписочную ссылку другим людям. Это ваш личный ключ доступа.</p>
           </section>
 
           <section class="card-panel payment-card">
             <div class="section-head payment-head">
               <div>
                 <h2>Продлить подписку</h2>
-                <p class="muted">Выберите срок. После клика откроется выбор способа оплаты.</p>
               </div>
             </div>
             <div id="plans" class="plans-grid"></div>
@@ -210,6 +204,6 @@
     </div>
   </div>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="../assets/js/cabinet.js?v=20260517-9"></script>
+  <script src="../assets/js/cabinet.js?v=20260517-10"></script>
 </body>
 </html>
