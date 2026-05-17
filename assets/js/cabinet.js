@@ -16,6 +16,7 @@
     const signupOffer = document.getElementById("signupOffer");
     const telegramLoginBox = document.getElementById("telegramLoginBox");
     const telegramLoginBtn = document.getElementById("telegramLoginBtn");
+    const telegramWidgetHost = document.getElementById("telegramWidgetHost");
     const telegramLoginStatus = document.getElementById("telegramLoginStatus");
     const userMeta = document.getElementById("userMeta");
     const daysBig = document.getElementById("daysBig");
@@ -58,6 +59,10 @@
     let resendLeft = 0;
     let telegramPollTimer = 0;
     let telegramLoginDeadline = 0;
+    let telegramWidgetLoaded = false;
+    const TELEGRAM_BOT_USERNAME = String(window.NEURAVPN_TELEGRAM_BOT || "neuravpn_bot").replace(/^@/, "");
+
+    window.onTelegramLoginAuth = handleTelegramLoginWidgetAuth;
 
     if (IS_MINI_APP) {
         document.body.classList.add("is-mini-app");
@@ -359,6 +364,8 @@
         } else {
             emailForm.classList.remove("hidden");
             telegramLoginBox.classList.remove("hidden");
+            telegramLoginBtn.classList.remove("hidden");
+            telegramWidgetHost.classList.add("hidden");
         }
     }
 
@@ -388,31 +395,45 @@
     }
 
     async function startTelegramLogin() {
-        stopTelegramPolling();
         setStatus(authStatus, "", "");
         setStatus(telegramLoginStatus, "", "");
-        telegramLoginBtn.disabled = true;
-        showToast("открываем Telegram");
+        telegramLoginBtn.classList.add("hidden");
+        telegramWidgetHost.classList.remove("hidden");
+        renderTelegramLoginWidget();
+        setStatus(telegramLoginStatus, "нажмите кнопку Telegram ниже", "ok");
+        showToast("выберите Telegram");
+    }
+
+    function renderTelegramLoginWidget() {
+        if (telegramWidgetLoaded) {
+            return;
+        }
+        telegramWidgetLoaded = true;
+        telegramWidgetHost.innerHTML = "";
+        const script = document.createElement("script");
+        script.async = true;
+        script.src = "https://telegram.org/js/telegram-widget.js?22";
+        script.setAttribute("data-telegram-login", TELEGRAM_BOT_USERNAME);
+        script.setAttribute("data-size", "large");
+        script.setAttribute("data-radius", "14");
+        script.setAttribute("data-userpic", "false");
+        script.setAttribute("data-request-access", "write");
+        script.setAttribute("data-onauth", "onTelegramLoginAuth(user)");
+        telegramWidgetHost.appendChild(script);
+    }
+
+    async function handleTelegramLoginWidgetAuth(user) {
+        setStatus(telegramLoginStatus, "проверяем Telegram...", "ok");
+        showToast("проверяем Telegram");
         try {
-            const data = await api("/api/auth/telegram/start", { method: "POST", body: {} });
-            if (!data.token || !data.bot_url) {
-                throw new Error("не пришла ссылка Telegram");
-            }
-            const opened = window.open(data.bot_url, "_blank", "noopener");
-            if (!opened) {
-                window.location.href = data.bot_url;
-                return;
-            }
-            telegramLoginDeadline = Date.now() + Number(data.expires_in || 300) * 1000;
-            setStatus(telegramLoginStatus, "подтвердите вход в Telegram-боте", "ok");
-            telegramPollTimer = window.setInterval(function () {
-                checkTelegramLogin(data.token);
-            }, 2000);
-            checkTelegramLogin(data.token);
+            await api("/api/auth/telegram-login", { method: "POST", body: user });
+            await loadMe();
+            showPaymentReturnIfNeeded();
+            showToast("вход через Telegram выполнен");
         } catch (error) {
-            telegramLoginBtn.disabled = false;
             setStatus(telegramLoginStatus, error.message || "не удалось начать вход через Telegram", "error");
-            showToast(error.message || "Telegram вход не запустился", "error");
+            showToast(error.message || "Telegram вход не выполнен", "error");
+            telegramLoginBtn.classList.remove("hidden");
         }
     }
 

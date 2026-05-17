@@ -123,6 +123,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/auth/request-code", a.handleRequestCode)
 	mux.HandleFunc("/api/auth/verify-code", a.handleVerifyCode)
+	mux.HandleFunc("/api/auth/telegram-login", a.handleTelegramLoginWidgetAuth)
 	mux.HandleFunc("/api/auth/telegram/start", a.handleTelegramLoginStart)
 	mux.HandleFunc("/api/auth/telegram/check", a.handleTelegramLoginCheck)
 	mux.HandleFunc("/api/auth/telegram-webapp", a.handleTelegramWebAppAuth)
@@ -387,6 +388,39 @@ WHERE token_hash=$1 AND expires_at > NOW()`, sessionHash(token)).Scan(&userID, &
 	setSessionCookie(w, sessionToken, sessionExpires)
 	a.sendWebLog(r, userID, "", "вошёл через Telegram", "")
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "confirmed": true})
+}
+
+func (a *app) handleTelegramLoginWidgetAuth(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
+		return
+	}
+	if a.botToken == "" {
+		writeJSON(w, http.StatusInternalServerError, errResp("Telegram Login Widget не настроен"))
+		return
+	}
+	tgUser, err := a.validateTelegramLoginWidgetData(r)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, errResp("Telegram вход не подтверждён"))
+		return
+	}
+	if err := a.ensureWebUser(r.Context(), tgUser.ID); err != nil {
+		log.Printf("telegram login widget ensure user failed: %v", err)
+		writeJSON(w, http.StatusInternalServerError, errResp("не удалось подготовить аккаунт"))
+		return
+	}
+	token := randomToken(32)
+	expires := time.Now().Add(30 * 24 * time.Hour)
+	_, err = a.db.Exec(r.Context(), `INSERT INTO web_sessions (token_hash, user_id, expires_at) VALUES ($1,$2,$3)`,
+		sessionHash(token), tgUser.ID, expires)
+	if err != nil {
+		log.Printf("telegram login widget session insert failed: %v", err)
+		writeJSON(w, http.StatusInternalServerError, errResp("не удалось создать сессию"))
+		return
+	}
+	setSessionCookie(w, token, expires)
+	a.sendWebLogWithUsername(r, tgUser.ID, tgUser.Username, "", "вошёл через Telegram", "")
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 func (a *app) handleTelegramWebAppAuth(w http.ResponseWriter, r *http.Request) {
@@ -717,6 +751,84 @@ func (a *app) validateTelegramWebAppInitData(initData string) (telegramWebAppUse
 		ID:       strconv.FormatInt(tgUser.ID, 10),
 		Username: sanitizeTelegramUsername(tgUser.Username),
 	}, nil
+}
+
+func (a *app) validateTelegramLoginWidgetData(r *http.Request) (telegramWebAppUser, error) {
+	defer r.Body.Close()
+	decoder := json.NewDecoder(r.Body)
+	decoder.UseNumber()
+	var raw map[string]json.RawMessage
+	if err := decoder.Decode(&raw); err != nil {
+		return telegramWebAppUser{}, err
+	}
+	hash := rawJSONString(raw["hash"])
+	if hash == "" {
+		return telegramWebAppUser{}, errors.New("missing hash")
+	}
+
+	idRaw := rawJSONText(raw["id"])
+	if idRaw == "" {
+		return telegramWebAppUser{}, errors.New("missing id")
+	}
+	if _, err := strconv.ParseInt(idRaw, 10, 64); err != nil {
+		return telegramWebAppUser{}, err
+	}
+
+	authDateRaw := rawJSONText(raw["auth_date"])
+	authUnix, err := strconv.ParseInt(authDateRaw, 10, 64)
+	if err != nil {
+		return telegramWebAppUser{}, err
+	}
+	authDate := time.Unix(authUnix, 0)
+	if time.Since(authDate) > 24*time.Hour || time.Until(authDate) > 5*time.Minute {
+		return telegramWebAppUser{}, errors.New("expired auth date")
+	}
+
+	keys := make([]string, 0, len(raw))
+	for key := range raw {
+		if key == "hash" {
+			continue
+		}
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	checkParts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		checkParts = append(checkParts, key+"="+rawJSONText(raw[key]))
+	}
+	checkString := strings.Join(checkParts, "\n")
+
+	secret := sha256.Sum256([]byte(a.botToken))
+	dataMAC := hmac.New(sha256.New, secret[:])
+	_, _ = dataMAC.Write([]byte(checkString))
+	expected := hex.EncodeToString(dataMAC.Sum(nil))
+	if subtle.ConstantTimeCompare([]byte(expected), []byte(strings.ToLower(hash))) != 1 {
+		return telegramWebAppUser{}, errors.New("bad hash")
+	}
+
+	return telegramWebAppUser{
+		ID:       idRaw,
+		Username: sanitizeTelegramUsername(rawJSONString(raw["username"])),
+	}, nil
+}
+
+func rawJSONString(raw json.RawMessage) string {
+	var s string
+	if len(raw) == 0 || json.Unmarshal(raw, &s) != nil {
+		return ""
+	}
+	return s
+}
+
+func rawJSONText(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var s string
+	if json.Unmarshal(raw, &s) == nil {
+		return s
+	}
+	return strings.TrimSpace(string(raw))
 }
 
 func publicAccounts(accounts []account) []map[string]any {

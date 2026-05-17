@@ -297,6 +297,17 @@ textarea:focus {
     width: 100%;
 }
 
+.telegram-widget-host {
+    display: flex;
+    justify-content: center;
+    margin-top: 12px;
+    min-height: 42px;
+}
+
+.telegram-widget-host.hidden {
+    display: none;
+}
+
 .telegram-divider {
     display: flex;
     align-items: center;
