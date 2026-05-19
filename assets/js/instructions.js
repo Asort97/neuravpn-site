@@ -97,12 +97,8 @@
     guide.actions.forEach(function (action, index) {
         const a = document.createElement("a");
         a.className = index === 0 ? "btn btn-primary" : "btn btn-secondary";
-        a.href = action.href;
         a.textContent = action.text;
-        if (/^https?:\/\//.test(action.href)) {
-            a.target = "_blank";
-            a.rel = "noopener noreferrer";
-        }
+        setupActionLink(a, action);
         actions.appendChild(a);
     });
 
@@ -129,12 +125,8 @@
             step.actions.forEach(function (action) {
                 const a = document.createElement("a");
                 a.className = action.primary ? "btn btn-primary" : "btn btn-secondary";
-                a.href = action.href;
                 a.textContent = action.text;
-                if (/^https?:\/\//.test(action.href)) {
-                    a.target = "_blank";
-                    a.rel = "noopener noreferrer";
-                }
+                setupActionLink(a, action);
                 stepActions.appendChild(a);
             });
             content.appendChild(stepActions);
@@ -185,6 +177,34 @@
         img.alt = "Шаг инструкции";
         loadingLazy(img);
         return img;
+    }
+
+    function setupActionLink(a, action) {
+        a.href = action.href;
+        if (isMiniApp && isDownloadAction(action)) {
+            a.addEventListener("click", function (event) {
+                event.preventDefault();
+                openExternal(action.href);
+            });
+            return;
+        }
+        if (/^https?:\/\//.test(action.href)) {
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+        }
+    }
+
+    function isDownloadAction(action) {
+        return String(action.text || "").toLowerCase().startsWith("скачать");
+    }
+
+    function openExternal(href) {
+        const url = new URL(href, window.location.href).href;
+        if (window.Telegram && window.Telegram.WebApp && typeof window.Telegram.WebApp.openLink === "function") {
+            window.Telegram.WebApp.openLink(url, { try_instant_view: false });
+            return;
+        }
+        window.open(url, "_blank", "noopener,noreferrer");
     }
 
     function loadingLazy(img) {

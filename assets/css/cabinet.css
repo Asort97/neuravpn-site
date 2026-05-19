@@ -76,7 +76,7 @@
     border-radius: 22px;
     box-shadow: 0 24px 58px rgba(0, 0, 0, 0.32);
     overflow: hidden;
-    transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+    transition: border-color 0.32s ease, box-shadow 0.32s ease, transform 0.32s ease, background 0.32s ease;
 }
 
 .cabinet-shell .btn,
@@ -414,9 +414,11 @@ textarea:focus {
 
 .cabinet-grid .card-panel:hover,
 .cabinet-auth:hover,
+.dashboard-hero:hover,
 .instructions-panel:hover {
     border-color: rgba(255, 42, 42, 0.42);
     box-shadow: 0 30px 82px rgba(255, 42, 42, 0.08), 0 28px 70px rgba(0, 0, 0, 0.34);
+    transform: translateY(-2px);
 }
 
 .autopay-card {
@@ -882,6 +884,20 @@ body.is-mini-app .card-panel {
         inset 0 -22px 54px rgba(94, 45, 16, 0.06),
         0 22px 58px rgba(80, 39, 16, 0.15);
     backdrop-filter: blur(22px) saturate(1.18);
+    transition:
+        border-color 0.42s cubic-bezier(0.2, 0.8, 0.2, 1),
+        box-shadow 0.42s cubic-bezier(0.2, 0.8, 0.2, 1),
+        transform 0.42s cubic-bezier(0.2, 0.8, 0.2, 1),
+        background 0.42s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+body.is-mini-app .card-panel:hover {
+    border-color: rgba(82, 39, 15, 0.34);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.7),
+        inset 0 -22px 54px rgba(94, 45, 16, 0.07),
+        0 30px 68px rgba(80, 39, 16, 0.2);
+    transform: translateY(-2px);
 }
 
 body.is-mini-app .card-panel::after {
@@ -953,9 +969,9 @@ body.is-mini-app #userMeta {
 }
 
 body.is-mini-app .dashboard-hero .profile-summary {
-    flex: 1 1 auto;
+    flex: 1 1 0;
     min-width: 0;
-    max-width: calc(100% - 106px);
+    max-width: none;
     padding-right: 0;
 }
 
@@ -972,7 +988,6 @@ body.is-mini-app .active-pill {
     padding: 6px 8px;
     gap: 5px;
     font-size: 0.74rem;
-    max-width: 104px;
     white-space: nowrap;
     background: rgba(69, 129, 70, 0.16);
     border-color: rgba(40, 111, 45, 0.22);

@@ -381,7 +381,7 @@
         logoutBtn.classList.remove("hidden");
         const days = Number(me.days || 0);
         daysBig.textContent = String(days);
-        userMeta.textContent = [me.email || "email не указан", me.masked_id || me.user_id || ""].filter(Boolean).join(" · ");
+        userMeta.textContent = profileLabel(me);
         subState.textContent = days > 0 ? "активна" : "нет активной подписки";
         subState.classList.toggle("is-active", days > 0);
         expireText.textContent = me.expires_at ? "Дата окончания: " + formatDate(me.expires_at) : "остаток синхронизируется из Xray через бота";
@@ -851,6 +851,15 @@
             return email.split("@")[0];
         }
         return me.masked_id || "пользователь";
+    }
+
+    function profileLabel(me) {
+        const email = String(me.email || "").trim();
+        if (email) {
+            return email;
+        }
+        const id = String(me.user_id || me.masked_id || "").trim();
+        return id ? "ID:" + id : "пользователь";
     }
 
     function detectAPIBase() {
