@@ -254,6 +254,109 @@ header[style] div span {
     color: var(--text-primary);
 }
 
+/* Telegram Mini App parchment theme */
+body.is-mini-app {
+    --bg-dark: #efe1ce;
+    --bg-panel: rgba(255, 247, 232, 0.72);
+    --bg-panel-alt: rgba(247, 226, 199, 0.76);
+    --accent-red-dim: #7b3a16;
+    --accent-red-mid: #9b4a1d;
+    --accent-red-bright: #5a250d;
+    --accent-glow: #7d3513;
+    --text-primary: #35190b;
+    --text-secondary: #755842;
+    --text-muted: #9b7d63;
+    --text-mono: #7d3513;
+    --border: rgba(86, 42, 17, 0.18);
+    --grid-line: rgba(92, 45, 18, 0.055);
+    background:
+        radial-gradient(circle at 82% 4%, rgba(255, 255, 255, 0.54), transparent 30%),
+        radial-gradient(circle at 10% 12%, rgba(130, 65, 24, 0.14), transparent 34%),
+        #efe1ce;
+    color: var(--text-primary);
+    overflow-x: hidden;
+}
+
+body.is-mini-app::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -3;
+    background:
+        linear-gradient(rgba(239, 225, 206, 0.34), rgba(224, 196, 158, 0.32)),
+        url("../brand/neura-paper.webp") center / cover no-repeat;
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+body.is-mini-app::after {
+    content: "";
+    position: fixed;
+    inset: 7% -18% auto auto;
+    width: 74vw;
+    height: 48vh;
+    z-index: -2;
+    border-radius: 44% 56% 58% 42% / 38% 44% 56% 62%;
+    background:
+        radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.48), transparent 23%),
+        radial-gradient(circle at 74% 66%, rgba(130, 63, 22, 0.18), transparent 42%),
+        linear-gradient(135deg, rgba(255, 252, 242, 0.38), rgba(121, 59, 22, 0.08));
+    filter: blur(18px) saturate(1.08);
+    opacity: 0.62;
+    pointer-events: none;
+    transform: rotate(-8deg);
+}
+
+body.is-mini-app .btn {
+    border-radius: 22px;
+}
+
+body.is-mini-app .btn-primary {
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.24), transparent 32%),
+        #5a250d;
+    border-color: rgba(72, 30, 10, 0.74);
+    color: #fff7eb;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.26),
+        0 16px 36px rgba(92, 42, 12, 0.23);
+}
+
+body.is-mini-app .btn-primary:hover {
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.28), transparent 32%),
+        #723314;
+    border-color: rgba(72, 30, 10, 0.86);
+    color: #fff;
+}
+
+body.is-mini-app .btn-secondary {
+    background:
+        linear-gradient(145deg, rgba(255, 239, 208, 0.38), transparent 44%),
+        rgba(207, 169, 124, 0.5);
+    border-color: rgba(86, 42, 17, 0.38);
+    color: var(--text-secondary);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 246, 226, 0.42),
+        inset 0 -14px 28px rgba(82, 39, 15, 0.055),
+        0 10px 24px rgba(82, 39, 15, 0.08);
+}
+
+body.is-mini-app .btn-secondary:hover {
+    background:
+        linear-gradient(145deg, rgba(255, 239, 208, 0.46), transparent 44%),
+        rgba(196, 154, 106, 0.58);
+    border-color: rgba(86, 42, 17, 0.52);
+    color: var(--text-primary);
+}
+
+body.is-mini-app .container {
+    width: calc(100vw - 20px);
+    max-width: calc(100vw - 20px);
+    padding-left: 0;
+    padding-right: 0;
+}
+
 /* Landing */
 header[style] {
     max-width: 920px;
