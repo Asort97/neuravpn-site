@@ -600,6 +600,7 @@
 
     function demoTrafficPacks() {
         return [
+            { id: "traffic_test_5gb", title: "Тест 5 ГБ", gb: 5, amount: 1 },
             { id: "traffic_50gb", title: "50 ГБ", gb: 50, amount: 119 },
             { id: "traffic_150gb", title: "150 ГБ", gb: 150, amount: 349 },
             { id: "traffic_250gb", title: "250 ГБ", gb: 250, amount: 549 }

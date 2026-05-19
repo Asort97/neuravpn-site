@@ -93,6 +93,8 @@ var trafficPacks = []trafficPack{
 	{ID: "traffic_250gb", Title: "250 ГБ", GB: 250, Amount: 549},
 }
 
+var testTrafficPack = trafficPack{ID: "traffic_test_5gb", Title: "Тест 5 ГБ", GB: 5, Amount: 1}
+
 const (
 	gibBytes               int64 = 1024 * 1024 * 1024
 	mergedBaseTrafficBytes int64 = 10 * gibBytes
@@ -581,7 +583,11 @@ func (a *app) handleCreatePayment(w http.ResponseWriter, r *http.Request, userID
 }
 
 func (a *app) handleTrafficPacks(w http.ResponseWriter, r *http.Request, userID string) {
-	writeJSON(w, http.StatusOK, map[string]any{"packs": trafficPacks})
+	visible := append([]trafficPack(nil), trafficPacks...)
+	if a.adminIDs[userID] {
+		visible = append(visible, testTrafficPack)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"packs": visible})
 }
 
 func (a *app) handleCreateTrafficPayment(w http.ResponseWriter, r *http.Request, userID string) {
@@ -596,7 +602,7 @@ func (a *app) handleCreateTrafficPayment(w http.ResponseWriter, r *http.Request,
 		writeJSON(w, http.StatusBadRequest, errResp("bad json"))
 		return
 	}
-	pack, ok := findTrafficPack(req.PackID)
+	pack, ok := a.findTrafficPack(userID, req.PackID)
 	if !ok {
 		writeJSON(w, http.StatusBadRequest, errResp("пакет трафика не найден"))
 		return
@@ -1135,11 +1141,14 @@ func (a *app) findPlan(userID, id string) (plan, bool) {
 	return plan{}, false
 }
 
-func findTrafficPack(id string) (trafficPack, bool) {
+func (a *app) findTrafficPack(userID, id string) (trafficPack, bool) {
 	for _, p := range trafficPacks {
 		if p.ID == id {
 			return p, true
 		}
+	}
+	if id == testTrafficPack.ID && a.adminIDs[userID] {
+		return testTrafficPack, true
 	}
 	return trafficPack{}, false
 }

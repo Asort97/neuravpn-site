@@ -1,6 +1,7 @@
 .cabinet-shell {
     min-height: 100vh;
     max-width: 820px;
+    width: min(100% - 32px, 820px);
     padding-bottom: 52px;
     font-size: var(--type-small);
 }
@@ -582,6 +583,7 @@ textarea:focus {
 
 .traffic-card {
     position: relative;
+    padding-bottom: 16px !important;
 }
 
 .traffic-meter {
@@ -626,9 +628,9 @@ textarea:focus {
 
 .traffic-packs {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 10px;
-    margin-top: 14px;
+    margin-top: 12px;
 }
 
 .traffic-pack-card {
@@ -917,7 +919,7 @@ textarea:focus {
     }
 
     .cabinet-shell {
-        max-width: 100%;
+        width: min(100% - 24px, 820px);
     }
 
     #userMeta {
@@ -1236,6 +1238,10 @@ body.is-mini-app .plan-card:hover {
 
 body.is-mini-app .traffic-meter {
     gap: 8px;
+}
+
+body.is-mini-app .traffic-card {
+    padding-bottom: 16px !important;
 }
 
 body.is-mini-app .traffic-meter-top strong,
