@@ -36,6 +36,7 @@
     const trafficCarryText = document.getElementById("trafficCarryText");
     const trafficPacksEl = document.getElementById("trafficPacks");
     const trafficStatus = document.getElementById("trafficStatus");
+    const refreshTrafficBtn = document.getElementById("refreshTrafficBtn");
     const autopaySetup = document.getElementById("autopaySetup");
     const autopayPlanTitle = document.getElementById("autopayPlanTitle");
     const autopayNextText = document.getElementById("autopayNextText");
@@ -174,6 +175,9 @@
         closePaymentChoice();
         createPayment(selectedPlan.id, true);
     });
+    if (refreshTrafficBtn) {
+        refreshTrafficBtn.addEventListener("click", refreshTraffic);
+    }
     document.querySelectorAll(".platform-card[data-platform]").forEach(function (link) {
         link.addEventListener("click", function (event) {
             event.preventDefault();
@@ -536,6 +540,34 @@
         trafficBarFill.style.width = percent + "%";
         trafficCarryText.textContent = "переносится дальше: " + formatGB(carry);
         trafficPanel.classList.toggle("is-empty", limit <= 0);
+    }
+
+    async function refreshTraffic() {
+        if (IS_DEMO) {
+            showToast("demo-режим: live трафик не запрашивается");
+            return;
+        }
+        if (!refreshTrafficBtn) {
+            return;
+        }
+        refreshTrafficBtn.disabled = true;
+        setStatus(trafficStatus, "обновляем...", "");
+        try {
+            const data = await api("/api/traffic/refresh", { method: "POST", body: {} });
+            renderTraffic(data.traffic || {});
+            if (data.traffic && data.traffic.refresh_error) {
+                setStatus(trafficStatus, "показаны последние сохранённые данные", "error");
+                showToast("live-обновление недоступно", "error");
+            } else {
+                setStatus(trafficStatus, "", "");
+                showToast("трафик обновлён");
+            }
+        } catch (error) {
+            setStatus(trafficStatus, error.message || "не удалось обновить трафик", "error");
+            showToast(error.message || "не удалось обновить трафик", "error");
+        } finally {
+            refreshTrafficBtn.disabled = false;
+        }
     }
 
     function renderTrafficPacks(packs) {
@@ -921,8 +953,9 @@
 
     function formatGB(value) {
         const n = Number(value || 0);
-        const rounded = Math.round(n * 10) / 10;
-        return (Number.isInteger(rounded) ? String(rounded) : String(rounded).replace(".", ",")) + " ГБ";
+        const rounded = Math.round(n * 100) / 100;
+        const text = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+        return text.replace(".", ",") + " ГБ";
     }
 
     function nextAutopayText(days) {

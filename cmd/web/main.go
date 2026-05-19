@@ -14,11 +14,13 @@ import (
 	"errors"
 	"fmt"
 	"html"
+	"io"
 	"log"
 	"math"
 	"mime"
 	"net"
 	"net/http"
+	"net/http/cookiejar"
 	"net/mail"
 	"net/smtp"
 	"net/url"
@@ -33,21 +35,23 @@ import (
 )
 
 type app struct {
-	db           *pgxpool.Pool
-	authSecret   []byte
-	corsOrigin   string
-	publicBase   string
-	subBase      string
-	mergedBase   string
-	mergedSecret string
-	yooShopID    string
-	yooSecret    string
-	adminIDs     map[string]bool
-	botToken     string
-	webLogChatID string
-	webLogMu     sync.Mutex
-	webLogs      map[string]*webLogSession
-	botUsername  string
+	db             *pgxpool.Pool
+	authSecret     []byte
+	corsOrigin     string
+	publicBase     string
+	subBase        string
+	mergedBase     string
+	mergedSecret   string
+	yooShopID      string
+	yooSecret      string
+	adminIDs       map[string]bool
+	botToken       string
+	webLogChatID   string
+	webLogMu       sync.Mutex
+	webLogs        map[string]*webLogSession
+	botUsername    string
+	mergedXray     *webXrayClient
+	mergedInbounds []int
 }
 
 type webLogSession struct {
@@ -137,6 +141,7 @@ func main() {
 		webLogs:      make(map[string]*webLogSession),
 		botUsername:  strings.TrimPrefix(strings.TrimSpace(envOrDefault("TG_BOT_USERNAME", "neuravpn_bot")), "@"),
 	}
+	a.mergedXray, a.mergedInbounds = newWebMergedXrayFromEnv()
 	if err := a.initSchema(context.Background()); err != nil {
 		log.Fatalf("schema init failed: %v", err)
 	}
@@ -154,6 +159,7 @@ func main() {
 	mux.HandleFunc("/api/payments/create", a.requireAuth(a.handleCreatePayment))
 	mux.HandleFunc("/api/traffic/packs", a.requireAuth(a.handleTrafficPacks))
 	mux.HandleFunc("/api/traffic/create", a.requireAuth(a.handleCreateTrafficPayment))
+	mux.HandleFunc("/api/traffic/refresh", a.requireAuth(a.handleRefreshTraffic))
 	mux.HandleFunc("/api/autopay/enable", a.requireAuth(a.handleEnableAutopay))
 	mux.HandleFunc("/api/autopay/disable", a.requireAuth(a.handleDisableAutopay))
 	mux.HandleFunc("/api/autopay/detach", a.requireAuth(a.handleDetachAutopay))
@@ -520,7 +526,7 @@ FROM users WHERE id=$1`, userID).Scan(&email, &days, &subID, &autopay, &autopayP
 	if days > 0 {
 		expiresAt = time.Now().Add(time.Duration(days) * 24 * time.Hour).Format(time.RFC3339)
 	}
-	traffic := a.mergedTrafficStatus(r.Context(), userID)
+	traffic := a.mergedTrafficStatus(r.Context(), userID, subID, true)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user_id":           userID,
 		"masked_id":         maskID(userID),
@@ -630,6 +636,17 @@ func (a *app) handleCreateTrafficPayment(w http.ResponseWriter, r *http.Request,
 	}
 	a.sendWebLog(r, userID, email, "создал счёт на трафик", fmt.Sprintf("%s · %.0f ₽", pack.Title, pack.Amount))
 	writeJSON(w, http.StatusOK, map[string]any{"payment_id": paymentID, "confirmation_url": paymentURL})
+}
+
+func (a *app) handleRefreshTraffic(w http.ResponseWriter, r *http.Request, userID string) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
+		return
+	}
+	var subID string
+	_ = a.db.QueryRow(r.Context(), `SELECT COALESCE(subscription_id,'') FROM users WHERE id=$1`, userID).Scan(&subID)
+	traffic := a.mergedTrafficStatus(r.Context(), userID, subID, true)
+	writeJSON(w, http.StatusOK, map[string]any{"traffic": traffic})
 }
 
 func (a *app) handleDisableAutopay(w http.ResponseWriter, r *http.Request, userID string) {
@@ -942,7 +959,267 @@ func (a *app) subscriptionURL(userID, subID string) string {
 	return ""
 }
 
-func (a *app) mergedTrafficStatus(ctx context.Context, userID string) map[string]any {
+type webXrayClient struct {
+	username   string
+	password   string
+	serverURL  string
+	httpClient *http.Client
+	authMu     sync.Mutex
+	csrfToken  string
+}
+
+type webXrayClientData struct {
+	ID         string `json:"id"`
+	Email      string `json:"email"`
+	Enable     bool   `json:"enable"`
+	Flow       string `json:"flow"`
+	LimitIP    int    `json:"limitIp"`
+	TotalGB    int64  `json:"totalGB"`
+	ExpiryTime int64  `json:"expiryTime"`
+	SubID      string `json:"subId"`
+	TgID       string `json:"tgId"`
+	Comment    string `json:"comment"`
+	Reset      int    `json:"reset"`
+}
+
+func (c *webXrayClientData) UnmarshalJSON(data []byte) error {
+	var dto struct {
+		ID         string `json:"id"`
+		Email      string `json:"email"`
+		Enable     bool   `json:"enable"`
+		Flow       string `json:"flow"`
+		LimitIP    int    `json:"limitIp"`
+		TotalGB    int64  `json:"totalGB"`
+		ExpiryTime int64  `json:"expiryTime"`
+		SubID      string `json:"subId"`
+		TgID       any    `json:"tgId"`
+		Comment    string `json:"comment"`
+		Reset      int    `json:"reset"`
+	}
+	if err := json.Unmarshal(data, &dto); err != nil {
+		return err
+	}
+	*c = webXrayClientData{
+		ID:         dto.ID,
+		Email:      dto.Email,
+		Enable:     dto.Enable,
+		Flow:       dto.Flow,
+		LimitIP:    dto.LimitIP,
+		TotalGB:    dto.TotalGB,
+		ExpiryTime: dto.ExpiryTime,
+		SubID:      dto.SubID,
+		TgID:       normalizeAnyID(dto.TgID),
+		Comment:    dto.Comment,
+		Reset:      dto.Reset,
+	}
+	return nil
+}
+
+type webXrayClientTraffic struct {
+	Email string `json:"email"`
+	Up    int64  `json:"up"`
+	Down  int64  `json:"down"`
+	Total int64  `json:"total"`
+}
+
+func newWebMergedXrayFromEnv() (*webXrayClient, []int) {
+	inboundIDs := parseCSVInts(os.Getenv("MERGED_XRAY_INBOUND_IDS"))
+	if len(inboundIDs) == 0 {
+		inboundIDs = parseCSVInts(os.Getenv("MERGED_XRAY_INBOUND_ID"))
+	}
+
+	username := strings.TrimSpace(os.Getenv("MERGED_XRAY_USERNAME"))
+	password := strings.TrimSpace(os.Getenv("MERGED_XRAY_PASSWORD"))
+	serverURL := strings.TrimRight(strings.TrimSpace(os.Getenv("MERGED_XRAY_PANEL_URL")), "/")
+	if serverURL == "" {
+		host := strings.TrimSpace(os.Getenv("MERGED_XRAY_HOST"))
+		port := strings.TrimSpace(os.Getenv("MERGED_XRAY_PORT"))
+		basePath := strings.TrimSpace(os.Getenv("MERGED_XRAY_WEB_BASE_PATH"))
+		if host == "" || port == "" {
+			return nil, inboundIDs
+		}
+		protocol := "http"
+		if port == "443" || port == "8443" || strings.HasPrefix(host, "https://") {
+			protocol = "https"
+		}
+		host = strings.TrimPrefix(strings.TrimPrefix(host, "https://"), "http://")
+		if basePath != "" && !strings.HasPrefix(basePath, "/") {
+			basePath = "/" + basePath
+		}
+		serverURL = fmt.Sprintf("%s://%s:%s%s", protocol, host, port, basePath)
+	}
+	if username == "" || password == "" || serverURL == "" {
+		return nil, inboundIDs
+	}
+	jar, _ := cookiejar.New(nil)
+	return &webXrayClient{
+		username:  username,
+		password:  password,
+		serverURL: strings.TrimRight(serverURL, "/"),
+		httpClient: &http.Client{
+			Jar:     jar,
+			Timeout: 8 * time.Second,
+		},
+	}, inboundIDs
+}
+
+func (x *webXrayClient) login(ctx context.Context) error {
+	x.authMu.Lock()
+	defer x.authMu.Unlock()
+
+	csrfReq, err := http.NewRequestWithContext(ctx, http.MethodGet, x.serverURL+"/csrf-token", nil)
+	if err == nil {
+		if resp, err := x.httpClient.Do(csrfReq); err == nil {
+			body, _ := io.ReadAll(resp.Body)
+			_ = resp.Body.Close()
+			if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+				var result struct {
+					Success bool   `json:"success"`
+					Obj     string `json:"obj"`
+				}
+				if json.Unmarshal(body, &result) == nil && result.Success {
+					x.csrfToken = result.Obj
+				}
+			}
+		}
+	}
+
+	payload, _ := json.Marshal(map[string]string{"username": x.username, "password": x.password})
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, x.serverURL+"/login", bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if x.csrfToken != "" {
+		req.Header.Set("X-CSRF-Token", x.csrfToken)
+	}
+	resp, err := x.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("xray login status=%s body=%s", resp.Status, responseSnippet(body))
+	}
+	if len(bytes.TrimSpace(body)) == 0 {
+		return errors.New("xray login returned empty body")
+	}
+	return nil
+}
+
+func (x *webXrayClient) doRequest(ctx context.Context, method, endpoint string) (int, []byte, error) {
+	return x.doRequestOnce(ctx, method, endpoint, true)
+}
+
+func (x *webXrayClient) doRequestOnce(ctx context.Context, method, endpoint string, allowRetry bool) (int, []byte, error) {
+	req, err := http.NewRequestWithContext(ctx, method, x.serverURL+endpoint, nil)
+	if err != nil {
+		return 0, nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+	if x.csrfToken != "" {
+		req.Header.Set("X-CSRF-Token", x.csrfToken)
+	}
+	resp, err := x.httpClient.Do(req)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return resp.StatusCode, nil, err
+	}
+	if allowRetry && shouldRetryXrayRequest(resp.StatusCode, body) {
+		if err := x.login(ctx); err != nil {
+			return resp.StatusCode, body, err
+		}
+		return x.doRequestOnce(ctx, method, endpoint, false)
+	}
+	return resp.StatusCode, body, nil
+}
+
+func (x *webXrayClient) getInboundClients(ctx context.Context, inboundID int) ([]webXrayClientData, error) {
+	status, body, err := x.doRequest(ctx, http.MethodGet, fmt.Sprintf("/panel/api/inbounds/get/%d", inboundID))
+	if err != nil {
+		return nil, err
+	}
+	if status < 200 || status >= 300 {
+		return nil, fmt.Errorf("xray inbound status=%d body=%s", status, responseSnippet(body))
+	}
+	var raw struct {
+		Success bool   `json:"success"`
+		Msg     string `json:"msg"`
+		Obj     struct {
+			Settings string `json:"settings"`
+		} `json:"obj"`
+	}
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return nil, fmt.Errorf("%w; body=%s", err, responseSnippet(body))
+	}
+	if !raw.Success {
+		return nil, fmt.Errorf("xray inbound success=false: %s", raw.Msg)
+	}
+	var settings struct {
+		Clients []webXrayClientData `json:"clients"`
+	}
+	if err := json.Unmarshal([]byte(raw.Obj.Settings), &settings); err != nil {
+		return nil, err
+	}
+	return settings.Clients, nil
+}
+
+func (x *webXrayClient) getClientTrafficByEmail(ctx context.Context, email string) (*webXrayClientTraffic, error) {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return nil, errors.New("client email is empty")
+	}
+	status, body, err := x.doRequest(ctx, http.MethodGet, "/panel/api/inbounds/getClientTraffics/"+url.PathEscape(email))
+	if err != nil {
+		return nil, err
+	}
+	if status < 200 || status >= 300 {
+		return nil, fmt.Errorf("xray traffic status=%d body=%s", status, responseSnippet(body))
+	}
+	var raw struct {
+		Success bool            `json:"success"`
+		Msg     string          `json:"msg"`
+		Obj     json.RawMessage `json:"obj"`
+	}
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return nil, fmt.Errorf("%w; body=%s", err, responseSnippet(body))
+	}
+	if !raw.Success {
+		return nil, fmt.Errorf("xray traffic success=false: %s", raw.Msg)
+	}
+	if len(raw.Obj) == 0 || string(raw.Obj) == "null" {
+		return nil, nil
+	}
+	var traffic webXrayClientTraffic
+	if err := json.Unmarshal(raw.Obj, &traffic); err == nil {
+		return &traffic, nil
+	}
+	var list []webXrayClientTraffic
+	if err := json.Unmarshal(raw.Obj, &list); err != nil {
+		return nil, fmt.Errorf("unexpected xray traffic payload: %s", responseSnippet(raw.Obj))
+	}
+	if len(list) == 0 {
+		return nil, nil
+	}
+	return &list[0], nil
+}
+
+func (a *app) mergedTrafficStatus(ctx context.Context, userID, subID string, refresh bool) map[string]any {
+	live := false
+	refreshErr := ""
+	if refresh {
+		if err := a.refreshMergedTrafficUsage(ctx, userID, subID); err != nil {
+			refreshErr = err.Error()
+		} else {
+			live = true
+		}
+	}
+
 	now := time.Now().UTC()
 	currentMonth := now.Format("2006-01")
 	month := currentMonth
@@ -995,6 +1272,115 @@ FROM merged_traffic WHERE user_id=$1`, userID).Scan(&month, &extraBytes, &usedBy
 		"remaining_gb":     bytesToGB(remainingBytes),
 		"carry_next_gb":    bytesToGB(carryNextBytes),
 		"updated_at":       timeOrEmpty(updatedAt),
+		"live":             live,
+		"refresh_error":    refreshErr,
+	}
+}
+
+func (a *app) refreshMergedTrafficUsage(ctx context.Context, userID, subID string) error {
+	if a.mergedXray == nil || len(a.mergedInbounds) == 0 {
+		return errors.New("merged xray is not configured")
+	}
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return errors.New("user id is empty")
+	}
+	now := time.Now().UTC()
+	currentMonth := now.Format("2006-01")
+	var month string
+	err := a.db.QueryRow(ctx, `SELECT month FROM merged_traffic WHERE user_id=$1`, userID).Scan(&month)
+	if err == nil && month != "" && month != currentMonth {
+		return errors.New("merged traffic month changed; waiting bot monthly sync")
+	}
+
+	refreshCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
+
+	client, err := a.findMergedXrayClient(refreshCtx, userID, subID)
+	if err != nil {
+		return err
+	}
+	if client == nil {
+		return errors.New("merged xray client not found")
+	}
+	traffic, err := a.mergedXray.getClientTrafficByEmail(refreshCtx, client.Email)
+	if err != nil {
+		return err
+	}
+	usedBytes := int64(0)
+	if traffic != nil {
+		usedBytes = traffic.Up + traffic.Down
+		if usedBytes < 0 {
+			usedBytes = 0
+		}
+	}
+	_, err = a.db.Exec(ctx, `
+INSERT INTO merged_traffic (user_id, month, extra_allocated_bytes, last_synced_used_bytes, updated_at)
+VALUES ($1, $2, 0, $3, NOW())
+ON CONFLICT (user_id) DO UPDATE
+SET last_synced_used_bytes=EXCLUDED.last_synced_used_bytes,
+    updated_at=NOW()
+WHERE merged_traffic.month=EXCLUDED.month`,
+		userID, currentMonth, usedBytes)
+	return err
+}
+
+func (a *app) findMergedXrayClient(ctx context.Context, userID, subID string) (*webXrayClientData, error) {
+	var lastErr error
+	userID = strings.TrimSpace(userID)
+	subID = strings.TrimSpace(subID)
+	for _, inboundID := range a.mergedInbounds {
+		clients, err := a.mergedXray.getInboundClients(ctx, inboundID)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if subID != "" {
+			for i := range clients {
+				if strings.TrimSpace(clients[i].SubID) == subID {
+					return &clients[i], nil
+				}
+			}
+		}
+		for i := range clients {
+			if mergedTrafficUserIDFromWebClient(clients[i]) == userID {
+				return &clients[i], nil
+			}
+		}
+	}
+	if lastErr != nil {
+		return nil, lastErr
+	}
+	return nil, nil
+}
+
+func mergedTrafficUserIDFromWebClient(client webXrayClientData) string {
+	if tgID := strings.TrimSpace(client.TgID); tgID != "" {
+		return tgID
+	}
+	comment := strings.TrimSpace(client.Comment)
+	if strings.HasPrefix(comment, "tg:") {
+		return strings.TrimSpace(strings.TrimPrefix(comment, "tg:"))
+	}
+	return ""
+}
+
+func normalizeAnyID(value any) string {
+	switch v := value.(type) {
+	case nil:
+		return ""
+	case string:
+		return strings.TrimSpace(v)
+	case float64:
+		return strconv.FormatInt(int64(v), 10)
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case int:
+		return strconv.Itoa(v)
+	case json.Number:
+		return v.String()
+	default:
+		return strings.TrimSpace(fmt.Sprint(v))
 	}
 }
 
@@ -1158,7 +1544,26 @@ func bytesToGB(bytes int64) float64 {
 		return 0
 	}
 	gb := float64(bytes) / float64(gibBytes)
-	return math.Round(gb*10) / 10
+	return math.Round(gb*100) / 100
+}
+
+func responseSnippet(body []byte) string {
+	trimmed := strings.TrimSpace(string(body))
+	if trimmed == "" {
+		return "<empty>"
+	}
+	if len(trimmed) > 300 {
+		return trimmed[:300] + "..."
+	}
+	return trimmed
+}
+
+func shouldRetryXrayRequest(statusCode int, body []byte) bool {
+	trimmed := bytes.TrimSpace(body)
+	return statusCode == http.StatusUnauthorized ||
+		statusCode == http.StatusForbidden ||
+		len(trimmed) == 0 ||
+		bytes.HasPrefix(trimmed, []byte("<"))
 }
 
 func timeOrEmpty(t time.Time) string {
@@ -1565,6 +1970,17 @@ func parseAdminIDs(raw string) map[string]bool {
 		id := strings.TrimSpace(part)
 		if id != "" {
 			ids[id] = true
+		}
+	}
+	return ids
+}
+
+func parseCSVInts(raw string) []int {
+	var ids []int
+	for _, part := range strings.Split(raw, ",") {
+		value, err := strconv.Atoi(strings.TrimSpace(part))
+		if err == nil && value > 0 {
+			ids = append(ids, value)
 		}
 	}
 	return ids
