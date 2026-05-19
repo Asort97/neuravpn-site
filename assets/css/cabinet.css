@@ -580,6 +580,92 @@ textarea:focus {
     font-size: var(--type-small);
 }
 
+.traffic-card {
+    position: relative;
+}
+
+.traffic-meter {
+    display: grid;
+    gap: 9px;
+}
+
+.traffic-meter-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.traffic-meter-top strong {
+    font-size: var(--type-big);
+}
+
+.traffic-meter-top span {
+    color: var(--text-muted);
+    font-size: var(--type-small);
+    white-space: nowrap;
+}
+
+.traffic-bar {
+    height: 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.035);
+    overflow: hidden;
+}
+
+.traffic-bar span {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ff2a2a, #ff8a3d);
+    box-shadow: 0 0 22px rgba(255, 42, 42, 0.28);
+    transition: width 0.45s ease;
+}
+
+.traffic-packs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.traffic-pack-card {
+    min-height: 66px;
+    padding: 13px 14px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.025), transparent 42%),
+        var(--bg-panel);
+    color: var(--text-primary);
+    cursor: pointer;
+    text-align: left;
+    transition: 0.16s ease;
+}
+
+.traffic-pack-card:hover {
+    border-color: rgba(255, 42, 42, 0.62);
+    box-shadow: 0 18px 50px rgba(255, 42, 42, 0.1);
+    transform: translateY(-2px);
+}
+
+.traffic-pack-card:active {
+    transform: translateY(0) scale(0.985);
+}
+
+.traffic-pack-card strong,
+.traffic-pack-card span {
+    display: block;
+    font-size: var(--type-small);
+}
+
+.traffic-pack-card span {
+    margin-top: 3px;
+    color: var(--text-muted);
+}
+
 .autopay-setup {
     display: flex;
     align-items: center;
@@ -1045,6 +1131,10 @@ body.is-mini-app .title-tools::before {
     background-image: url("../brand/neura-tools.webp");
 }
 
+body.is-mini-app .title-traffic::before {
+    background-image: url("../brand/neura-network.webp");
+}
+
 body.is-mini-app .title-sync::before {
     background-image: url("../brand/neura-sync.webp");
 }
@@ -1141,6 +1231,65 @@ body.is-mini-app .plan-card:hover {
     background:
         linear-gradient(145deg, rgba(255, 239, 207, 0.4), transparent 38%),
         rgba(223, 194, 158, 0.7);
+    box-shadow: 0 18px 42px rgba(92, 42, 12, 0.14);
+}
+
+body.is-mini-app .traffic-meter {
+    gap: 8px;
+}
+
+body.is-mini-app .traffic-meter-top strong,
+body.is-mini-app .traffic-meter-top span {
+    font-size: 0.88rem;
+}
+
+body.is-mini-app .traffic-bar {
+    height: 12px;
+    border-color: rgba(82, 39, 15, 0.24);
+    background: rgba(255, 248, 236, 0.52);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+body.is-mini-app .traffic-bar span {
+    background: linear-gradient(90deg, #6e2a0d, #b45f27);
+    box-shadow: 0 0 18px rgba(110, 42, 13, 0.18);
+}
+
+body.is-mini-app .traffic-packs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 11px;
+}
+
+body.is-mini-app .traffic-pack-card {
+    min-height: 54px;
+    padding: 9px 10px;
+    border-color: rgba(82, 39, 15, 0.3);
+    background:
+        linear-gradient(145deg, rgba(255, 242, 217, 0.34), transparent 38%),
+        rgba(218, 184, 143, 0.5);
+    color: var(--text-primary);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 246, 226, 0.42),
+        inset 0 -14px 30px rgba(82, 39, 15, 0.045),
+        0 8px 20px rgba(82, 39, 15, 0.055);
+}
+
+body.is-mini-app .traffic-pack-card strong,
+body.is-mini-app .traffic-pack-card span {
+    font-size: 0.84rem !important;
+    line-height: 1.08;
+}
+
+body.is-mini-app .traffic-pack-card span {
+    color: #7d3513;
+}
+
+body.is-mini-app .traffic-pack-card:hover {
+    border-color: rgba(125, 53, 19, 0.52);
+    background:
+        linear-gradient(145deg, rgba(255, 239, 207, 0.42), transparent 42%),
+        rgba(199, 158, 110, 0.64);
     box-shadow: 0 18px 42px rgba(92, 42, 12, 0.14);
 }
 

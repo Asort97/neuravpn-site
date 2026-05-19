@@ -71,6 +71,13 @@ type plan struct {
 	Days   int     `json:"days"`
 }
 
+type trafficPack struct {
+	ID     string  `json:"id"`
+	Title  string  `json:"title"`
+	GB     int64   `json:"gb"`
+	Amount float64 `json:"amount"`
+}
+
 var plans = []plan{
 	{ID: "30d", Title: "30 дней", Amount: 149, Days: 30},
 	{ID: "60d", Title: "60 дней", Amount: 289, Days: 60},
@@ -79,6 +86,17 @@ var plans = []plan{
 }
 
 var testPlan = plan{ID: "test_1d", Title: "Тест 1 день", Amount: 1, Days: 1}
+
+var trafficPacks = []trafficPack{
+	{ID: "traffic_50gb", Title: "50 ГБ", GB: 50, Amount: 119},
+	{ID: "traffic_150gb", Title: "150 ГБ", GB: 150, Amount: 349},
+	{ID: "traffic_250gb", Title: "250 ГБ", GB: 250, Amount: 549},
+}
+
+const (
+	gibBytes               int64 = 1024 * 1024 * 1024
+	mergedBaseTrafficBytes int64 = 10 * gibBytes
+)
 
 func main() {
 	dsn := strings.TrimSpace(os.Getenv("DB_DSN"))
@@ -132,6 +150,8 @@ func main() {
 	mux.HandleFunc("/api/me", a.requireAuth(a.handleMe))
 	mux.HandleFunc("/api/plans", a.requireAuth(a.handlePlans))
 	mux.HandleFunc("/api/payments/create", a.requireAuth(a.handleCreatePayment))
+	mux.HandleFunc("/api/traffic/packs", a.requireAuth(a.handleTrafficPacks))
+	mux.HandleFunc("/api/traffic/create", a.requireAuth(a.handleCreateTrafficPayment))
 	mux.HandleFunc("/api/autopay/enable", a.requireAuth(a.handleEnableAutopay))
 	mux.HandleFunc("/api/autopay/disable", a.requireAuth(a.handleDisableAutopay))
 	mux.HandleFunc("/api/autopay/detach", a.requireAuth(a.handleDetachAutopay))
@@ -176,6 +196,13 @@ CREATE TABLE IF NOT EXISTS web_login_tokens (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_web_login_tokens_expires_at ON web_login_tokens(expires_at);
+CREATE TABLE IF NOT EXISTS merged_traffic (
+    user_id TEXT PRIMARY KEY,
+    month TEXT NOT NULL,
+    extra_allocated_bytes BIGINT NOT NULL DEFAULT 0,
+    last_synced_used_bytes BIGINT NOT NULL DEFAULT 0,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 DELETE FROM email_login_codes WHERE expires_at < NOW() - INTERVAL '1 day';
 DELETE FROM web_sessions WHERE expires_at < NOW();
 DELETE FROM web_login_tokens WHERE expires_at < NOW() - INTERVAL '1 day';
@@ -491,6 +518,7 @@ FROM users WHERE id=$1`, userID).Scan(&email, &days, &subID, &autopay, &autopayP
 	if days > 0 {
 		expiresAt = time.Now().Add(time.Duration(days) * 24 * time.Hour).Format(time.RFC3339)
 	}
+	traffic := a.mergedTrafficStatus(r.Context(), userID)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user_id":           userID,
 		"masked_id":         maskID(userID),
@@ -502,6 +530,7 @@ FROM users WHERE id=$1`, userID).Scan(&email, &days, &subID, &autopay, &autopayP
 		"autopay_enabled":   autopay,
 		"autopay_available": autopayMethod != "",
 		"autopay_plan_id":   autopayPlan,
+		"traffic":           traffic,
 	})
 }
 
@@ -548,6 +577,52 @@ func (a *app) handleCreatePayment(w http.ResponseWriter, r *http.Request, userID
 		saveCardText = "да"
 	}
 	a.sendWebLog(r, userID, email, "создал счёт", fmt.Sprintf("%s · %.0f ₽ · save card: %s", p.Title, p.Amount, saveCardText))
+	writeJSON(w, http.StatusOK, map[string]any{"payment_id": paymentID, "confirmation_url": paymentURL})
+}
+
+func (a *app) handleTrafficPacks(w http.ResponseWriter, r *http.Request, userID string) {
+	writeJSON(w, http.StatusOK, map[string]any{"packs": trafficPacks})
+}
+
+func (a *app) handleCreateTrafficPayment(w http.ResponseWriter, r *http.Request, userID string) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
+		return
+	}
+	var req struct {
+		PackID string `json:"pack_id"`
+	}
+	if err := readJSON(r, &req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errResp("bad json"))
+		return
+	}
+	pack, ok := findTrafficPack(req.PackID)
+	if !ok {
+		writeJSON(w, http.StatusBadRequest, errResp("пакет трафика не найден"))
+		return
+	}
+	if a.yooShopID == "" || a.yooSecret == "" {
+		writeJSON(w, http.StatusServiceUnavailable, errResp("YooKassa не настроена для web API"))
+		return
+	}
+	var email string
+	var days int64
+	err := a.db.QueryRow(r.Context(), `SELECT COALESCE(email,''), days FROM users WHERE id=$1`, userID).Scan(&email, &days)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, errResp("пользователь не найден"))
+		return
+	}
+	if days <= 0 {
+		writeJSON(w, http.StatusBadRequest, errResp("сначала купите доступ, потом можно докупить трафик"))
+		return
+	}
+	paymentURL, paymentID, err := a.createYooTrafficPayment(r.Context(), userID, email, pack, a.paymentReturnBase(r))
+	if err != nil {
+		log.Printf("web traffic payment create failed user=%s pack=%s: %v", userID, pack.ID, err)
+		writeJSON(w, http.StatusBadGateway, errResp("не удалось создать платёж"))
+		return
+	}
+	a.sendWebLog(r, userID, email, "создал счёт на трафик", fmt.Sprintf("%s · %.0f ₽", pack.Title, pack.Amount))
 	writeJSON(w, http.StatusOK, map[string]any{"payment_id": paymentID, "confirmation_url": paymentURL})
 }
 
@@ -861,6 +936,62 @@ func (a *app) subscriptionURL(userID, subID string) string {
 	return ""
 }
 
+func (a *app) mergedTrafficStatus(ctx context.Context, userID string) map[string]any {
+	now := time.Now().UTC()
+	currentMonth := now.Format("2006-01")
+	month := currentMonth
+	var extraBytes, usedBytes int64
+	var updatedAt time.Time
+	err := a.db.QueryRow(ctx, `
+SELECT month, extra_allocated_bytes, last_synced_used_bytes, updated_at
+FROM merged_traffic WHERE user_id=$1`, userID).Scan(&month, &extraBytes, &usedBytes, &updatedAt)
+	if err != nil {
+		extraBytes = 0
+		usedBytes = 0
+		updatedAt = time.Time{}
+	}
+	stale := month != currentMonth
+	if stale {
+		usedOverBase := usedBytes - mergedBaseTrafficBytes
+		if usedOverBase < 0 {
+			usedOverBase = 0
+		}
+		extraBytes -= usedOverBase
+		if extraBytes < 0 {
+			extraBytes = 0
+		}
+		usedBytes = 0
+		month = currentMonth
+	}
+	limitBytes := mergedBaseTrafficBytes + extraBytes
+	remainingBytes := limitBytes - usedBytes
+	if remainingBytes < 0 {
+		remainingBytes = 0
+	}
+	usedOverBase := usedBytes - mergedBaseTrafficBytes
+	if usedOverBase < 0 {
+		usedOverBase = 0
+	}
+	carryNextBytes := extraBytes - usedOverBase
+	if carryNextBytes < 0 {
+		carryNextBytes = 0
+	}
+	return map[string]any{
+		"available":        true,
+		"month":            month,
+		"stale":            stale,
+		"limit_bytes":      limitBytes,
+		"used_bytes":       usedBytes,
+		"remaining_bytes":  remainingBytes,
+		"carry_next_bytes": carryNextBytes,
+		"limit_gb":         bytesToGB(limitBytes),
+		"used_gb":          bytesToGB(usedBytes),
+		"remaining_gb":     bytesToGB(remainingBytes),
+		"carry_next_gb":    bytesToGB(carryNextBytes),
+		"updated_at":       timeOrEmpty(updatedAt),
+	}
+}
+
 func (a *app) createYooPayment(ctx context.Context, userID, email string, p plan, saveCard bool, returnBase string) (string, string, error) {
 	chatID, _ := strconv.ParseInt(userID, 10, 64)
 	returnURL := strings.TrimRight(returnBase, "/") + "/cabinet/?payment=return"
@@ -918,6 +1049,62 @@ func (a *app) createYooPayment(ctx context.Context, userID, email string, p plan
 	return confirmationURL, data.ID, nil
 }
 
+func (a *app) createYooTrafficPayment(ctx context.Context, userID, email string, p trafficPack, returnBase string) (string, string, error) {
+	chatID, _ := strconv.ParseInt(userID, 10, 64)
+	returnURL := strings.TrimRight(returnBase, "/") + "/cabinet/?payment=traffic_return"
+	if returnBase == "" {
+		returnURL = "https://t.me/neuravpn_bot"
+	}
+	reqBody := map[string]any{
+		"amount":       map[string]string{"value": fmt.Sprintf("%.2f", p.Amount), "currency": "RUB"},
+		"capture":      true,
+		"confirmation": map[string]any{"type": "redirect", "return_url": returnURL},
+		"description":  "NeuraVPN докупка трафика " + p.Title,
+		"expires_at":   time.Now().UTC().Add(20 * time.Minute).Format(time.RFC3339),
+		"metadata": map[string]any{
+			"chat_id":         chatID,
+			"user_id":         userID,
+			"product_type":    "traffic",
+			"traffic_pack_id": p.ID,
+			"traffic_gb":      p.GB,
+			"traffic_amount":  p.Amount,
+			"source":          "website",
+		},
+	}
+	if email != "" {
+		reqBody["receipt"] = trafficReceipt(email, p)
+	}
+	payload, _ := json.Marshal(reqBody)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.yookassa.ru/v3/payments", bytes.NewReader(payload))
+	if err != nil {
+		return "", "", err
+	}
+	auth := base64.StdEncoding.EncodeToString([]byte(a.yooShopID + ":" + a.yooSecret))
+	req.Header.Set("Authorization", "Basic "+auth)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotence-Key", "web-"+userID+"-"+p.ID+"-"+strconv.FormatInt(time.Now().UnixNano(), 10))
+	resp, err := (&http.Client{Timeout: 25 * time.Second}).Do(req)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+	var data struct {
+		ID           string         `json:"id"`
+		Confirmation map[string]any `json:"confirmation"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return "", "", err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", "", fmt.Errorf("yookassa status %s", resp.Status)
+	}
+	confirmationURL, _ := data.Confirmation["confirmation_url"].(string)
+	if confirmationURL == "" {
+		return "", data.ID, errors.New("confirmation_url is empty")
+	}
+	return confirmationURL, data.ID, nil
+}
+
 func (a *app) paymentReturnBase(r *http.Request) string {
 	origin := strings.TrimRight(strings.TrimSpace(r.Header.Get("Origin")), "/")
 	if origin != "" {
@@ -932,6 +1119,10 @@ func receipt(email string, p plan) map[string]any {
 	return map[string]any{"customer": map[string]string{"email": email}, "items": []map[string]any{{"description": "NeuraVPN " + p.Title, "quantity": "1.00", "amount": map[string]string{"value": fmt.Sprintf("%.2f", p.Amount), "currency": "RUB"}, "vat_code": 1, "payment_mode": "full_payment", "payment_subject": "service"}}}
 }
 
+func trafficReceipt(email string, p trafficPack) map[string]any {
+	return map[string]any{"customer": map[string]string{"email": email}, "items": []map[string]any{{"description": "NeuraVPN трафик " + p.Title, "quantity": "1.00", "amount": map[string]string{"value": fmt.Sprintf("%.2f", p.Amount), "currency": "RUB"}, "vat_code": 1, "payment_mode": "full_payment", "payment_subject": "service"}}}
+}
+
 func (a *app) findPlan(userID, id string) (plan, bool) {
 	for _, p := range plans {
 		if p.ID == id {
@@ -943,6 +1134,31 @@ func (a *app) findPlan(userID, id string) (plan, bool) {
 	}
 	return plan{}, false
 }
+
+func findTrafficPack(id string) (trafficPack, bool) {
+	for _, p := range trafficPacks {
+		if p.ID == id {
+			return p, true
+		}
+	}
+	return trafficPack{}, false
+}
+
+func bytesToGB(bytes int64) float64 {
+	if bytes <= 0 {
+		return 0
+	}
+	gb := float64(bytes) / float64(gibBytes)
+	return math.Round(gb*10) / 10
+}
+
+func timeOrEmpty(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.UTC().Format(time.RFC3339)
+}
+
 func (a *app) codeHash(email, code string) string {
 	h := hmac.New(sha256.New, a.authSecret)
 	_, _ = h.Write([]byte(strings.ToLower(email) + ":" + code))
@@ -1208,8 +1424,12 @@ func webActionEmoji(action string) string {
 		return "🚪 " + action
 	case "создал счёт":
 		return "🔗 счёт создан"
+	case "создал счёт на трафик":
+		return "📶 счёт на трафик"
 	case "выбрал тариф":
 		return "💰 " + action
+	case "выбрал пакет трафика":
+		return "📶 " + action
 	case "скопировал ключ":
 		return "📋 " + action
 	case "открыл инструкцию":
@@ -1235,6 +1455,8 @@ func normalizeUILogAction(action string) string {
 		return "скопировал ключ"
 	case "instruction_open":
 		return "открыл инструкцию"
+	case "traffic_pack_selected":
+		return "выбрал пакет трафика"
 	default:
 		return ""
 	}
