@@ -316,3 +316,125 @@ body.is-mini-app .guide-hero {
 .step-media video {
     pointer-events: none;
 }
+
+/* Mini App instruction pages use the same parchment glass layer as cabinet. */
+body.is-mini-app .instructions-shell {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px 0 34px;
+}
+
+body.is-mini-app .guide-hero,
+body.is-mini-app .guide-step {
+    width: 100%;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-color: rgba(82, 39, 15, 0.2);
+    background:
+        radial-gradient(circle at 16% 8%, rgba(255, 255, 255, 0.58), transparent 26%),
+        radial-gradient(circle at 86% 18%, rgba(123, 58, 18, 0.1), transparent 36%),
+        linear-gradient(145deg, rgba(255, 252, 243, 0.68), rgba(240, 216, 184, 0.44));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.64),
+        inset 0 -22px 54px rgba(94, 45, 16, 0.055),
+        0 22px 58px rgba(80, 39, 16, 0.16);
+    backdrop-filter: blur(22px) saturate(1.18);
+}
+
+body.is-mini-app .guide-hero > *,
+body.is-mini-app .guide-step > *,
+body.is-mini-app .step-content,
+body.is-mini-app .step-media {
+    min-width: 0;
+}
+
+body.is-mini-app .guide-hero p,
+body.is-mini-app .step-content p {
+    max-width: min(100%, 280px) !important;
+    overflow-wrap: anywhere;
+}
+
+body.is-mini-app .guide-hero::after,
+body.is-mini-app .guide-step::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    z-index: -1;
+    border-radius: inherit;
+    background:
+        linear-gradient(120deg, rgba(255, 255, 255, 0.38), transparent 34%),
+        radial-gradient(circle at 50% 120%, rgba(92, 45, 18, 0.08), transparent 42%);
+    opacity: 0.86;
+    pointer-events: none;
+}
+
+body.is-mini-app .guide-hero::before {
+    content: "";
+    position: absolute;
+    right: -8px;
+    top: -18px;
+    width: 126px;
+    height: 126px;
+    background: url("../brand/neura-tools.webp") center / contain no-repeat;
+    opacity: 0.18;
+    transform: rotate(7deg);
+    pointer-events: none;
+}
+
+body.is-mini-app .guide-step:nth-child(2n)::before {
+    content: "";
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    width: 54px;
+    height: 54px;
+    background: url("../brand/neura-network.webp") center / contain no-repeat;
+    opacity: 0.16;
+    pointer-events: none;
+}
+
+body.is-mini-app .guide-back {
+    border-color: rgba(82, 39, 15, 0.24);
+    background: rgba(255, 248, 236, 0.56);
+    color: var(--text-primary);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+}
+
+body.is-mini-app .guide-back:hover {
+    border-color: rgba(125, 53, 19, 0.42);
+    color: var(--text-primary);
+}
+
+body.is-mini-app .guide-hero h1,
+body.is-mini-app .guide-step h2,
+body.is-mini-app .step-index,
+body.is-mini-app .step-content b {
+    color: var(--text-primary);
+}
+
+body.is-mini-app .guide-hero p,
+body.is-mini-app .step-content p,
+body.is-mini-app .step-content li {
+    color: var(--text-secondary);
+}
+
+body.is-mini-app .step-content a {
+    color: #7d3513;
+}
+
+body.is-mini-app .step-content a.btn-primary {
+    color: #fff7eb;
+}
+
+body.is-mini-app .step-media,
+body.is-mini-app .step-key-input {
+    background: rgba(255, 251, 241, 0.58);
+    border-color: rgba(82, 39, 15, 0.18);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.52),
+        inset 0 -18px 34px rgba(89, 43, 17, 0.035);
+}

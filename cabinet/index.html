@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>neuravpn - личный кабинет</title>
-  <link rel="stylesheet" href="../assets/css/site.css?v=20260517-9">
-  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260517-10">
+  <link rel="stylesheet" href="../assets/css/site.css?v=20260519-1">
+  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20260519-1">
 </head>
 <body>
   <div class="grid-overlay"></div>
@@ -76,8 +76,7 @@
       <section id="dashboardView" class="hidden">
         <div class="dashboard-hero card-panel">
           <div class="profile-summary">
-            <p class="profile-kicker">Личный кабинет</p>
-            <p id="userMeta" class="muted">загрузка профиля...</p>
+            <p id="userMeta" class="muted title-with-mark title-shield">загрузка профиля...</p>
           </div>
           <div class="active-pill" aria-live="polite">
             <span class="active-dot"></span>
@@ -89,15 +88,15 @@
           <section class="card-panel subscription-card">
             <div class="section-head">
               <div>
-                <h2>Ваш доступ к VPN</h2>
+                <h2 class="title-with-mark title-network">Подключение</h2>
                 <p id="expireText" class="muted"></p>
               </div>
               <div id="subState" class="state-pill">проверка</div>
             </div>
             <div class="secret-box">
-              <textarea id="subLink" readonly placeholder="Ссылка появится после загрузки"></textarea>
+              <textarea id="subLink" class="hidden" readonly placeholder="Ссылка появится после загрузки"></textarea>
               <div class="secret-actions">
-                <button id="copySubBtn" class="btn btn-primary" type="button">Скопировать ссылку</button>
+                <button id="copySubBtn" class="btn btn-primary" type="button">Скопировать ключ</button>
                 <a id="openSubBtn" class="btn btn-secondary" href="#" target="_blank" rel="noopener noreferrer">открыть</a>
               </div>
             </div>
@@ -106,13 +105,13 @@
           <section class="card-panel payment-card">
             <div class="section-head payment-head">
               <div>
-                <h2>Продлить подписку</h2>
+                <h2 class="title-with-mark title-money">Продлить</h2>
               </div>
             </div>
             <div id="plans" class="plans-grid"></div>
             <div id="autopaySetup" class="autopay-setup hidden">
               <div class="autopay-info">
-                <h3 id="autopayPlanTitle">Автопродление</h3>
+                <h3 id="autopayPlanTitle" class="title-with-mark title-sync">Автопродление</h3>
                 <p id="autopayNextText" class="muted"></p>
               </div>
               <div class="autopay-controls">
@@ -136,8 +135,7 @@
         <section id="instructions" class="card-panel instructions-panel">
           <div class="section-head">
             <div>
-              <h2>Инструкции по подключению</h2>
-              <p class="muted">Короткие шаги с видео для вашей платформы.</p>
+              <h2 class="title-with-mark title-tools">Инструкции</h2>
             </div>
           </div>
           <div class="platform-grid">
@@ -204,6 +202,6 @@
     </div>
   </div>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="../assets/js/cabinet.js?v=20260517-12"></script>
+  <script src="../assets/js/cabinet.js?v=20260519-1"></script>
 </body>
 </html>

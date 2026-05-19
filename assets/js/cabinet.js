@@ -2,6 +2,8 @@
     const API_BASE = detectAPIBase();
     const TG_WEBAPP = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
     const IS_MINI_APP = detectMiniApp();
+    const HAS_TELEGRAM_INIT_DATA = Boolean(TG_WEBAPP && TG_WEBAPP.initData);
+    const IS_DEMO = new URLSearchParams(window.location.search).get("demo") === "1";
     const authView = document.getElementById("authView");
     const dashboardView = document.getElementById("dashboardView");
     const emailForm = document.getElementById("emailForm");
@@ -122,7 +124,7 @@
             logUI("copy_key", "");
             copySubBtn.textContent = "скопировано";
             showToast("ключ скопирован");
-            window.setTimeout(function () { copySubBtn.textContent = "Скопировать ссылку"; }, 1400);
+            window.setTimeout(function () { copySubBtn.textContent = "Скопировать ключ"; }, 1400);
         } catch (error) {
             showToast("не удалось скопировать", "error");
         }
@@ -189,6 +191,10 @@
     });
 
     async function boot() {
+        if (IS_DEMO) {
+            showDemoDashboard();
+            return;
+        }
         if (await completeTelegramLoginFromURL()) {
             showPaymentReturnIfNeeded();
             return;
@@ -204,20 +210,17 @@
             showAuth();
             if (isPaymentReturn()) {
                 setStatus(authStatus, "оплата прошла. Войдите, чтобы увидеть обновлённую подписку.", "ok");
-            } else if (IS_MINI_APP) {
+            } else if (IS_MINI_APP && HAS_TELEGRAM_INIT_DATA) {
                 setStatus(authStatus, "Откройте личный кабинет через кнопку в Telegram-боте.", "error");
             }
         }
     }
 
     async function completeTelegramMiniAppLogin() {
-        if (!IS_MINI_APP) {
+        if (!IS_MINI_APP || !HAS_TELEGRAM_INIT_DATA) {
             return false;
         }
-        const initData = TG_WEBAPP && TG_WEBAPP.initData ? TG_WEBAPP.initData : "";
-        if (!initData) {
-            return false;
-        }
+        const initData = TG_WEBAPP.initData;
         showMiniAppLoading();
         showToast("входим через Telegram");
         try {
@@ -355,7 +358,7 @@
         authView.classList.remove("hidden");
         dashboardView.classList.add("hidden");
         logoutBtn.classList.add("hidden");
-        if (IS_MINI_APP) {
+        if (IS_MINI_APP && HAS_TELEGRAM_INIT_DATA) {
             emailForm.classList.add("hidden");
             codeForm.classList.add("hidden");
             telegramLoginBox.classList.add("hidden");
@@ -381,7 +384,7 @@
         userMeta.textContent = [me.email || "email не указан", me.masked_id || me.user_id || ""].filter(Boolean).join(" · ");
         subState.textContent = days > 0 ? "активна" : "нет активной подписки";
         subState.classList.toggle("is-active", days > 0);
-        expireText.textContent = me.expires_at ? "примерная дата окончания: " + formatDate(me.expires_at) : "остаток синхронизируется из Xray через бота";
+        expireText.textContent = me.expires_at ? "Дата окончания: " + formatDate(me.expires_at) : "остаток синхронизируется из Xray через бота";
         subLink.value = me.subscription_url || "";
         openSubBtn.href = me.subscription_url || "#";
         autopayText.textContent = me.autopay_available ? (me.autopay_enabled ? "автопродление включено" : "карта привязана, автосписание выключено") : "карта не привязана";
@@ -473,30 +476,38 @@
     }
 
     async function loadPlans() {
+        if (IS_DEMO) {
+            renderPlans(demoPlans());
+            return;
+        }
         try {
             const data = await api("/api/plans");
-            plansEl.innerHTML = "";
-            getVisiblePlans(data.plans || []).forEach(function (plan) {
-                const button = document.createElement("button");
-                button.className = "plan-card";
-                button.type = "button";
-                button.innerHTML = [
-                    "<strong>" + escapeHTML(plan.title) + "</strong>",
-                    "<span>" + Number(plan.amount).toFixed(0) + " ₽ · " + plan.days + " дней</span>"
-                ].join("");
-                button.addEventListener("click", function () { openPaymentChoice(plan); });
-                plansEl.appendChild(button);
-            });
+            renderPlans(data.plans || []);
         } catch (error) {
             plansEl.textContent = "не удалось загрузить тарифы";
         }
+    }
+
+    function renderPlans(plans) {
+        plansEl.innerHTML = "";
+        getVisiblePlans(plans || []).forEach(function (plan) {
+            const button = document.createElement("button");
+            button.className = "plan-card";
+            button.type = "button";
+            button.innerHTML = [
+                "<strong>" + escapeHTML(plan.title) + "</strong>",
+                '<span class="plan-price">' + Number(plan.amount).toFixed(0) + " ₽</span>"
+            ].join("");
+            button.addEventListener("click", function () { openPaymentChoice(plan); });
+            plansEl.appendChild(button);
+        });
     }
 
     function openPaymentChoice(plan) {
         selectedPlan = plan;
         logUI("plan_selected", plan.title + " · " + Number(plan.amount).toFixed(0) + " ₽");
         paymentChoiceText.textContent = plan.title + " · " + Number(plan.amount).toFixed(0) + " ₽";
-        payAutopayBtn.innerHTML = "Картой с автопродлением<br><span>сохранить карту для следующих списаний</span>";
+        payAutopayBtn.textContent = "Картой с автопродлением";
         paymentChoiceModal.classList.remove("hidden");
         setStatus(paymentStatus, "", "");
     }
@@ -504,6 +515,31 @@
     function closePaymentChoice() {
         paymentChoiceModal.classList.add("hidden");
         clearPendingPaymentStatus();
+    }
+
+    function showDemoDashboard() {
+        showDashboard({
+            user_id: "623290294",
+            masked_id: "6232***294",
+            email: "asort97@mail.ru",
+            days: 21,
+            expires_at: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
+            subscription_url: "https://webhook.staticdeliverycdn.com/merged-sub/623290294/e8f2f084b81dc99fd2c8df286642fb9320aa1ebe666693a910d3f06f3f1e0335",
+            autopay_available: true,
+            autopay_enabled: false,
+            autopay_plan_id: "30d"
+        });
+        renderPlans(demoPlans());
+        setStatus(paymentStatus, "demo-режим: платежи и API не вызываются", "ok");
+    }
+
+    function demoPlans() {
+        return [
+            { id: "30d", title: "30 дней", amount: 149, days: 30 },
+            { id: "60d", title: "60 дней", amount: 289, days: 60 },
+            { id: "90d", title: "90 дней", amount: 419, days: 90 },
+            { id: "365d", title: "365 дней", amount: 1499, days: 365 }
+        ];
     }
 
     function startResendTimer(seconds) {
@@ -545,7 +581,7 @@
     function showAutopayStatus(me) {
         autopayToggle.checked = Boolean(me.autopay_enabled);
         autopayPlanTitle.textContent = "Автопродление";
-        autopayNextText.textContent = me.autopay_enabled ? "Следующее автосписание: " + nextAutopayText(0) : "Карта привязана. Автосписание сейчас выключено.";
+        autopayNextText.textContent = me.autopay_enabled ? "Следующее автосписание: " + nextAutopayText(0) : "";
         autopaySetup.classList.remove("hidden");
     }
 
@@ -689,7 +725,11 @@
         const text = await response.text();
         let data = {};
         if (text) {
-            try { data = JSON.parse(text); } catch (error) { data = { error: text }; }
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                data = { error: fallbackAPIError(response, text) };
+            }
         }
         if (!response.ok) {
             const error = new Error(data.error || "API error " + response.status);
@@ -698,6 +738,14 @@
             throw error;
         }
         return data;
+    }
+
+    function fallbackAPIError(response, text) {
+        const normalized = String(text || "").trim().toLowerCase();
+        if (response.status === 501 || normalized.startsWith("<!doctype") || normalized.startsWith("<html")) {
+            return "локальный API не запущен. Для проверки дизайна это нормально.";
+        }
+        return "сервер вернул некорректный ответ";
     }
 
     function logUI(action, details) {

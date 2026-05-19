@@ -860,3 +860,370 @@ textarea:focus {
         gap: 16px;
     }
 }
+
+/* Mini App: Neura parchment / liquid glass layer */
+body.is-mini-app .cabinet-shell {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px 0 26px;
+}
+
+body.is-mini-app .card-panel {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 1px solid rgba(82, 39, 15, 0.2);
+    background:
+        radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.56), transparent 26%),
+        radial-gradient(circle at 86% 18%, rgba(123, 58, 18, 0.1), transparent 36%),
+        linear-gradient(145deg, rgba(255, 252, 243, 0.7), rgba(240, 216, 184, 0.46));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.62),
+        inset 0 -22px 54px rgba(94, 45, 16, 0.06),
+        0 22px 58px rgba(80, 39, 16, 0.15);
+    backdrop-filter: blur(22px) saturate(1.18);
+}
+
+body.is-mini-app .card-panel::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    z-index: -1;
+    border-radius: inherit;
+    background:
+        linear-gradient(120deg, rgba(255, 255, 255, 0.36), transparent 34%),
+        radial-gradient(circle at 50% 120%, rgba(92, 45, 18, 0.08), transparent 42%);
+    opacity: 0.84;
+    pointer-events: none;
+}
+
+body.is-mini-app .cabinet-auth,
+body.is-mini-app .dashboard-hero,
+body.is-mini-app .cabinet-grid .card-panel,
+body.is-mini-app .instructions-panel {
+    width: 100%;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 26px;
+}
+
+body.is-mini-app .cabinet-auth {
+    max-width: 100%;
+    padding: 24px 18px;
+}
+
+body.is-mini-app .cabinet-auth::before {
+    content: "";
+    position: absolute;
+    right: -12px;
+    top: -24px;
+    width: 130px;
+    height: 130px;
+    background: url("../brand/neura-cat.webp") center / contain no-repeat;
+    opacity: 0.1;
+    transform: rotate(8deg);
+    pointer-events: none;
+}
+
+body.is-mini-app .dashboard-hero {
+    min-height: 72px;
+    padding: 11px 12px;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+body.is-mini-app .dashboard-hero::before {
+    display: none;
+}
+
+body.is-mini-app .profile-kicker,
+body.is-mini-app .auth-form label,
+body.is-mini-app .telegram-divider,
+body.is-mini-app .secret-label {
+    color: var(--text-muted);
+}
+
+body.is-mini-app #userMeta {
+    color: var(--text-primary);
+    font-size: 0.92rem;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.36);
+}
+
+body.is-mini-app .dashboard-hero .profile-summary {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: calc(100% - 106px);
+    padding-right: 0;
+}
+
+body.is-mini-app .dashboard-hero #userMeta {
+    margin-bottom: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.is-mini-app .active-pill {
+    flex: 0 0 auto;
+    padding: 6px 8px;
+    gap: 5px;
+    font-size: 0.74rem;
+    max-width: 104px;
+    white-space: nowrap;
+    background: rgba(69, 129, 70, 0.16);
+    border-color: rgba(40, 111, 45, 0.22);
+    color: #286f2d;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.46);
+}
+
+body.is-mini-app .section-head {
+    margin-bottom: 10px;
+}
+
+body.is-mini-app .active-dot {
+    width: 7px;
+    height: 7px;
+    background: #2e8b3c;
+}
+
+body.is-mini-app .section-head {
+    padding-right: 0;
+}
+
+body.is-mini-app .section-head > *,
+body.is-mini-app .profile-summary,
+body.is-mini-app .cabinet-grid,
+body.is-mini-app .secret-box,
+body.is-mini-app .platform-grid,
+body.is-mini-app .platform-card {
+    min-width: 0;
+}
+
+body.is-mini-app .title-with-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+}
+
+body.is-mini-app .title-with-mark::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 1.22em;
+    height: 1.22em;
+    background: center / contain no-repeat;
+    transform: translateY(0.03em);
+}
+
+body.is-mini-app .title-network::before {
+    background-image: url("../brand/neura-network.webp");
+}
+
+body.is-mini-app .title-money::before {
+    background-image: url("../brand/neura-money.webp");
+}
+
+body.is-mini-app .title-tools::before {
+    background-image: url("../brand/neura-tools.webp");
+}
+
+body.is-mini-app .title-sync::before {
+    background-image: url("../brand/neura-sync.webp");
+}
+
+body.is-mini-app .title-shield::before {
+    background-image: url("../brand/neura-shield.webp");
+}
+
+body.is-mini-app .subscription-card textarea,
+body.is-mini-app input,
+body.is-mini-app textarea {
+    background: rgba(255, 251, 241, 0.6);
+    border-color: rgba(82, 39, 15, 0.2);
+    color: var(--text-primary);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        inset 0 -18px 34px rgba(89, 43, 17, 0.04);
+}
+
+body.is-mini-app .secret-box {
+    margin-top: 0;
+}
+
+body.is-mini-app .secret-actions {
+    margin-top: 0;
+}
+
+body.is-mini-app .subscription-card textarea {
+    height: 48px;
+    min-height: 48px;
+    padding-top: 13px;
+    color: #563018;
+}
+
+body.is-mini-app .secret-actions .btn-primary {
+    min-height: 48px;
+    color: #fff7eb;
+}
+
+body.is-mini-app .plans-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+}
+
+body.is-mini-app .plan-card {
+    min-height: 58px;
+    width: 100%;
+    min-width: 0;
+    padding: 10px 9px;
+    border-color: rgba(82, 39, 15, 0.3);
+    background:
+        linear-gradient(145deg, rgba(255, 242, 217, 0.34), transparent 38%),
+        rgba(218, 184, 143, 0.5);
+    color: var(--text-primary);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 246, 226, 0.42),
+        inset 0 -14px 30px rgba(82, 39, 15, 0.045),
+        0 8px 20px rgba(82, 39, 15, 0.055);
+}
+
+body.is-mini-app .plan-card::after {
+    display: none;
+}
+
+body.is-mini-app .plan-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+body.is-mini-app .plan-card span {
+    color: var(--text-secondary);
+}
+
+body.is-mini-app .plan-card strong,
+body.is-mini-app .plan-card .plan-price {
+    display: block;
+    font-size: 0.94rem !important;
+    line-height: 1.08;
+    margin: 0;
+    white-space: nowrap;
+}
+
+body.is-mini-app .plan-card .plan-price {
+    flex: 0 0 auto;
+    color: #7d3513;
+}
+
+body.is-mini-app .plan-card:hover {
+    border-color: rgba(125, 53, 19, 0.42);
+    background:
+        linear-gradient(145deg, rgba(255, 239, 207, 0.4), transparent 38%),
+        rgba(223, 194, 158, 0.7);
+    box-shadow: 0 18px 42px rgba(92, 42, 12, 0.14);
+}
+
+body.is-mini-app .autopay-setup {
+    position: relative;
+    border-color: rgba(82, 39, 15, 0.18);
+    background: rgba(255, 248, 236, 0.5);
+}
+
+body.is-mini-app .autopay-info .muted:empty {
+    display: none;
+}
+
+body.is-mini-app .toggle-row input {
+    background: rgba(255, 248, 236, 0.42);
+    border-color: rgba(82, 39, 15, 0.22);
+}
+
+body.is-mini-app .toggle-row input:checked {
+    background: rgba(125, 53, 19, 0.32);
+    border-color: rgba(125, 53, 19, 0.5);
+}
+
+body.is-mini-app .platform-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    margin-top: 10px;
+}
+
+body.is-mini-app .platform-card {
+    min-height: 50px;
+    width: 100%;
+    border-radius: 22px;
+    border-color: rgba(82, 39, 15, 0.34);
+    background:
+        linear-gradient(145deg, rgba(255, 239, 207, 0.36), transparent 42%),
+        rgba(215, 181, 139, 0.52);
+    color: var(--text-primary);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 246, 226, 0.45),
+        inset 0 -16px 28px rgba(82, 39, 15, 0.055),
+        0 9px 22px rgba(82, 39, 15, 0.075);
+}
+
+body.is-mini-app .platform-card .platform-icon {
+    width: 20px;
+    height: 20px;
+}
+
+body.is-mini-app .platform-card:hover {
+    background:
+        linear-gradient(145deg, rgba(255, 239, 207, 0.42), transparent 42%),
+        rgba(199, 158, 110, 0.64);
+    border-color: rgba(125, 53, 19, 0.52);
+    color: var(--text-primary);
+}
+
+body.is-mini-app .detach-card-btn {
+    border-color: rgba(86, 42, 17, 0.4);
+    color: #5a250d;
+}
+
+body.is-mini-app .modal-overlay {
+    background: rgba(73, 38, 17, 0.28);
+    backdrop-filter: blur(14px) saturate(1.05);
+}
+
+body.is-mini-app .modal-card,
+body.is-mini-app .toast {
+    border-color: rgba(82, 39, 15, 0.24);
+    background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.5), transparent 34%),
+        rgba(255, 247, 232, 0.84);
+    color: var(--text-primary);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.58),
+        0 28px 76px rgba(80, 39, 16, 0.2);
+    backdrop-filter: blur(20px) saturate(1.12);
+}
+
+body.is-mini-app #paymentChoiceText {
+    color: var(--text-primary);
+    font-size: calc(var(--type-big) * 1.14);
+    font-weight: 900;
+    line-height: 1.15;
+    margin-top: 4px;
+}
+
+body.is-mini-app #payAutopayBtn,
+body.is-mini-app #payAnyMethodBtn {
+    text-align: center;
+    justify-content: center;
+}
+
+body.is-mini-app .toast {
+    color: #286f2d;
+}
+
+body.is-mini-app .toast.is-error {
+    color: #7d3513;
+}
