@@ -394,12 +394,23 @@ textarea:focus {
     white-space: nowrap;
 }
 
+.active-pill.is-inactive {
+    background: rgba(255, 42, 42, 0.14);
+    border-color: rgba(255, 42, 42, 0.36);
+    color: #ff7b7b;
+    box-shadow: 0 12px 34px rgba(255, 42, 42, 0.08);
+}
+
 .active-dot {
     width: 8px;
     height: 8px;
     border-radius: 999px;
     background: #22c55e;
     animation: pulse 2s infinite;
+}
+
+.active-pill.is-inactive .active-dot {
+    background: #ff2a2a;
 }
 
 .cabinet-grid {
@@ -1115,6 +1126,12 @@ body.is-mini-app .active-pill {
     border-color: rgba(40, 111, 45, 0.22);
     color: #286f2d;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.46);
+}
+
+body.is-mini-app .active-pill.is-inactive {
+    background: rgba(138, 36, 18, 0.16);
+    border-color: rgba(138, 36, 18, 0.3);
+    color: #8a2412;
 }
 
 body.is-mini-app .section-head {

@@ -22,6 +22,7 @@
     const telegramLoginStatus = document.getElementById("telegramLoginStatus");
     const userMeta = document.getElementById("userMeta");
     const daysBig = document.getElementById("daysBig");
+    const activePill = document.querySelector(".active-pill");
     const subState = document.getElementById("subState");
     const expireText = document.getElementById("expireText");
     const subLink = document.getElementById("subLink");
@@ -393,10 +394,11 @@
         logoutBtn.classList.remove("hidden");
         const days = Number(me.days || 0);
         daysBig.textContent = String(days);
+        activePill.classList.toggle("is-inactive", days <= 0);
         userMeta.textContent = profileLabel(me);
         subState.textContent = days > 0 ? "активна" : "нет активной подписки";
         subState.classList.toggle("is-active", days > 0);
-        expireText.textContent = me.expires_at ? "Дата окончания: " + formatDate(me.expires_at) : "остаток синхронизируется из Xray через бота";
+        expireText.textContent = me.expires_at ? "Дата окончания: " + formatDate(me.expires_at) : "";
         subLink.value = me.subscription_url || "";
         openSubBtn.href = me.subscription_url || "#";
         autopayText.textContent = me.autopay_available ? (me.autopay_enabled ? "автопродление включено" : "карта привязана, автосписание выключено") : "карта не привязана";
