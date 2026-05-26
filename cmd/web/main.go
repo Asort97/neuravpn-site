@@ -912,11 +912,21 @@ func (a *app) validateTelegramLoginWidgetData(r *http.Request) (telegramWebAppUs
 }
 
 func rawJSONString(raw json.RawMessage) string {
-	var s string
-	if len(raw) == 0 || json.Unmarshal(raw, &s) != nil {
+	raw = bytes.TrimSpace(raw)
+	if len(raw) == 0 || bytes.Equal(raw, []byte("null")) {
 		return ""
 	}
-	return s
+	if raw[0] == '"' {
+		var s string
+		if err := json.Unmarshal(raw, &s); err == nil {
+			return s
+		}
+	}
+	var buf bytes.Buffer
+	if err := json.Compact(&buf, raw); err == nil {
+		return buf.String()
+	}
+	return string(raw)
 }
 
 func rawJSONText(raw json.RawMessage) string {
@@ -963,6 +973,7 @@ type webXrayClient struct {
 	username   string
 	password   string
 	serverURL  string
+	apiToken   string
 	httpClient *http.Client
 	authMu     sync.Mutex
 	csrfToken  string
@@ -1030,6 +1041,7 @@ func newWebMergedXrayFromEnv() (*webXrayClient, []int) {
 
 	username := strings.TrimSpace(os.Getenv("MERGED_XRAY_USERNAME"))
 	password := strings.TrimSpace(os.Getenv("MERGED_XRAY_PASSWORD"))
+	apiToken := strings.TrimSpace(os.Getenv("MERGED_XRAY_API_TOKEN"))
 	serverURL := strings.TrimRight(strings.TrimSpace(os.Getenv("MERGED_XRAY_PANEL_URL")), "/")
 	if serverURL == "" {
 		host := strings.TrimSpace(os.Getenv("MERGED_XRAY_HOST"))
@@ -1048,13 +1060,14 @@ func newWebMergedXrayFromEnv() (*webXrayClient, []int) {
 		}
 		serverURL = fmt.Sprintf("%s://%s:%s%s", protocol, host, port, basePath)
 	}
-	if username == "" || password == "" || serverURL == "" {
+	if serverURL == "" || (apiToken == "" && (username == "" || password == "")) {
 		return nil, inboundIDs
 	}
 	jar, _ := cookiejar.New(nil)
 	return &webXrayClient{
 		username:  username,
 		password:  password,
+		apiToken:  apiToken,
 		serverURL: strings.TrimRight(serverURL, "/"),
 		httpClient: &http.Client{
 			Jar:     jar,
@@ -1066,6 +1079,10 @@ func newWebMergedXrayFromEnv() (*webXrayClient, []int) {
 func (x *webXrayClient) login(ctx context.Context) error {
 	x.authMu.Lock()
 	defer x.authMu.Unlock()
+
+	if strings.TrimSpace(x.apiToken) != "" {
+		return nil
+	}
 
 	csrfReq, err := http.NewRequestWithContext(ctx, http.MethodGet, x.serverURL+"/csrf-token", nil)
 	if err == nil {
@@ -1105,6 +1122,16 @@ func (x *webXrayClient) login(ctx context.Context) error {
 	if len(bytes.TrimSpace(body)) == 0 {
 		return errors.New("xray login returned empty body")
 	}
+	var result struct {
+		Success bool   `json:"success"`
+		Msg     string `json:"msg"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return fmt.Errorf("xray login invalid response: %w; body=%s", err, responseSnippet(body))
+	}
+	if !result.Success {
+		return fmt.Errorf("xray login failed: %s", strings.TrimSpace(result.Msg))
+	}
 	return nil
 }
 
@@ -1118,6 +1145,9 @@ func (x *webXrayClient) doRequestOnce(ctx context.Context, method, endpoint stri
 		return 0, nil, err
 	}
 	req.Header.Set("Accept", "application/json")
+	if strings.TrimSpace(x.apiToken) != "" {
+		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(x.apiToken))
+	}
 	if x.csrfToken != "" {
 		req.Header.Set("X-CSRF-Token", x.csrfToken)
 	}
@@ -1151,7 +1181,7 @@ func (x *webXrayClient) getInboundClients(ctx context.Context, inboundID int) ([
 		Success bool   `json:"success"`
 		Msg     string `json:"msg"`
 		Obj     struct {
-			Settings string `json:"settings"`
+			Settings json.RawMessage `json:"settings"`
 		} `json:"obj"`
 	}
 	if err := json.Unmarshal(body, &raw); err != nil {
@@ -1163,7 +1193,7 @@ func (x *webXrayClient) getInboundClients(ctx context.Context, inboundID int) ([
 	var settings struct {
 		Clients []webXrayClientData `json:"clients"`
 	}
-	if err := json.Unmarshal([]byte(raw.Obj.Settings), &settings); err != nil {
+	if err := json.Unmarshal([]byte(rawJSONString(raw.Obj.Settings)), &settings); err != nil {
 		return nil, err
 	}
 	return settings.Clients, nil
@@ -1174,9 +1204,15 @@ func (x *webXrayClient) getClientTrafficByEmail(ctx context.Context, email strin
 	if email == "" {
 		return nil, errors.New("client email is empty")
 	}
-	status, body, err := x.doRequest(ctx, http.MethodGet, "/panel/api/inbounds/getClientTraffics/"+url.PathEscape(email))
+	status, body, err := x.doRequest(ctx, http.MethodGet, "/panel/api/clients/traffic/"+url.PathEscape(email))
 	if err != nil {
 		return nil, err
+	}
+	if status == http.StatusNotFound || status == http.StatusMethodNotAllowed {
+		status, body, err = x.doRequest(ctx, http.MethodGet, "/panel/api/inbounds/getClientTraffics/"+url.PathEscape(email))
+		if err != nil {
+			return nil, err
+		}
 	}
 	if status < 200 || status >= 300 {
 		return nil, fmt.Errorf("xray traffic status=%d body=%s", status, responseSnippet(body))
@@ -1560,6 +1596,9 @@ func responseSnippet(body []byte) string {
 
 func shouldRetryXrayRequest(statusCode int, body []byte) bool {
 	trimmed := bytes.TrimSpace(body)
+	if statusCode == http.StatusNotFound || statusCode == http.StatusMethodNotAllowed {
+		return false
+	}
 	return statusCode == http.StatusUnauthorized ||
 		statusCode == http.StatusForbidden ||
 		len(trimmed) == 0 ||
