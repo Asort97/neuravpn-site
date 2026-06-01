@@ -33,9 +33,9 @@ html {
 body {
     min-height: 100vh;
     background:
-        radial-gradient(circle at 82% 4%, rgba(255, 255, 255, 0.36), transparent 30%),
-        radial-gradient(circle at 10% 12%, rgba(130, 65, 24, 0.12), transparent 34%),
-        linear-gradient(rgba(244, 234, 218, 0.22), rgba(226, 199, 164, 0.16)),
+        radial-gradient(circle at 82% 4%, rgba(255, 255, 255, 0.5), transparent 30%),
+        radial-gradient(circle at 10% 12%, rgba(130, 65, 24, 0.08), transparent 34%),
+        linear-gradient(rgba(244, 234, 218, 0.52), rgba(226, 199, 164, 0.46)),
         url("../brand/neura-paper-bg.webp") center / cover no-repeat fixed,
         var(--bg-dark);
     color: var(--text-primary);
@@ -44,16 +44,6 @@ body {
     line-height: 1.5;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
-}
-
-body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -3;
-    background: linear-gradient(rgba(255, 250, 241, 0.18), rgba(239, 217, 188, 0.08));
-    opacity: 1;
-    pointer-events: none;
 }
 
 body::after {
@@ -335,23 +325,13 @@ body.is-mini-app {
     --border: rgba(86, 42, 17, 0.18);
     --grid-line: rgba(92, 45, 18, 0.055);
     background:
-        radial-gradient(circle at 82% 4%, rgba(255, 255, 255, 0.36), transparent 30%),
-        radial-gradient(circle at 10% 12%, rgba(130, 65, 24, 0.12), transparent 34%),
-        linear-gradient(rgba(244, 234, 218, 0.22), rgba(226, 199, 164, 0.16)),
+        radial-gradient(circle at 82% 4%, rgba(255, 255, 255, 0.5), transparent 30%),
+        radial-gradient(circle at 10% 12%, rgba(130, 65, 24, 0.08), transparent 34%),
+        linear-gradient(rgba(244, 234, 218, 0.52), rgba(226, 199, 164, 0.46)),
         url("../brand/neura-paper-bg.webp") center / cover no-repeat fixed,
         #efe1ce;
     color: var(--text-primary);
     overflow-x: hidden;
-}
-
-body.is-mini-app::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -3;
-    background: linear-gradient(rgba(255, 250, 241, 0.18), rgba(239, 217, 188, 0.08));
-    opacity: 1;
-    pointer-events: none;
 }
 
 body.is-mini-app::after {
@@ -478,21 +458,6 @@ header[style] {
     text-align: left;
 }
 
-.hero-kicker {
-    min-height: 34px;
-    padding: 7px 14px;
-    border: 1px solid rgba(86, 42, 17, 0.22);
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    background: rgba(255, 247, 232, 0.58);
-    color: var(--text-secondary);
-    font-size: 0.78rem;
-    font-weight: 900;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
 .hero-text h1 {
     font-size: var(--type-big);
     line-height: 0.96;
@@ -538,15 +503,21 @@ header[style] {
 .hero-email-link {
     min-height: 38px;
     padding: 8px 14px;
-    border: 1px solid rgba(86, 42, 17, 0.2);
+    border: 1px solid rgba(86, 42, 17, 0.38);
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
     color: var(--text-secondary);
-    background: rgba(255, 247, 232, 0.38);
+    background:
+        linear-gradient(145deg, rgba(255, 239, 208, 0.38), transparent 44%),
+        rgba(207, 169, 124, 0.5);
     font-size: 0.84rem !important;
     font-weight: 800;
     text-decoration: none;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 246, 226, 0.42),
+        inset 0 -14px 28px rgba(82, 39, 15, 0.055),
+        0 10px 24px rgba(82, 39, 15, 0.08);
     transition: 0.16s ease;
 }
 
@@ -604,10 +575,6 @@ header[style] {
 }
 
 .flow-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 18px;
     margin-bottom: 24px;
 }
 
@@ -616,16 +583,6 @@ header[style] {
     font-size: 1.75rem !important;
     line-height: 1.1;
     letter-spacing: -0.04em;
-}
-
-.flow-status {
-    padding: 8px 13px;
-    border: 1px solid rgba(69, 129, 70, 0.22);
-    border-radius: 999px;
-    background: rgba(69, 129, 70, 0.16);
-    color: #2e8b3c;
-    font-size: 0.85rem !important;
-    font-weight: 900;
 }
 
 .flow-steps {
@@ -661,52 +618,6 @@ header[style] {
 .flow-step strong {
     font-size: 0.98rem !important;
     line-height: 1.25;
-}
-
-.bot-preview {
-    margin-top: 20px;
-    padding: 18px;
-    border-radius: 26px;
-    background: #3b2114;
-    color: #fff7eb;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
-}
-
-.bot-message {
-    padding: 14px;
-    border: 1px solid rgba(255, 247, 232, 0.18);
-    border-radius: 18px;
-    display: grid;
-    gap: 3px;
-    background: rgba(255, 247, 232, 0.16);
-}
-
-.bot-message strong,
-.bot-message span {
-    font-size: 0.92rem !important;
-}
-
-.bot-message span {
-    color: rgba(255, 247, 232, 0.74);
-    font-weight: 800;
-}
-
-.bot-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin-top: 12px;
-}
-
-.bot-actions span {
-    min-height: 44px;
-    border-radius: 15px;
-    display: grid;
-    place-items: center;
-    background: rgba(255, 247, 232, 0.14);
-    color: #fff7eb;
-    font-size: 0.82rem !important;
-    font-weight: 900;
 }
 
 .features,
@@ -909,6 +820,18 @@ footer {
         gap: 28px;
     }
 
+    .hero-benefit {
+        min-height: 82px;
+        padding: 16px 18px;
+        border-radius: 22px;
+    }
+
+    .benefit-mark {
+        width: 18px;
+        height: 18px;
+        box-shadow: 0 0 0 7px rgba(125, 53, 19, 0.1);
+    }
+
     .footer-content {
         flex-direction: column;
     }
@@ -921,7 +844,7 @@ footer {
 @media (max-width: 620px) {
     .hero {
         min-height: auto;
-        padding: 46px 0 54px;
+        padding: 38px 0 42px;
     }
 
     .hero-actions {
@@ -940,15 +863,6 @@ footer {
     .hero-flow-panel {
         padding: 20px;
         border-radius: 28px;
-    }
-
-    .flow-head {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
-    .bot-actions {
-        grid-template-columns: 1fr;
     }
 
     .download-panel {
