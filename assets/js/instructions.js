@@ -1,5 +1,9 @@
 (function () {
     const mediaBase = "../../assets/instructions/";
+    const DOWNLOADS = {
+        android: "https://github.com/Asort97/neuravpn-client/releases/download/v1.0.5/neuravpn_android_v1.0.5_arm64.apk",
+        windows: "https://github.com/Asort97/neuravpn-client/releases/download/v.1.0.6/neuravpn-setup-v1.0.6.exe"
+    };
     const isMiniApp = detectMiniApp();
     if (isMiniApp) {
         document.body.classList.add("is-mini-app");
@@ -10,12 +14,12 @@
             title: "Инструкция для Windows",
             intro: "Установка клиента NeuraVPN, импорт ключа и запуск подключения.",
             actions: [
-                { text: "Скачать Windows", href: "../../" }
+                { text: "Скачать Windows", href: DOWNLOADS.windows, download: true }
             ],
             steps: [
-                { media: "Windows/neuravpn_app/0.png", title: "Скачайте клиент", text: `скачайте последнюю версию neuravpn с сайта, нажав кнопку «скачать для windows».` },
-                { title: "Распакуйте архив", text: `после завершения загрузки выполните следующие действия:<br><br>1) найдите загруженный файл <b>neuravpn_windows_vX.X.X</b>.<br>2) щелкните правой кнопкой мыши на файле и выберите «извлечь все».` },
-                { title: "Запустите от администратора", text: `откройте папку с распакованными файлами. найдите файл <b>neuravpn.exe</b>. щелкните по нему правой кнопкой мыши и запустите от имени администратора.` },
+                { media: "Windows/neuravpn_app/0.png", title: "Скачайте клиент", text: `скачайте установщик neuravpn для Windows.`, actions: [{ text: "Скачать Windows", href: DOWNLOADS.windows, primary: true, download: true }] },
+                { title: "Запустите установщик", text: `после завершения загрузки откройте файл <b>neuravpn-setup</b> и установите приложение.` },
+                { title: "Откройте приложение", text: `после установки запустите <b>neuravpn</b>. если Windows попросит разрешение, подтвердите запуск.` },
                 { media: "Windows/0.MP4", title: "Импортируйте ключ", text: `предварительно скопировав ключ доступа, в программе нажмите на кнопку «вставить из буфера». Если ключ открыт в кабинете, можно использовать авто-импорт.` },
                 { media: "Windows/1.MP4", title: "Подключитесь", text: `подключитесь к VPN, нажав по большой кнопке в центре.` }
             ]
@@ -23,12 +27,12 @@
         android: {
             label: "Android",
             title: "Инструкция для Android",
-            intro: "Установка V2RayTun из Google Play, импорт ключа и включение VPN.",
+            intro: "Установка клиента NeuraVPN, импорт ключа и включение VPN.",
             actions: [
-                { text: "Скачать V2RayTun", href: "https://play.google.com/store/apps/details?id=com.v2raytun.android&hl=ru" }
+                { text: "Скачать Android", href: DOWNLOADS.android, download: true }
             ],
             steps: [
-                { media: "Android/0.MP4", title: "Скачайте приложение", text: `скачайте <a href="https://play.google.com/store/apps/details?id=com.v2raytun.android&hl=ru">v2RayTun</a> из Google Play.` },
+                { media: "Android/0.MP4", title: "Скачайте приложение", text: `скачайте APK neuravpn и запустите установку.`, actions: [{ text: "Скачать Android", href: DOWNLOADS.android, primary: true, download: true }] },
                 { media: "Android/1.MP4", title: "Вставьте ключ", text: `зайдите в приложение и вставьте ключ из буфера обмена. предварительно скопируйте ключ подключения из личного кабинета.` },
                 { media: "Android/2.MP4", title: "Включите VPN", text: `далее нажмите на кнопку включения. VPN начнёт работать.` }
             ]
@@ -186,6 +190,11 @@
                 event.preventDefault();
                 openExternal(action.href);
             });
+            return;
+        }
+        if (action.download) {
+            a.removeAttribute("target");
+            a.removeAttribute("rel");
             return;
         }
         if (/^https?:\/\//.test(action.href)) {
