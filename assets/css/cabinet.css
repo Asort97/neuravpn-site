@@ -71,7 +71,7 @@
 
 .card-panel {
     background:
-        radial-gradient(circle at top right, rgba(255, 42, 42, 0.075), transparent 34%),
+        radial-gradient(circle at top right, rgba(125, 53, 19, 0.075), transparent 34%),
         linear-gradient(135deg, rgba(15, 15, 18, 0.98), rgba(18, 14, 17, 0.98));
     border: 1px solid var(--border);
     border-radius: 22px;
@@ -219,7 +219,7 @@ textarea {
 input:focus,
 textarea:focus {
     border-color: var(--accent-red-mid);
-    box-shadow: 0 0 0 4px rgba(255, 42, 42, 0.12);
+    box-shadow: 0 0 0 4px rgba(125, 53, 19, 0.12);
 }
 
 .status-line {
@@ -277,9 +277,9 @@ textarea:focus {
 .signup-offer {
     margin-top: 22px;
     padding: 16px;
-    border: 1px solid rgba(255, 42, 42, 0.35);
+    border: 1px solid rgba(125, 53, 19, 0.35);
     border-radius: 18px;
-    background: rgba(255, 42, 42, 0.055);
+    background: rgba(125, 53, 19, 0.055);
 }
 
 .signup-offer .btn {
@@ -350,7 +350,7 @@ textarea:focus {
     justify-content: space-between;
     gap: 18px;
     background:
-        linear-gradient(90deg, rgba(255, 42, 42, 0.08), transparent 38%),
+        linear-gradient(90deg, rgba(125, 53, 19, 0.08), transparent 38%),
         rgba(10, 10, 12, 0.58);
     border: 1px solid rgba(255, 255, 255, 0.05);
     box-shadow: 0 20px 70px rgba(0, 0, 0, 0.24);
@@ -395,10 +395,10 @@ textarea:focus {
 }
 
 .active-pill.is-inactive {
-    background: rgba(255, 42, 42, 0.14);
-    border-color: rgba(255, 42, 42, 0.36);
+    background: rgba(125, 53, 19, 0.14);
+    border-color: rgba(125, 53, 19, 0.36);
     color: #ff7b7b;
-    box-shadow: 0 12px 34px rgba(255, 42, 42, 0.08);
+    box-shadow: 0 12px 34px rgba(125, 53, 19, 0.08);
 }
 
 .active-dot {
@@ -410,7 +410,7 @@ textarea:focus {
 }
 
 .active-pill.is-inactive .active-dot {
-    background: #ff2a2a;
+    background: #8a2412;
 }
 
 .cabinet-grid {
@@ -428,8 +428,8 @@ textarea:focus {
 .cabinet-auth:hover,
 .dashboard-hero:hover,
 .instructions-panel:hover {
-    border-color: rgba(255, 42, 42, 0.42);
-    box-shadow: 0 30px 82px rgba(255, 42, 42, 0.08), 0 28px 70px rgba(0, 0, 0, 0.34);
+    border-color: rgba(125, 53, 19, 0.42);
+    box-shadow: 0 30px 82px rgba(125, 53, 19, 0.08), 0 28px 70px rgba(0, 0, 0, 0.34);
     transform: translateY(-2px);
 }
 
@@ -460,9 +460,9 @@ textarea:focus {
     justify-content: center;
     min-height: 32px;
     padding: 6px 12px;
-    border: 1px solid rgba(255, 42, 42, 0.28);
+    border: 1px solid rgba(125, 53, 19, 0.28);
     border-radius: 999px;
-    background: rgba(255, 42, 42, 0.07);
+    background: rgba(125, 53, 19, 0.07);
     color: #ff9b9b;
     font-size: var(--type-small);
     font-weight: 800;
@@ -494,7 +494,7 @@ textarea:focus {
     height: 50px;
     border-radius: 16px;
     background:
-        linear-gradient(135deg, rgba(255, 42, 42, 0.035), transparent 42%),
+        linear-gradient(135deg, rgba(125, 53, 19, 0.035), transparent 42%),
         #070708;
     border-color: rgba(255, 255, 255, 0.08);
     overflow: hidden;
@@ -564,16 +564,16 @@ textarea:focus {
 }
 
 .plan-card:hover {
-    border-color: rgba(255, 42, 42, 0.62);
+    border-color: rgba(125, 53, 19, 0.62);
     background:
-        linear-gradient(135deg, rgba(255, 42, 42, 0.08), transparent 45%),
+        linear-gradient(135deg, rgba(125, 53, 19, 0.08), transparent 45%),
         var(--bg-panel);
-    box-shadow: 0 18px 50px rgba(255, 42, 42, 0.1);
+    box-shadow: 0 18px 50px rgba(125, 53, 19, 0.1);
     transform: translateY(-2px);
 }
 
 .plan-card:hover::after {
-    border-color: rgba(255, 42, 42, 0.65);
+    border-color: rgba(125, 53, 19, 0.65);
     color: #fff;
 }
 
@@ -619,9 +619,9 @@ textarea:focus {
 }
 
 .traffic-refresh-btn:hover {
-    border-color: rgba(255, 42, 42, 0.55);
+    border-color: rgba(125, 53, 19, 0.55);
     color: var(--text-primary);
-    box-shadow: 0 14px 34px rgba(255, 42, 42, 0.08);
+    box-shadow: 0 14px 34px rgba(125, 53, 19, 0.08);
     transform: translateY(-1px);
 }
 
@@ -666,8 +666,8 @@ textarea:focus {
     height: 100%;
     width: 0;
     border-radius: inherit;
-    background: linear-gradient(90deg, #ff2a2a, #ff8a3d);
-    box-shadow: 0 0 22px rgba(255, 42, 42, 0.28);
+    background: linear-gradient(90deg, #8a2412, #b45f27);
+    box-shadow: 0 0 22px rgba(125, 53, 19, 0.28);
     transition: width 0.45s ease;
 }
 
@@ -693,8 +693,8 @@ textarea:focus {
 }
 
 .traffic-pack-card:hover {
-    border-color: rgba(255, 42, 42, 0.62);
-    box-shadow: 0 18px 50px rgba(255, 42, 42, 0.1);
+    border-color: rgba(125, 53, 19, 0.62);
+    box-shadow: 0 18px 50px rgba(125, 53, 19, 0.1);
     transform: translateY(-2px);
 }
 
@@ -720,9 +720,9 @@ textarea:focus {
     gap: 14px;
     margin-top: 12px;
     padding: 14px;
-    border: 1px solid rgba(255, 42, 42, 0.3);
+    border: 1px solid rgba(125, 53, 19, 0.3);
     border-radius: 16px;
-    background: rgba(255, 42, 42, 0.045);
+    background: rgba(125, 53, 19, 0.045);
 }
 
 .autopay-setup h3 {
@@ -756,7 +756,7 @@ textarea:focus {
     min-height: 28px;
     height: 28px;
     border-radius: 999px;
-    border-color: rgba(255, 42, 42, 0.38);
+    border-color: rgba(125, 53, 19, 0.38);
     background: #08080a;
     cursor: pointer;
     position: relative;
@@ -776,7 +776,7 @@ textarea:focus {
 }
 
 .toggle-row input:checked {
-    background: rgba(255, 42, 42, 0.28);
+    background: rgba(125, 53, 19, 0.28);
     border-color: var(--accent-glow);
 }
 
@@ -788,14 +788,14 @@ textarea:focus {
 .detach-card-btn {
     min-height: 42px;
     padding: 10px 14px;
-    border-color: rgba(255, 42, 42, 0.4);
+    border-color: rgba(125, 53, 19, 0.4);
     color: #ffb0b0;
 }
 
 .instructions-panel {
     margin-top: 14px;
     background:
-        radial-gradient(circle at top left, rgba(255, 42, 42, 0.08), transparent 32%),
+        radial-gradient(circle at top left, rgba(125, 53, 19, 0.08), transparent 32%),
         rgba(10, 10, 12, 0.62);
     border-color: rgba(255, 255, 255, 0.05);
 }
@@ -834,15 +834,15 @@ textarea:focus {
 
 .platform-card:hover,
 .account-button:hover {
-    border-color: rgba(255, 42, 42, 0.55);
+    border-color: rgba(125, 53, 19, 0.55);
     color: #fff;
-    box-shadow: 0 16px 42px rgba(255, 42, 42, 0.08);
+    box-shadow: 0 16px 42px rgba(125, 53, 19, 0.08);
     transform: translateY(-2px);
 }
 
 .platform-card:hover {
     background:
-        linear-gradient(145deg, rgba(255, 42, 42, 0.08), transparent 44%),
+        linear-gradient(145deg, rgba(125, 53, 19, 0.08), transparent 44%),
         var(--bg-panel);
 }
 
@@ -877,7 +877,7 @@ textarea:focus {
 }
 
 .toast.is-error {
-    border-color: rgba(255, 42, 42, 0.45);
+    border-color: rgba(125, 53, 19, 0.45);
     color: #ff9b9b;
 }
 
@@ -896,10 +896,10 @@ textarea:focus {
 .modal-card {
     width: min(560px, 100%);
     padding: 28px;
-    border: 1px solid rgba(255, 42, 42, 0.32);
+    border: 1px solid rgba(125, 53, 19, 0.32);
     border-radius: 26px;
     background:
-        radial-gradient(circle at top right, rgba(255, 42, 42, 0.1), transparent 36%),
+        radial-gradient(circle at top right, rgba(125, 53, 19, 0.1), transparent 36%),
         linear-gradient(135deg, rgba(15, 15, 18, 0.98), rgba(20, 14, 18, 0.98));
     box-shadow: 0 34px 90px rgba(0, 0, 0, 0.55);
     animation: modalPopIn 0.22s cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
@@ -1471,4 +1471,206 @@ body.is-mini-app .toast {
 
 body.is-mini-app .toast.is-error {
     color: #7d3513;
+}
+
+/* Unified site parchment layer, matching the Telegram Mini App cabinet. */
+.card-panel {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 1px solid rgba(82, 39, 15, 0.2);
+    background:
+        radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.56), transparent 26%),
+        radial-gradient(circle at 86% 18%, rgba(123, 58, 18, 0.1), transparent 36%),
+        linear-gradient(145deg, rgba(255, 252, 243, 0.7), rgba(240, 216, 184, 0.46));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.62),
+        inset 0 -22px 54px rgba(94, 45, 16, 0.06),
+        0 22px 58px rgba(80, 39, 16, 0.15);
+    backdrop-filter: blur(22px) saturate(1.18);
+}
+
+.card-panel::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    z-index: -1;
+    border-radius: inherit;
+    background:
+        linear-gradient(120deg, rgba(255, 255, 255, 0.36), transparent 34%),
+        radial-gradient(circle at 50% 120%, rgba(92, 45, 18, 0.08), transparent 42%);
+    opacity: 0.84;
+    pointer-events: none;
+}
+
+.cabinet-grid .card-panel:hover,
+.cabinet-auth:hover,
+.dashboard-hero:hover,
+.instructions-panel:hover {
+    border-color: rgba(82, 39, 15, 0.34);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.7),
+        inset 0 -22px 54px rgba(94, 45, 16, 0.07),
+        0 30px 68px rgba(80, 39, 16, 0.2);
+}
+
+.dashboard-hero,
+.instructions-panel {
+    background:
+        radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.56), transparent 26%),
+        radial-gradient(circle at 86% 18%, rgba(123, 58, 18, 0.1), transparent 36%),
+        linear-gradient(145deg, rgba(255, 252, 243, 0.7), rgba(240, 216, 184, 0.46));
+    border-color: rgba(82, 39, 15, 0.2);
+}
+
+.cabinet-nav a:hover,
+.nav-logout:hover,
+.platform-card:hover,
+.account-button:hover {
+    color: var(--text-primary);
+}
+
+input,
+textarea,
+.subscription-card textarea {
+    background: rgba(255, 251, 241, 0.6);
+    border-color: rgba(82, 39, 15, 0.2);
+    color: var(--text-primary);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        inset 0 -18px 34px rgba(89, 43, 17, 0.04);
+}
+
+input:focus,
+textarea:focus {
+    border-color: rgba(125, 53, 19, 0.48);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.56),
+        0 0 0 4px rgba(125, 53, 19, 0.12);
+}
+
+.signup-offer,
+.autopay-setup {
+    border-color: rgba(82, 39, 15, 0.18);
+    background: rgba(255, 248, 236, 0.5);
+}
+
+.state-pill {
+    border-color: rgba(138, 36, 18, 0.24);
+    background: rgba(138, 36, 18, 0.12);
+    color: #8a2412;
+}
+
+.state-pill.is-active,
+.active-pill {
+    background: rgba(69, 129, 70, 0.16);
+    border-color: rgba(40, 111, 45, 0.22);
+    color: #286f2d;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.46);
+}
+
+.active-pill.is-inactive {
+    background: rgba(138, 36, 18, 0.16);
+    border-color: rgba(138, 36, 18, 0.3);
+    color: #8a2412;
+}
+
+.active-dot {
+    background: #2e8b3c;
+}
+
+.active-pill.is-inactive .active-dot {
+    background: #8a2412;
+}
+
+.plan-card,
+.traffic-pack-card,
+.platform-card,
+.account-button,
+.traffic-refresh-btn {
+    border-color: rgba(82, 39, 15, 0.3);
+    background:
+        linear-gradient(145deg, rgba(255, 242, 217, 0.34), transparent 38%),
+        rgba(218, 184, 143, 0.5);
+    color: var(--text-primary);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 246, 226, 0.42),
+        inset 0 -14px 30px rgba(82, 39, 15, 0.045),
+        0 8px 20px rgba(82, 39, 15, 0.055);
+}
+
+.plan-card::after {
+    border-color: rgba(82, 39, 15, 0.26);
+    background: rgba(255, 248, 236, 0.52);
+    color: #7d3513;
+}
+
+.plan-card:hover,
+.traffic-pack-card:hover,
+.platform-card:hover,
+.account-button:hover,
+.traffic-refresh-btn:hover {
+    border-color: rgba(125, 53, 19, 0.52);
+    background:
+        linear-gradient(145deg, rgba(255, 239, 207, 0.42), transparent 42%),
+        rgba(199, 158, 110, 0.64);
+    box-shadow: 0 18px 42px rgba(92, 42, 12, 0.14);
+}
+
+.plan-card:hover::after {
+    border-color: rgba(125, 53, 19, 0.52);
+    color: var(--text-primary);
+}
+
+.traffic-bar {
+    border-color: rgba(82, 39, 15, 0.24);
+    background: rgba(255, 248, 236, 0.52);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+.traffic-bar span {
+    background: linear-gradient(90deg, #6e2a0d, #b45f27);
+    box-shadow: 0 0 18px rgba(110, 42, 13, 0.18);
+}
+
+.toggle-row input {
+    background: rgba(255, 248, 236, 0.42);
+    border-color: rgba(82, 39, 15, 0.22);
+}
+
+.toggle-row input:checked {
+    background: rgba(125, 53, 19, 0.32);
+    border-color: rgba(125, 53, 19, 0.5);
+}
+
+.detach-card-btn {
+    border-color: rgba(86, 42, 17, 0.4);
+    color: #5a250d;
+}
+
+.toast,
+.modal-card {
+    border-color: rgba(82, 39, 15, 0.24);
+    background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.5), transparent 34%),
+        rgba(255, 247, 232, 0.9);
+    color: var(--text-primary);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.58),
+        0 28px 76px rgba(80, 39, 16, 0.2);
+    backdrop-filter: blur(20px) saturate(1.12);
+}
+
+.toast {
+    color: #286f2d;
+}
+
+.toast.is-error,
+.status-line.is-error {
+    color: #8a2412;
+}
+
+.modal-overlay {
+    background: rgba(73, 38, 17, 0.28);
+    backdrop-filter: blur(14px) saturate(1.05);
 }

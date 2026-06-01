@@ -58,18 +58,18 @@ body.is-mini-app .guide-hero {
 .guide-back {
     margin-bottom: 22px;
     padding: 12px 16px;
-    border: 1px solid rgba(255, 42, 42, 0.28);
+    border: 1px solid rgba(125, 53, 19, 0.28);
     border-radius: 999px;
-    background: rgba(255, 42, 42, 0.06);
+    background: rgba(125, 53, 19, 0.06);
     color: var(--text-primary);
     font-weight: 800;
-    box-shadow: 0 12px 32px rgba(255, 42, 42, 0.08);
+    box-shadow: 0 12px 32px rgba(125, 53, 19, 0.08);
 }
 
 .instructions-nav a:hover,
 .guide-back:hover {
     color: #fff;
-    border-color: rgba(255, 42, 42, 0.58);
+    border-color: rgba(125, 53, 19, 0.58);
     transform: translateY(-1px);
 }
 
@@ -85,8 +85,8 @@ body.is-mini-app .guide-hero {
 }
 
 .guide-step:hover {
-    border-color: rgba(255, 42, 42, 0.42);
-    box-shadow: 0 30px 82px rgba(255, 42, 42, 0.08), 0 28px 70px rgba(0, 0, 0, 0.34);
+    border-color: rgba(125, 53, 19, 0.42);
+    box-shadow: 0 30px 82px rgba(125, 53, 19, 0.08), 0 28px 70px rgba(0, 0, 0, 0.34);
 }
 
 .instructions-hero {
@@ -124,8 +124,8 @@ body.is-mini-app .guide-hero {
 }
 
 .guide-card:hover {
-    border-color: rgba(255, 42, 42, 0.5);
-    box-shadow: 0 18px 48px rgba(255, 42, 42, 0.09);
+    border-color: rgba(125, 53, 19, 0.5);
+    box-shadow: 0 18px 48px rgba(125, 53, 19, 0.09);
     transform: translateY(-3px);
 }
 
@@ -186,8 +186,8 @@ body.is-mini-app .guide-hero {
 }
 
 .guide-step:hover .step-media {
-    border-color: rgba(255, 42, 42, 0.35);
-    box-shadow: inset 0 0 0 1px rgba(255, 42, 42, 0.08);
+    border-color: rgba(125, 53, 19, 0.35);
+    box-shadow: inset 0 0 0 1px rgba(125, 53, 19, 0.08);
 }
 
 .step-media img,
@@ -255,7 +255,7 @@ body.is-mini-app .guide-hero {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 14px;
     background:
-        linear-gradient(135deg, rgba(255, 42, 42, 0.035), transparent 42%),
+        linear-gradient(135deg, rgba(125, 53, 19, 0.035), transparent 42%),
         #070708;
     color: var(--text-secondary);
     font-family: var(--font-tech);
@@ -437,4 +437,95 @@ body.is-mini-app .step-key-input {
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.52),
         inset 0 -18px 34px rgba(89, 43, 17, 0.035);
+}
+
+/* Unified parchment styling for public instruction pages. */
+.instructions-hero,
+.guide-hero,
+.guide-step {
+    position: relative;
+    isolation: isolate;
+    border-color: rgba(82, 39, 15, 0.2);
+    background:
+        radial-gradient(circle at 16% 8%, rgba(255, 255, 255, 0.58), transparent 26%),
+        radial-gradient(circle at 86% 18%, rgba(123, 58, 18, 0.1), transparent 36%),
+        linear-gradient(145deg, rgba(255, 252, 243, 0.68), rgba(240, 216, 184, 0.44));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.64),
+        inset 0 -22px 54px rgba(94, 45, 16, 0.055),
+        0 22px 58px rgba(80, 39, 16, 0.16);
+    backdrop-filter: blur(22px) saturate(1.18);
+}
+
+.instructions-hero::after,
+.guide-hero::after,
+.guide-step::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    z-index: -1;
+    border-radius: inherit;
+    background:
+        linear-gradient(120deg, rgba(255, 255, 255, 0.38), transparent 34%),
+        radial-gradient(circle at 50% 120%, rgba(92, 45, 18, 0.08), transparent 42%);
+    opacity: 0.86;
+    pointer-events: none;
+}
+
+.guide-step:hover,
+.guide-card:hover {
+    border-color: rgba(82, 39, 15, 0.34);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.7),
+        inset 0 -22px 54px rgba(94, 45, 16, 0.07),
+        0 30px 68px rgba(80, 39, 16, 0.2);
+}
+
+.guide-card,
+.step-media,
+.step-key-input {
+    border-color: rgba(82, 39, 15, 0.26);
+    background:
+        linear-gradient(145deg, rgba(255, 242, 217, 0.34), transparent 38%),
+        rgba(218, 184, 143, 0.5);
+    color: var(--text-primary);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 246, 226, 0.42),
+        inset 0 -14px 30px rgba(82, 39, 15, 0.045),
+        0 8px 20px rgba(82, 39, 15, 0.055);
+}
+
+.guide-back {
+    border-color: rgba(82, 39, 15, 0.24);
+    background: rgba(255, 248, 236, 0.56);
+    color: var(--text-primary);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+}
+
+.instructions-nav a:hover,
+.guide-back:hover {
+    border-color: rgba(125, 53, 19, 0.42);
+    color: var(--text-primary);
+}
+
+.guide-hero h1,
+.guide-step h2,
+.step-index,
+.step-content b {
+    color: var(--text-primary);
+}
+
+.guide-hero p,
+.step-content p,
+.step-content li,
+.guide-card span {
+    color: var(--text-secondary);
+}
+
+.step-content a {
+    color: #7d3513;
+}
+
+.step-content a.btn-primary {
+    color: #fff7eb;
 }

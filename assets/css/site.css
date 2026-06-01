@@ -1,21 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
-    --bg-dark: #050507;
-    --bg-panel: #0f0f12;
-    --bg-panel-alt: #151217;
-    --accent-red-dim: #3b090d;
-    --accent-red-mid: #8d151b;
-    --accent-red-bright: #ef1d25;
-    --accent-glow: #ff2a2a;
-    --text-primary: #f8f8f8;
-    --text-secondary: #a3a3a3;
-    --text-muted: #737373;
-    --text-mono: #ff2a2a;
-    --border: #1f1f26;
+    --bg-dark: #efe1ce;
+    --bg-panel: rgba(255, 247, 232, 0.72);
+    --bg-panel-alt: rgba(247, 226, 199, 0.76);
+    --accent-red-dim: #7b3a16;
+    --accent-red-mid: #9b4a1d;
+    --accent-red-bright: #5a250d;
+    --accent-glow: #7d3513;
+    --text-primary: #35190b;
+    --text-secondary: #755842;
+    --text-muted: #9b7d63;
+    --text-mono: #7d3513;
+    --border: rgba(86, 42, 17, 0.18);
     --font-main: 'Inter', sans-serif;
     --font-tech: 'JetBrains Mono', monospace;
-    --grid-line: rgba(255, 42, 42, 0.028);
+    --grid-line: rgba(92, 45, 18, 0.055);
     --type-big: clamp(1.1rem, 2.4vw, 1.3rem);
     --type-small: 0.92rem;
 }
@@ -32,7 +32,10 @@ html {
 
 body {
     min-height: 100vh;
-    background: var(--bg-dark);
+    background:
+        radial-gradient(circle at 82% 4%, rgba(255, 255, 255, 0.54), transparent 30%),
+        radial-gradient(circle at 10% 12%, rgba(130, 65, 24, 0.14), transparent 34%),
+        var(--bg-dark);
     color: var(--text-primary);
     font-family: var(--font-main);
     font-size: var(--type-small);
@@ -41,10 +44,40 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -3;
+    background:
+        linear-gradient(rgba(239, 225, 206, 0.34), rgba(224, 196, 158, 0.32)),
+        url("../brand/neura-paper.webp") center / cover no-repeat;
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+body::after {
+    content: "";
+    position: fixed;
+    inset: 7% -18% auto auto;
+    width: 74vw;
+    height: 48vh;
+    z-index: -2;
+    border-radius: 44% 56% 58% 42% / 38% 44% 56% 62%;
+    background:
+        radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.48), transparent 23%),
+        radial-gradient(circle at 74% 66%, rgba(130, 63, 22, 0.18), transparent 42%),
+        linear-gradient(135deg, rgba(255, 252, 242, 0.38), rgba(121, 59, 22, 0.08));
+    filter: blur(18px) saturate(1.08);
+    opacity: 0.62;
+    pointer-events: none;
+    transform: rotate(-8deg);
+}
+
 body::selection,
 *::selection {
-    background: var(--accent-glow);
-    color: #fff;
+    background: rgba(125, 53, 19, 0.28);
+    color: var(--text-primary);
 }
 
 .grid-overlay {
@@ -65,7 +98,7 @@ body::selection,
     width: 520px;
     height: 520px;
     border-radius: 999px;
-    background: rgba(255, 42, 42, 0.045);
+    background: rgba(130, 65, 24, 0.11);
     filter: blur(80px);
     pointer-events: none;
     z-index: -1;
@@ -110,7 +143,7 @@ a {
 .btn {
     min-height: 54px;
     padding: 14px 22px;
-    border-radius: 14px;
+    border-radius: 22px;
     border: 1px solid transparent;
     display: inline-flex;
     align-items: center;
@@ -144,30 +177,47 @@ a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-    outline: 2px solid rgba(255, 42, 42, 0.82);
+    outline: 2px solid rgba(125, 53, 19, 0.72);
     outline-offset: 4px;
 }
 
 .btn-primary {
-    background: var(--accent-red-bright);
-    border-color: var(--accent-red-bright);
-    box-shadow: 0 12px 34px rgba(255, 42, 42, 0.18);
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.24), transparent 32%),
+        var(--accent-red-bright);
+    border-color: rgba(72, 30, 10, 0.74);
+    color: #fff7eb;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.26),
+        0 16px 36px rgba(92, 42, 12, 0.23);
 }
 
 .btn-primary:hover {
-    background: var(--accent-glow);
-    border-color: var(--accent-glow);
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.28), transparent 32%),
+        #723314;
+    border-color: rgba(72, 30, 10, 0.86);
+    color: #fff;
 }
 
 .btn-secondary {
-    background: var(--bg-panel);
-    border-color: var(--border);
+    background:
+        linear-gradient(145deg, rgba(255, 239, 208, 0.38), transparent 44%),
+        rgba(207, 169, 124, 0.5);
+    border-color: rgba(86, 42, 17, 0.38);
     color: var(--text-secondary);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 246, 226, 0.42),
+        inset 0 -14px 28px rgba(82, 39, 15, 0.055),
+        0 10px 24px rgba(82, 39, 15, 0.08);
 }
 
 .btn-secondary:hover {
-    border-color: #404040;
-    color: #fff;
+    background:
+        linear-gradient(145deg, rgba(255, 239, 208, 0.46), transparent 44%),
+        rgba(196, 154, 106, 0.58);
+    border-color: rgba(86, 42, 17, 0.52);
+    color: var(--text-primary);
 }
 
 .brand-link span,
@@ -191,12 +241,17 @@ header[style] div span {
     width: min(100%, 440px);
     margin-top: 18px;
     padding: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(82, 39, 15, 0.2);
     border-radius: 24px;
     background:
-        radial-gradient(circle at top right, rgba(255, 42, 42, 0.08), transparent 42%),
-        rgba(12, 12, 14, 0.72);
-    box-shadow: 0 24px 72px rgba(0, 0, 0, 0.34);
+        radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.56), transparent 26%),
+        radial-gradient(circle at 86% 18%, rgba(123, 58, 18, 0.1), transparent 36%),
+        linear-gradient(145deg, rgba(255, 252, 243, 0.7), rgba(240, 216, 184, 0.46));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.62),
+        inset 0 -22px 54px rgba(94, 45, 16, 0.06),
+        0 22px 58px rgba(80, 39, 16, 0.15);
+    backdrop-filter: blur(22px) saturate(1.18);
 }
 
 .download-row,
@@ -231,15 +286,21 @@ header[style] div span {
 .download-btn {
     min-height: 48px;
     padding: 12px 16px;
-    background: var(--accent-red-bright);
-    border-color: var(--accent-red-bright);
-    color: #fff;
-    box-shadow: 0 12px 34px rgba(255, 42, 42, 0.18);
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.24), transparent 32%),
+        var(--accent-red-bright);
+    border-color: rgba(72, 30, 10, 0.74);
+    color: #fff7eb;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.26),
+        0 16px 36px rgba(92, 42, 12, 0.23);
 }
 
 .download-btn:hover {
-    background: var(--accent-glow);
-    border-color: var(--accent-glow);
+    background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.28), transparent 32%),
+        #723314;
+    border-color: rgba(72, 30, 10, 0.86);
 }
 
 .download-wide {
@@ -250,7 +311,7 @@ header[style] div span {
 }
 
 .download-telegram {
-    border-color: var(--accent-red-mid);
+    border-color: rgba(86, 42, 17, 0.44);
     color: var(--text-primary);
 }
 
@@ -406,11 +467,21 @@ header[style] {
 .card,
 details,
 .onboarding-card {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 18% 8%, rgba(255, 255, 255, 0.56), transparent 26%),
+        radial-gradient(circle at 86% 18%, rgba(123, 58, 18, 0.1), transparent 36%),
+        linear-gradient(145deg, rgba(255, 252, 243, 0.7), rgba(240, 216, 184, 0.46));
+    border: 1px solid rgba(82, 39, 15, 0.2);
     border-radius: 24px;
     padding: 24px;
-    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.22);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.62),
+        inset 0 -22px 54px rgba(94, 45, 16, 0.06),
+        0 22px 58px rgba(80, 39, 16, 0.15);
+    backdrop-filter: blur(22px) saturate(1.18);
     transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
 
@@ -418,8 +489,11 @@ details,
 details:hover,
 .onboarding-card:hover,
 .platform-item:hover {
-    border-color: rgba(255, 42, 42, 0.5);
-    box-shadow: 0 26px 70px rgba(255, 42, 42, 0.08), 0 24px 70px rgba(0, 0, 0, 0.32);
+    border-color: rgba(82, 39, 15, 0.34);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.7),
+        inset 0 -22px 54px rgba(94, 45, 16, 0.07),
+        0 30px 68px rgba(80, 39, 16, 0.2);
     transform: translateY(-2px);
 }
 
@@ -453,9 +527,11 @@ details:hover,
 }
 
 .platform-item {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 18px;
+    background:
+        linear-gradient(145deg, rgba(255, 239, 207, 0.36), transparent 42%),
+        rgba(215, 181, 139, 0.52);
+    border: 1px solid rgba(82, 39, 15, 0.34);
+    border-radius: 22px;
     padding: 18px;
     transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
 }
@@ -500,7 +576,7 @@ footer {
 }
 
 .footer-links a:hover {
-    color: #fff;
+    color: var(--text-primary);
 }
 
 .onboarding-wrap {
@@ -522,7 +598,7 @@ footer {
 
 .debug-panel,
 .debug-log {
-    background: #08080a;
+    background: rgba(255, 251, 241, 0.58);
     border: 1px solid var(--border);
     border-radius: 16px;
 }
