@@ -50,9 +50,10 @@ body::before {
     inset: 0;
     z-index: -3;
     background:
-        linear-gradient(rgba(239, 225, 206, 0.34), rgba(224, 196, 158, 0.32)),
-        url("../brand/neura-paper.webp") center / cover no-repeat;
-    opacity: 0.9;
+        linear-gradient(rgba(244, 234, 218, 0.42), rgba(226, 199, 164, 0.38)),
+        url("../brand/neura-paper-bg.webp") center / cover no-repeat;
+    opacity: 0.82;
+    filter: saturate(0.92) contrast(0.96) brightness(1.04);
     pointer-events: none;
 }
 
@@ -344,9 +345,10 @@ body.is-mini-app::before {
     inset: 0;
     z-index: -3;
     background:
-        linear-gradient(rgba(239, 225, 206, 0.34), rgba(224, 196, 158, 0.32)),
-        url("../brand/neura-paper.webp") center / cover no-repeat;
-    opacity: 0.9;
+        linear-gradient(rgba(244, 234, 218, 0.42), rgba(226, 199, 164, 0.38)),
+        url("../brand/neura-paper-bg.webp") center / cover no-repeat;
+    opacity: 0.82;
+    filter: saturate(0.92) contrast(0.96) brightness(1.04);
     pointer-events: none;
 }
 
