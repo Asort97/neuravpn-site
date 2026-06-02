@@ -983,6 +983,8 @@ type webXrayClientData struct {
 	ID         string `json:"id"`
 	Email      string `json:"email"`
 	Enable     bool   `json:"enable"`
+	Up         int64  `json:"up"`
+	Down       int64  `json:"down"`
 	Flow       string `json:"flow"`
 	LimitIP    int    `json:"limitIp"`
 	TotalGB    int64  `json:"totalGB"`
@@ -991,6 +993,7 @@ type webXrayClientData struct {
 	TgID       string `json:"tgId"`
 	Comment    string `json:"comment"`
 	Reset      int    `json:"reset"`
+	TrafficSet bool   `json:"-"`
 }
 
 func (c *webXrayClientData) UnmarshalJSON(data []byte) error {
@@ -998,6 +1001,8 @@ func (c *webXrayClientData) UnmarshalJSON(data []byte) error {
 		ID         string `json:"id"`
 		Email      string `json:"email"`
 		Enable     bool   `json:"enable"`
+		Up         int64  `json:"up"`
+		Down       int64  `json:"down"`
 		Flow       string `json:"flow"`
 		LimitIP    int    `json:"limitIp"`
 		TotalGB    int64  `json:"totalGB"`
@@ -1014,6 +1019,8 @@ func (c *webXrayClientData) UnmarshalJSON(data []byte) error {
 		ID:         dto.ID,
 		Email:      dto.Email,
 		Enable:     dto.Enable,
+		Up:         dto.Up,
+		Down:       dto.Down,
 		Flow:       dto.Flow,
 		LimitIP:    dto.LimitIP,
 		TotalGB:    dto.TotalGB,
@@ -1181,7 +1188,8 @@ func (x *webXrayClient) getInboundClients(ctx context.Context, inboundID int) ([
 		Success bool   `json:"success"`
 		Msg     string `json:"msg"`
 		Obj     struct {
-			Settings json.RawMessage `json:"settings"`
+			Settings    json.RawMessage        `json:"settings"`
+			ClientStats []webXrayClientTraffic `json:"clientStats"`
 		} `json:"obj"`
 	}
 	if err := json.Unmarshal(body, &raw); err != nil {
@@ -1196,6 +1204,23 @@ func (x *webXrayClient) getInboundClients(ctx context.Context, inboundID int) ([
 	if err := json.Unmarshal([]byte(rawJSONString(raw.Obj.Settings)), &settings); err != nil {
 		return nil, err
 	}
+	if len(raw.Obj.ClientStats) > 0 {
+		statsByEmail := make(map[string]webXrayClientTraffic, len(raw.Obj.ClientStats))
+		for _, stat := range raw.Obj.ClientStats {
+			email := strings.ToLower(strings.TrimSpace(stat.Email))
+			if email != "" {
+				statsByEmail[email] = stat
+			}
+		}
+		for i := range settings.Clients {
+			email := strings.ToLower(strings.TrimSpace(settings.Clients[i].Email))
+			if stat, ok := statsByEmail[email]; ok {
+				settings.Clients[i].Up = stat.Up
+				settings.Clients[i].Down = stat.Down
+				settings.Clients[i].TrafficSet = true
+			}
+		}
+	}
 	return settings.Clients, nil
 }
 
@@ -1204,16 +1229,35 @@ func (x *webXrayClient) getClientTrafficByEmail(ctx context.Context, email strin
 	if email == "" {
 		return nil, errors.New("client email is empty")
 	}
-	status, body, err := x.doRequest(ctx, http.MethodGet, "/panel/api/clients/traffic/"+url.PathEscape(email))
-	if err != nil {
-		return nil, err
+	encodedEmail := url.PathEscape(email)
+	endpoints := []string{
+		"/panel/api/clients/traffic/" + encodedEmail,
+		"/panel/api/inbounds/getClientTraffics/" + encodedEmail,
 	}
-	if status == http.StatusNotFound || status == http.StatusMethodNotAllowed {
-		status, body, err = x.doRequest(ctx, http.MethodGet, "/panel/api/inbounds/getClientTraffics/"+url.PathEscape(email))
+	var firstErr error
+	for _, endpoint := range endpoints {
+		status, body, err := x.doRequest(ctx, http.MethodGet, endpoint)
 		if err != nil {
-			return nil, err
+			if firstErr == nil {
+				firstErr = err
+			}
+			continue
+		}
+		traffic, err := decodeWebXrayTrafficResponse(status, body, email)
+		if err == nil {
+			return traffic, nil
+		}
+		if firstErr == nil {
+			firstErr = err
 		}
 	}
+	if firstErr != nil {
+		return nil, firstErr
+	}
+	return nil, errors.New("xray traffic response is empty")
+}
+
+func decodeWebXrayTrafficResponse(status int, body []byte, email string) (*webXrayClientTraffic, error) {
 	if status < 200 || status >= 300 {
 		return nil, fmt.Errorf("xray traffic status=%d body=%s", status, responseSnippet(body))
 	}
@@ -1241,6 +1285,12 @@ func (x *webXrayClient) getClientTrafficByEmail(ctx context.Context, email strin
 	}
 	if len(list) == 0 {
 		return nil, nil
+	}
+	needle := strings.ToLower(strings.TrimSpace(email))
+	for i := range list {
+		if strings.ToLower(strings.TrimSpace(list[i].Email)) == needle {
+			return &list[i], nil
+		}
 	}
 	return &list[0], nil
 }
@@ -1341,14 +1391,19 @@ func (a *app) refreshMergedTrafficUsage(ctx context.Context, userID, subID strin
 	}
 	traffic, err := a.mergedXray.getClientTrafficByEmail(refreshCtx, client.Email)
 	if err != nil {
-		return err
+		if !client.TrafficSet {
+			return err
+		}
+		log.Printf("web merged traffic endpoint failed user=%s email=%s, using inbound clientStats: %v", userID, client.Email, err)
 	}
 	usedBytes := int64(0)
 	if traffic != nil {
 		usedBytes = traffic.Up + traffic.Down
-		if usedBytes < 0 {
-			usedBytes = 0
-		}
+	} else if client.TrafficSet {
+		usedBytes = client.Up + client.Down
+	}
+	if usedBytes < 0 {
+		usedBytes = 0
 	}
 	_, err = a.db.Exec(ctx, `
 INSERT INTO merged_traffic (user_id, month, extra_allocated_bytes, last_synced_used_bytes, updated_at)
