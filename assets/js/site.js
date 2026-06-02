@@ -39,6 +39,7 @@
             const landingDownloadWindowsBtn = document.getElementById("landingDownloadWindowsBtn");
             const fallbackAndroidBtn = document.getElementById("fallbackAndroidBtn");
             const fallbackWindowsBtn = document.getElementById("fallbackWindowsBtn");
+            const totalDownloadCount = document.getElementById("totalDownloadCount");
             let releaseCatalogPromise = null;
 
             const initialAndroidUrl = isPlaceholderUrl(ANDROID_APK_URL) ? RELEASES_PAGE_URL : ANDROID_APK_URL;
@@ -431,11 +432,20 @@
             async function loadDownloadCounts() {
                 const androidEl = document.getElementById("androidDownloadCount");
                 const windowsEl = document.getElementById("windowsDownloadCount");
-                if (!androidEl && !windowsEl) return;
+                if (!androidEl && !windowsEl && !totalDownloadCount) return;
 
-                // Download counters require GitHub API (download_count), so keep hidden in HTML-only mode.
-                if (androidEl) androidEl.textContent = "";
-                if (windowsEl) windowsEl.textContent = "";
+                const assets = await loadReleaseCatalog();
+                const androidAsset = pickLatestPlatformAsset(assets, "android");
+                const windowsAsset = pickLatestPlatformAsset(assets, "windows");
+                const androidCount = getAssetDownloadCount(androidAsset);
+                const windowsCount = getAssetDownloadCount(windowsAsset);
+
+                if (androidEl) androidEl.textContent = androidCount > 0 ? formatDownloadCount(androidCount) : "";
+                if (windowsEl) windowsEl.textContent = windowsCount > 0 ? formatDownloadCount(windowsCount) : "";
+                if (totalDownloadCount) {
+                    const total = androidCount + windowsCount;
+                    totalDownloadCount.textContent = total > 0 ? "скачиваний приложения: " + formatCompactNumber(total) : "";
+                }
             }
 
             function updateVersionDisplay(platform, version) {
@@ -447,9 +457,9 @@
                 
                 let elementId = "";
                 if (platform === "android") {
-                    elementId = "androidDownloadCount";
+                    elementId = "androidDownloadVersion";
                 } else if (platform === "windows") {
-                    elementId = "windowsDownloadCount";
+                    elementId = "windowsDownloadVersion";
                 }
 
                 if (!elementId) {
@@ -495,6 +505,7 @@
                         assets.push({
                             name: name,
                             browser_download_url: browser_download_url,
+                            download_count: Number(asset.download_count) || 0,
                             _releaseVersion: version
                         });
                         console.log("[NeuraVPN] Parsed asset:", { name: name, version: version });
@@ -585,6 +596,22 @@
                 }
 
                 return "";
+            }
+
+            function getAssetDownloadCount(asset) {
+                if (!asset) {
+                    return 0;
+                }
+                const count = Number(asset.download_count);
+                return Number.isFinite(count) && count > 0 ? count : 0;
+            }
+
+            function formatDownloadCount(count) {
+                return "скачиваний: " + formatCompactNumber(count);
+            }
+
+            function formatCompactNumber(value) {
+                return new Intl.NumberFormat("ru-RU").format(value);
             }
 
             function extractVersionFromText(text) {

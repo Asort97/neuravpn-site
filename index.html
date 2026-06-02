@@ -2,7 +2,7 @@
     <meta charset="UTF-8" vid="2">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" vid="3">
     <title vid="4">neuravpn - подключение</title>
-    <link rel="stylesheet" href="assets/css/site.css?v=20260601-6">
+    <link rel="stylesheet" href="assets/css/site.css?v=20260602-1">
 </head>
 <body vid="9">
 
@@ -19,6 +19,7 @@
             </a>
             <nav class="site-nav" aria-label="Основная навигация" vid="17">
                 <a href="./">главная</a>
+                <a href="#app">приложение</a>
                 <a href="cabinet/">кабинет</a>
                 <a href="https://t.me/neuravpn_support" target="_blank" rel="noopener noreferrer">поддержка</a>
             </nav>
@@ -89,6 +90,32 @@
             </div>
         </section>
 
+        <section id="app" class="app-section" data-landing="true" aria-labelledby="appTitle">
+            <div class="app-panel">
+                <div class="app-copy">
+                    <h2 id="appTitle">Приложение</h2>
+                    <p>Клиент neuravpn для Android и Windows. Скачайте приложение, затем вставьте ключ из личного кабинета.</p>
+                    <div id="totalDownloadCount" class="app-total-count" aria-live="polite"></div>
+                </div>
+                <div class="app-download-list" aria-label="Скачать приложение">
+                    <div class="app-download-item">
+                        <a id="landingDownloadAndroidBtn" class="btn btn-primary app-download-btn" href="#">Скачать Android</a>
+                        <div class="app-download-meta">
+                            <span id="androidDownloadVersion"></span>
+                            <span id="androidDownloadCount" class="download-count" aria-live="polite"></span>
+                        </div>
+                    </div>
+                    <div class="app-download-item">
+                        <a id="landingDownloadWindowsBtn" class="btn btn-primary app-download-btn" href="#">Скачать Windows</a>
+                        <div class="app-download-meta">
+                            <span id="windowsDownloadVersion"></span>
+                            <span id="windowsDownloadCount" class="download-count" aria-live="polite"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         
         <footer data-landing="true" vid="134">
             <div class="footer-content" vid="135">
@@ -106,6 +133,6 @@
 
     </div>
 
-    <script src="assets/js/site.js?v=20260516-2"></script>
+    <script src="assets/js/site.js?v=20260602-1"></script>
 
 </body></html>

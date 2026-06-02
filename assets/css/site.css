@@ -622,6 +622,84 @@ header[style] {
     line-height: 1.25;
 }
 
+.app-section {
+    padding: 0 0 72px;
+}
+
+.app-panel {
+    border: 1px solid rgba(86, 42, 17, 0.2);
+    border-radius: 30px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+    gap: 28px;
+    align-items: center;
+    padding: 28px;
+    background: rgba(255, 247, 232, 0.66);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.48),
+        0 22px 58px rgba(80, 39, 16, 0.11);
+}
+
+.app-copy {
+    display: grid;
+    gap: 10px;
+}
+
+.app-copy h2 {
+    font-size: 2rem !important;
+    line-height: 1.08;
+}
+
+.app-copy p {
+    max-width: 620px;
+    color: var(--text-secondary);
+    font-size: 1.05rem !important;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.app-total-count {
+    min-height: 1.3em;
+    color: var(--text-muted);
+    font-family: var(--font-tech);
+    font-size: 0.88rem !important;
+}
+
+.app-download-list {
+    display: grid;
+    gap: 12px;
+}
+
+.app-download-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid rgba(86, 42, 17, 0.16);
+    border-radius: 22px;
+    background: rgba(255, 251, 241, 0.58);
+}
+
+.app-download-btn {
+    min-height: 50px;
+    padding: 0 20px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.app-download-meta {
+    min-width: 104px;
+    display: grid;
+    gap: 2px;
+    justify-items: end;
+    color: var(--text-muted);
+    font-family: var(--font-tech);
+    font-size: 0.78rem !important;
+    line-height: 1.25;
+    white-space: nowrap;
+}
+
 .features,
 .compat-section,
 .faq-section {
@@ -822,6 +900,10 @@ footer {
         gap: 28px;
     }
 
+    .app-panel {
+        grid-template-columns: 1fr;
+    }
+
     .hero-benefit {
         min-height: 82px;
         padding: 16px 18px;
@@ -865,6 +947,24 @@ footer {
     .hero-flow-panel {
         padding: 20px;
         border-radius: 28px;
+    }
+
+    .app-section {
+        padding-bottom: 42px;
+    }
+
+    .app-panel {
+        padding: 20px;
+        border-radius: 26px;
+    }
+
+    .app-download-item {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .app-download-meta {
+        justify-items: start;
     }
 
     .download-panel {
