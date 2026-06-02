@@ -1301,6 +1301,7 @@ func (a *app) mergedTrafficStatus(ctx context.Context, userID, subID string, ref
 	if refresh {
 		if err := a.refreshMergedTrafficUsage(ctx, userID, subID); err != nil {
 			refreshErr = err.Error()
+			log.Printf("web merged traffic refresh failed user=%s sub_id=%s: %v", userID, subID, err)
 		} else {
 			live = true
 		}
