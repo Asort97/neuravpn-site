@@ -209,8 +209,10 @@ CREATE TABLE IF NOT EXISTS merged_traffic (
     month TEXT NOT NULL,
     extra_allocated_bytes BIGINT NOT NULL DEFAULT 0,
     last_synced_used_bytes BIGINT NOT NULL DEFAULT 0,
+    last_synced_limit_bytes BIGINT NOT NULL DEFAULT 0,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE merged_traffic ADD COLUMN IF NOT EXISTS last_synced_limit_bytes BIGINT NOT NULL DEFAULT 0;
 DELETE FROM email_login_codes WHERE expires_at < NOW() - INTERVAL '1 day';
 DELETE FROM web_sessions WHERE expires_at < NOW();
 DELETE FROM web_login_tokens WHERE expires_at < NOW() - INTERVAL '1 day';
@@ -1311,14 +1313,15 @@ func (a *app) mergedTrafficStatus(ctx context.Context, userID, subID string, ref
 	now := time.Now().UTC()
 	currentMonth := now.Format("2006-01")
 	month := currentMonth
-	var extraBytes, usedBytes int64
+	var extraBytes, usedBytes, syncedLimitBytes int64
 	var updatedAt time.Time
 	err := a.db.QueryRow(ctx, `
-SELECT month, extra_allocated_bytes, last_synced_used_bytes, updated_at
-FROM merged_traffic WHERE user_id=$1`, userID).Scan(&month, &extraBytes, &usedBytes, &updatedAt)
+SELECT month, extra_allocated_bytes, last_synced_used_bytes, COALESCE(last_synced_limit_bytes, 0), updated_at
+FROM merged_traffic WHERE user_id=$1`, userID).Scan(&month, &extraBytes, &usedBytes, &syncedLimitBytes, &updatedAt)
 	if err != nil {
 		extraBytes = 0
 		usedBytes = 0
+		syncedLimitBytes = 0
 		updatedAt = time.Time{}
 	}
 	stale := month != currentMonth
@@ -1332,9 +1335,13 @@ FROM merged_traffic WHERE user_id=$1`, userID).Scan(&month, &extraBytes, &usedBy
 			extraBytes = 0
 		}
 		usedBytes = 0
+		syncedLimitBytes = 0
 		month = currentMonth
 	}
 	limitBytes := mergedBaseTrafficBytes + extraBytes
+	if syncedLimitBytes > 0 {
+		limitBytes = syncedLimitBytes
+	}
 	remainingBytes := limitBytes - usedBytes
 	if remainingBytes < 0 {
 		remainingBytes = 0
@@ -1407,14 +1414,19 @@ func (a *app) refreshMergedTrafficUsage(ctx context.Context, userID, subID strin
 	if usedBytes < 0 {
 		usedBytes = 0
 	}
+	limitBytes := client.TotalGB
+	if limitBytes < 0 {
+		limitBytes = 0
+	}
 	_, err = a.db.Exec(ctx, `
-INSERT INTO merged_traffic (user_id, month, extra_allocated_bytes, last_synced_used_bytes, updated_at)
-VALUES ($1, $2, 0, $3, NOW())
+INSERT INTO merged_traffic (user_id, month, extra_allocated_bytes, last_synced_used_bytes, last_synced_limit_bytes, updated_at)
+VALUES ($1, $2, 0, $3, $4, NOW())
 ON CONFLICT (user_id) DO UPDATE
 SET last_synced_used_bytes=EXCLUDED.last_synced_used_bytes,
+    last_synced_limit_bytes=EXCLUDED.last_synced_limit_bytes,
     updated_at=NOW()
 WHERE merged_traffic.month=EXCLUDED.month`,
-		userID, currentMonth, usedBytes)
+		userID, currentMonth, usedBytes, limitBytes)
 	return err
 }
 
