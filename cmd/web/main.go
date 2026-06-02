@@ -1152,6 +1152,7 @@ func (x *webXrayClient) doRequestOnce(ctx context.Context, method, endpoint stri
 		return 0, nil, err
 	}
 	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-Requested-With", "XMLHttpRequest")
 	if strings.TrimSpace(x.apiToken) != "" {
 		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(x.apiToken))
 	}
