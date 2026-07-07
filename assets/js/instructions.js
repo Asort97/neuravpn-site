@@ -2,7 +2,7 @@
     const mediaBase = "../../assets/instructions/";
     const DOWNLOADS = {
         android: "https://github.com/Asort97/neuravpn-client/releases/download/v1.0.5/neuravpn_android_v1.0.5_arm64.apk",
-        windows: "https://github.com/Asort97/neuravpn-client/releases/download/v.1.0.6/neuravpn-setup-v1.0.6.exe"
+        windows: "https://github.com/Asort97/neuravpn-client/releases/download/v.1.0.7/neuravpn-setup-v1.0.7.exe"
     };
     const isMiniApp = detectMiniApp();
     if (isMiniApp) {
