@@ -30,14 +30,6 @@
     const openSubBtn = document.getElementById("openSubBtn");
     const plansEl = document.getElementById("plans");
     const paymentStatus = document.getElementById("paymentStatus");
-    const trafficPanel = document.getElementById("trafficPanel");
-    const trafficRemainingText = document.getElementById("trafficRemainingText");
-    const trafficLimitText = document.getElementById("trafficLimitText");
-    const trafficBarFill = document.getElementById("trafficBarFill");
-    const trafficCarryText = document.getElementById("trafficCarryText");
-    const trafficPacksEl = document.getElementById("trafficPacks");
-    const trafficStatus = document.getElementById("trafficStatus");
-    const refreshTrafficBtn = document.getElementById("refreshTrafficBtn");
     const autopaySetup = document.getElementById("autopaySetup");
     const autopayPlanTitle = document.getElementById("autopayPlanTitle");
     const autopayNextText = document.getElementById("autopayNextText");
@@ -176,9 +168,6 @@
         closePaymentChoice();
         createPayment(selectedPlan.id, true);
     });
-    if (refreshTrafficBtn) {
-        refreshTrafficBtn.addEventListener("click", refreshTraffic);
-    }
     document.querySelectorAll(".platform-card[data-platform]").forEach(function (link) {
         link.addEventListener("click", function (event) {
             event.preventDefault();
@@ -364,7 +353,6 @@
         const me = await api("/api/me");
         showDashboard(me);
         loadPlans();
-        loadTrafficPacks();
     }
 
     function showAuth() {
@@ -409,7 +397,6 @@
         } else {
             autopaySetup.classList.add("hidden");
         }
-        renderTraffic(me.traffic);
     }
 
     async function startTelegramLogin() {
@@ -503,19 +490,6 @@
         }
     }
 
-    async function loadTrafficPacks() {
-        if (IS_DEMO) {
-            renderTrafficPacks(demoTrafficPacks());
-            return;
-        }
-        try {
-            const data = await api("/api/traffic/packs");
-            renderTrafficPacks(data.packs || []);
-        } catch (error) {
-            trafficPacksEl.textContent = "не удалось загрузить пакеты";
-        }
-    }
-
     function renderPlans(plans) {
         plansEl.innerHTML = "";
         getVisiblePlans(plans || []).forEach(function (plan) {
@@ -528,62 +502,6 @@
             ].join("");
             button.addEventListener("click", function () { openPaymentChoice(plan); });
             plansEl.appendChild(button);
-        });
-    }
-
-    function renderTraffic(traffic) {
-        const data = traffic || {};
-        const limit = Number(data.limit_gb || 0);
-        const remaining = Number(data.remaining_gb || 0);
-        const carry = Number(data.carry_next_gb || 0);
-        const percent = limit > 0 ? Math.max(0, Math.min(100, (remaining / limit) * 100)) : 0;
-        trafficRemainingText.textContent = formatGB(remaining) + " осталось";
-        trafficLimitText.textContent = limit > 0 ? "из " + formatGB(limit) : "лимит синхронизируется";
-        trafficBarFill.style.width = percent + "%";
-        trafficCarryText.textContent = "переносится дальше: " + formatGB(carry);
-        trafficPanel.classList.toggle("is-empty", limit <= 0);
-    }
-
-    async function refreshTraffic() {
-        if (IS_DEMO) {
-            showToast("demo-режим: live трафик не запрашивается");
-            return;
-        }
-        if (!refreshTrafficBtn) {
-            return;
-        }
-        refreshTrafficBtn.disabled = true;
-        setStatus(trafficStatus, "обновляем...", "");
-        try {
-            const data = await api("/api/traffic/refresh", { method: "POST", body: {} });
-            renderTraffic(data.traffic || {});
-            if (data.traffic && data.traffic.refresh_error) {
-                setStatus(trafficStatus, "показаны последние сохранённые данные", "error");
-                showToast("live-обновление недоступно", "error");
-            } else {
-                setStatus(trafficStatus, "", "");
-                showToast("трафик обновлён");
-            }
-        } catch (error) {
-            setStatus(trafficStatus, error.message || "не удалось обновить трафик", "error");
-            showToast(error.message || "не удалось обновить трафик", "error");
-        } finally {
-            refreshTrafficBtn.disabled = false;
-        }
-    }
-
-    function renderTrafficPacks(packs) {
-        trafficPacksEl.innerHTML = "";
-        (packs || []).forEach(function (pack) {
-            const button = document.createElement("button");
-            button.className = "traffic-pack-card";
-            button.type = "button";
-            button.innerHTML = [
-                "<strong>" + escapeHTML(pack.title || (pack.gb + " ГБ")) + "</strong>",
-                '<span>' + Number(pack.amount).toFixed(0) + " ₽</span>"
-            ].join("");
-            button.addEventListener("click", function () { createTrafficPayment(pack); });
-            trafficPacksEl.appendChild(button);
         });
     }
 
@@ -611,15 +529,9 @@
             subscription_url: "https://webhook.staticdeliverycdn.com/merged-sub/623290294/e8f2f084b81dc99fd2c8df286642fb9320aa1ebe666693a910d3f06f3f1e0335",
             autopay_available: true,
             autopay_enabled: false,
-            autopay_plan_id: "30d",
-            traffic: {
-                limit_gb: 60,
-                remaining_gb: 43.7,
-                carry_next_gb: 33.7
-            }
+            autopay_plan_id: "30d"
         });
         renderPlans(demoPlans());
-        renderTrafficPacks(demoTrafficPacks());
         setStatus(paymentStatus, "demo-режим: платежи и API не вызываются", "ok");
     }
 
@@ -629,15 +541,6 @@
             { id: "60d", title: "60 дней", amount: 289, days: 60 },
             { id: "90d", title: "90 дней", amount: 419, days: 90 },
             { id: "365d", title: "365 дней", amount: 1499, days: 365 }
-        ];
-    }
-
-    function demoTrafficPacks() {
-        return [
-            { id: "traffic_test_5gb", title: "Тест 5 ГБ", gb: 5, amount: 1 },
-            { id: "traffic_50gb", title: "50 ГБ", gb: 50, amount: 119 },
-            { id: "traffic_150gb", title: "150 ГБ", gb: 150, amount: 349 },
-            { id: "traffic_250gb", title: "250 ГБ", gb: 250, amount: 549 }
         ];
     }
 
@@ -706,37 +609,6 @@
         }
     }
 
-    async function createTrafficPayment(pack) {
-        if (!pack || !pack.id) {
-            return;
-        }
-        const details = (pack.title || (pack.gb + " ГБ")) + " · " + Number(pack.amount).toFixed(0) + " ₽";
-        logUI("traffic_pack_selected", details);
-        if (IS_DEMO) {
-            showToast("demo-режим: счёт не создаётся");
-            return;
-        }
-        setStatus(trafficStatus, "создаём платёж...", "");
-        showToast("создаём платёж");
-        try {
-            const data = await api("/api/traffic/create", {
-                method: "POST",
-                body: { pack_id: pack.id }
-            });
-            if (data.confirmation_url) {
-                showToast("переходим к оплате");
-                setStatus(trafficStatus, "", "");
-                window.location.href = data.confirmation_url;
-                return;
-            }
-            setStatus(trafficStatus, "платёж создан, но ссылка не пришла", "error");
-            showToast("ссылка оплаты не пришла", "error");
-        } catch (error) {
-            setStatus(trafficStatus, error.message || "не удалось создать платёж", "error");
-            showToast(error.message || "не удалось создать платёж", "error");
-        }
-    }
-
     function openDetachConfirm() {
         if (!currentMe || !currentMe.autopay_available) {
             showToast("карта не привязана", "error");
@@ -801,12 +673,8 @@
             return;
         }
         paymentReturnShown = true;
-        const isTrafficReturn = paymentReturnKind() === "traffic_return";
         showToast("оплата прошла");
-        if (isTrafficReturn) {
-            paymentReturnText.textContent = "Трафик обновляется. Обычно это занимает несколько секунд.";
-            enableReturnAutopayBtn.classList.add("hidden");
-        } else if (currentMe.autopay_enabled) {
+        if (currentMe.autopay_enabled) {
             paymentReturnText.textContent = "Подписка обновляется. Автосписание уже включено.";
             enableReturnAutopayBtn.classList.add("hidden");
         } else if (currentMe.autopay_available) {
@@ -842,7 +710,7 @@
 
     function isPaymentReturn() {
         const payment = paymentReturnKind();
-        return payment === "return" || payment === "traffic_return";
+        return payment === "return";
     }
 
     function paymentReturnKind() {

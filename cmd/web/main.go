@@ -528,7 +528,6 @@ FROM users WHERE id=$1`, userID).Scan(&email, &days, &subID, &autopay, &autopayP
 	if days > 0 {
 		expiresAt = time.Now().Add(time.Duration(days) * 24 * time.Hour).Format(time.RFC3339)
 	}
-	traffic := a.mergedTrafficStatus(r.Context(), userID, subID, true)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user_id":           userID,
 		"masked_id":         maskID(userID),
@@ -540,7 +539,6 @@ FROM users WHERE id=$1`, userID).Scan(&email, &days, &subID, &autopay, &autopayP
 		"autopay_enabled":   autopay,
 		"autopay_available": autopayMethod != "",
 		"autopay_plan_id":   autopayPlan,
-		"traffic":           traffic,
 	})
 }
 
@@ -591,11 +589,7 @@ func (a *app) handleCreatePayment(w http.ResponseWriter, r *http.Request, userID
 }
 
 func (a *app) handleTrafficPacks(w http.ResponseWriter, r *http.Request, userID string) {
-	visible := append([]trafficPack(nil), trafficPacks...)
-	if a.adminIDs[userID] {
-		visible = append(visible, testTrafficPack)
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"packs": visible})
+	writeJSON(w, http.StatusOK, map[string]any{"packs": []trafficPack{}})
 }
 
 func (a *app) handleCreateTrafficPayment(w http.ResponseWriter, r *http.Request, userID string) {
@@ -603,41 +597,7 @@ func (a *app) handleCreateTrafficPayment(w http.ResponseWriter, r *http.Request,
 		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
 		return
 	}
-	var req struct {
-		PackID string `json:"pack_id"`
-	}
-	if err := readJSON(r, &req); err != nil {
-		writeJSON(w, http.StatusBadRequest, errResp("bad json"))
-		return
-	}
-	pack, ok := a.findTrafficPack(userID, req.PackID)
-	if !ok {
-		writeJSON(w, http.StatusBadRequest, errResp("пакет трафика не найден"))
-		return
-	}
-	if a.yooShopID == "" || a.yooSecret == "" {
-		writeJSON(w, http.StatusServiceUnavailable, errResp("YooKassa не настроена для web API"))
-		return
-	}
-	var email string
-	var days int64
-	err := a.db.QueryRow(r.Context(), `SELECT COALESCE(email,''), days FROM users WHERE id=$1`, userID).Scan(&email, &days)
-	if err != nil {
-		writeJSON(w, http.StatusNotFound, errResp("пользователь не найден"))
-		return
-	}
-	if days <= 0 {
-		writeJSON(w, http.StatusBadRequest, errResp("сначала купите доступ, потом можно докупить трафик"))
-		return
-	}
-	paymentURL, paymentID, err := a.createYooTrafficPayment(r.Context(), userID, email, pack, a.paymentReturnBase(r))
-	if err != nil {
-		log.Printf("web traffic payment create failed user=%s pack=%s: %v", userID, pack.ID, err)
-		writeJSON(w, http.StatusBadGateway, errResp("не удалось создать платёж"))
-		return
-	}
-	a.sendWebLog(r, userID, email, "создал счёт на трафик", fmt.Sprintf("%s · %.0f ₽", pack.Title, pack.Amount))
-	writeJSON(w, http.StatusOK, map[string]any{"payment_id": paymentID, "confirmation_url": paymentURL})
+	writeJSON(w, http.StatusGone, errResp("трафик белых списков теперь безлимитный и не требует доплаты"))
 }
 
 func (a *app) handleRefreshTraffic(w http.ResponseWriter, r *http.Request, userID string) {
@@ -645,10 +605,7 @@ func (a *app) handleRefreshTraffic(w http.ResponseWriter, r *http.Request, userI
 		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
 		return
 	}
-	var subID string
-	_ = a.db.QueryRow(r.Context(), `SELECT COALESCE(subscription_id,'') FROM users WHERE id=$1`, userID).Scan(&subID)
-	traffic := a.mergedTrafficStatus(r.Context(), userID, subID, true)
-	writeJSON(w, http.StatusOK, map[string]any{"traffic": traffic})
+	writeJSON(w, http.StatusOK, map[string]any{"traffic": map[string]any{"unlimited": true}})
 }
 
 func (a *app) handleDisableAutopay(w http.ResponseWriter, r *http.Request, userID string) {
