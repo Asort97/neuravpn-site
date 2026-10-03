@@ -28,6 +28,7 @@
     const subLink = document.getElementById("subLink");
     const copySubBtn = document.getElementById("copySubBtn");
     const openSubBtn = document.getElementById("openSubBtn");
+    const referralInvite = document.getElementById("referralInvite");
     const plansEl = document.getElementById("plans");
     const paymentStatus = document.getElementById("paymentStatus");
     const autopaySetup = document.getElementById("autopaySetup");
@@ -76,6 +77,15 @@
     }
 
     boot();
+    referralInvite.addEventListener("click", function (event) {
+        if (IS_DEMO) {
+            event.preventDefault();
+            showToast("в вашем кабинете здесь будет личная ссылка приглашения");
+        } else if (TG_WEBAPP && typeof TG_WEBAPP.openTelegramLink === "function") {
+            event.preventDefault();
+            TG_WEBAPP.openTelegramLink(referralInvite.href);
+        }
+    });
     window.addEventListener("pageshow", clearPendingPaymentStatus);
     document.addEventListener("visibilitychange", function () {
         if (document.visibilityState === "visible") {
@@ -375,6 +385,15 @@
 
     function showDashboard(me) {
         currentMe = me;
+        const referralURL = me.referral_url || (/^\d+$/.test(String(me.user_id || ""))
+            ? "https://t.me/" + TELEGRAM_BOT_USERNAME + "?start=ref_" + me.user_id : "");
+        referralInvite.classList.toggle("hidden", !IS_MINI_APP || !referralURL);
+        if (referralURL) {
+            referralInvite.href = "https://t.me/share/url?url=" + encodeURIComponent(referralURL)
+                + "&text=" + encodeURIComponent("подключай vpn, опробовав его бесплатно 5 дней!");
+        } else {
+            referralInvite.removeAttribute("href");
+        }
         stopTelegramPolling();
         clearPendingPaymentStatus();
         authView.classList.add("hidden");

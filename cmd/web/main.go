@@ -530,6 +530,7 @@ FROM users WHERE id=$1`, userID).Scan(&email, &days, &subID, &autopay, &autopayP
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"user_id":           userID,
+		"referral_url":      fmt.Sprintf("https://t.me/%s?start=ref_%s", a.botUsername, url.QueryEscape(userID)),
 		"masked_id":         maskID(userID),
 		"email":             email,
 		"days":              days,

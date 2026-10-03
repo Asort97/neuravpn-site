@@ -1674,3 +1674,29 @@ textarea:focus {
     background: rgba(73, 38, 17, 0.28);
     backdrop-filter: blur(14px) saturate(1.05);
 }
+.referral-invite {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) auto 12px;
+    align-items: center;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid rgba(166, 111, 32, 0.65);
+    border-radius: 18px;
+    background: linear-gradient(120deg, rgba(255, 249, 228, 0.88), rgba(241, 213, 164, 0.65));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    color: #4b260f;
+    text-decoration: none;
+}
+
+.referral-invite.hidden { display: none; }
+.referral-gift { font-size: 26px; }
+.referral-copy { display: grid; gap: 3px; min-width: 0; }
+.referral-copy strong { font-size: 1rem; }
+.referral-copy > span { font-size: 0.88rem; }
+.referral-copy small { font-size: 0.72rem; line-height: 1.35; color: #795d42; }
+.referral-reward { display: grid; text-align: center; color: #936022; }
+.referral-reward strong { font-size: 1.6rem; line-height: 1.1; }
+.referral-reward span { font-size: 0.8rem; }
+.referral-arrow { font-size: 28px; color: #936022; }
+.referral-invite:hover { border-color: #936022; }
+.referral-invite:focus-visible { outline: 2px solid #7d3513; outline-offset: 3px; }
