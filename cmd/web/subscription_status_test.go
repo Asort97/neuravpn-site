@@ -14,9 +14,9 @@ import (
 func TestSubscriptionStatusUsesSignedBotStatus(t *testing.T) {
 	h := hmac.New(sha256.New, []byte("test-secret"))
 	_, _ = h.Write([]byte("42"))
-	wantPath := "/merged-sub/42/" + hex.EncodeToString(h.Sum(nil)) + "/status"
+	wantPath := "/merged-sub/42/" + hex.EncodeToString(h.Sum(nil))
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != wantPath {
+		if r.URL.Path != wantPath || r.URL.Query().Get("status") != "1" {
 			t.Errorf("unexpected status URL: %s", r.URL.Path)
 		}
 		if r.Header.Get("Accept") != "application/json" {

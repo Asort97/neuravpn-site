@@ -99,7 +99,11 @@
             refreshProfile();
         }
     });
-    setInterval(refreshProfile, 60000);
+    setInterval(function () {
+        if (currentMe && (currentMe.subscription_verified !== true || Date.now() - currentMe.received_at >= 60000)) {
+            refreshProfile();
+        }
+    }, 10000);
     setInterval(renderSubscriptionState, 30000);
 
     emailForm.addEventListener("submit", async function (event) {
