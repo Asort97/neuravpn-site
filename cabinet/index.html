@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>neuravpn - личный кабинет</title>
   <link rel="stylesheet" href="../assets/css/site.css?v=20260601-6">
-  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20261003-referral">
+  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20261021-status">
 </head>
 <body>
   <div class="grid-overlay"></div>
@@ -80,7 +80,7 @@
           </div>
           <div class="active-pill" aria-live="polite">
             <span class="active-dot"></span>
-            <strong><span id="daysBig">--</span> дней активно</strong>
+            <strong><span id="daysBig">--</span> <span id="accessSuffix">дней активно</span></strong>
           </div>
         </div>
 
@@ -213,6 +213,7 @@
     </div>
   </div>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="../assets/js/cabinet.js?v=20261003-referral"></script>
+  <script src="../assets/js/subscription-state.js?v=20261021-status"></script>
+  <script src="../assets/js/cabinet.js?v=20261021-status"></script>
 </body>
 </html>

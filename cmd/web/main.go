@@ -514,32 +514,42 @@ func (a *app) handleLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) handleMe(w http.ResponseWriter, r *http.Request, userID string) {
+	w.Header().Set("Cache-Control", "no-store, private")
 	var email, subID, autopayPlan, autopayMethod string
-	var days int64
 	var autopay bool
 	err := a.db.QueryRow(r.Context(), `
-SELECT COALESCE(email,''), days, COALESCE(subscription_id,''), autopay_enabled, COALESCE(autopay_plan_id,''), COALESCE(autopay_method_id,'')
-FROM users WHERE id=$1`, userID).Scan(&email, &days, &subID, &autopay, &autopayPlan, &autopayMethod)
+SELECT COALESCE(email,''), COALESCE(subscription_id,''), autopay_enabled, COALESCE(autopay_plan_id,''), COALESCE(autopay_method_id,'')
+FROM users WHERE id=$1`, userID).Scan(&email, &subID, &autopay, &autopayPlan, &autopayMethod)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, errResp("пользователь не найден"))
 		return
 	}
 	var expiresAt any
-	if days > 0 {
-		expiresAt = time.Now().Add(time.Duration(days) * 24 * time.Hour).Format(time.RFC3339)
+	var days any
+	live, statusErr := a.subscriptionStatus(r.Context(), userID)
+	if statusErr == nil {
+		days = live.Days
+		expiresAt = live.ExpiresAt
+	} else {
+		log.Printf("web subscription status unavailable user=%s: %v", userID, statusErr)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"user_id":           userID,
-		"referral_url":      fmt.Sprintf("https://t.me/%s?start=ref_%s", a.botUsername, url.QueryEscape(userID)),
-		"masked_id":         maskID(userID),
-		"email":             email,
-		"days":              days,
-		"expires_at":        expiresAt,
-		"subscription_id":   subID,
-		"subscription_url":  a.subscriptionURL(userID, subID),
-		"autopay_enabled":   autopay,
-		"autopay_available": autopayMethod != "",
-		"autopay_plan_id":   autopayPlan,
+		"subscription_verified": statusErr == nil,
+		"active":                live.Active,
+		"unlimited":             live.Unlimited,
+		"pending_activation":    live.PendingActivation,
+		"checked_at":            live.CheckedAt,
+		"user_id":               userID,
+		"referral_url":          fmt.Sprintf("https://t.me/%s?start=ref_%s", a.botUsername, url.QueryEscape(userID)),
+		"masked_id":             maskID(userID),
+		"email":                 email,
+		"days":                  days,
+		"expires_at":            expiresAt,
+		"subscription_id":       subID,
+		"subscription_url":      a.subscriptionURL(userID, subID),
+		"autopay_enabled":       autopay,
+		"autopay_available":     autopayMethod != "",
+		"autopay_plan_id":       autopayPlan,
 	})
 }
 

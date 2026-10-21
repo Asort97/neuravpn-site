@@ -22,6 +22,7 @@
     const telegramLoginStatus = document.getElementById("telegramLoginStatus");
     const userMeta = document.getElementById("userMeta");
     const daysBig = document.getElementById("daysBig");
+    const accessSuffix = document.getElementById("accessSuffix");
     const activePill = document.querySelector(".active-pill");
     const subState = document.getElementById("subState");
     const expireText = document.getElementById("expireText");
@@ -58,6 +59,8 @@
     let toastTimer = 0;
     let selectedPlan = null;
     let currentMe = null;
+    let profileRefresh = null;
+    let profileVersion = 0;
     let paymentReturnShown = false;
     let resendTimerID = 0;
     let resendLeft = 0;
@@ -86,12 +89,18 @@
             TG_WEBAPP.openTelegramLink(referralInvite.href);
         }
     });
-    window.addEventListener("pageshow", clearPendingPaymentStatus);
+    window.addEventListener("pageshow", function () {
+        clearPendingPaymentStatus();
+        refreshProfile();
+    });
     document.addEventListener("visibilitychange", function () {
         if (document.visibilityState === "visible") {
             clearPendingPaymentStatus();
+            refreshProfile();
         }
     });
+    setInterval(refreshProfile, 60000);
+    setInterval(renderSubscriptionState, 30000);
 
     emailForm.addEventListener("submit", async function (event) {
         event.preventDefault();
@@ -359,13 +368,37 @@
         accountChooser.classList.remove("hidden");
     }
 
-    async function loadMe() {
-        const me = await api("/api/me");
+    async function loadMe(includePlans) {
+        const version = ++profileVersion;
+        let me;
+        try {
+            me = await api("/api/me");
+        } catch (error) {
+            if (version !== profileVersion) return;
+            throw error;
+        }
+        if (version !== profileVersion) return;
         showDashboard(me);
-        loadPlans();
+        if (includePlans !== false) loadPlans();
+    }
+
+    function refreshProfile() {
+        if (IS_DEMO || !currentMe || document.hidden || dashboardView.classList.contains("hidden")) return;
+        renderSubscriptionState();
+        if (profileRefresh) return;
+        profileRefresh = loadMe(false).catch(function (error) {
+            if (error.status === 401) {
+                showAuth();
+            } else if (currentMe) {
+                currentMe.subscription_verified = false;
+                renderSubscriptionState();
+            }
+        }).finally(function () { profileRefresh = null; });
     }
 
     function showAuth() {
+        currentMe = null;
+        profileVersion++;
         authView.classList.remove("hidden");
         dashboardView.classList.add("hidden");
         logoutBtn.classList.add("hidden");
@@ -384,6 +417,7 @@
     }
 
     function showDashboard(me) {
+        me.received_at = Date.now();
         currentMe = me;
         const referralURL = me.referral_url || (/^\d+$/.test(String(me.user_id || ""))
             ? "https://t.me/" + TELEGRAM_BOT_USERNAME + "?start=ref_" + me.user_id : "");
@@ -399,13 +433,8 @@
         authView.classList.add("hidden");
         dashboardView.classList.remove("hidden");
         logoutBtn.classList.remove("hidden");
-        const days = Number(me.days || 0);
-        daysBig.textContent = String(days);
-        activePill.classList.toggle("is-inactive", days <= 0);
+        renderSubscriptionState();
         userMeta.textContent = profileLabel(me);
-        subState.textContent = days > 0 ? "активна" : "нет активной подписки";
-        subState.classList.toggle("is-active", days > 0);
-        expireText.textContent = me.expires_at ? "Дата окончания: " + formatDate(me.expires_at) : "";
         subLink.value = me.subscription_url || "";
         openSubBtn.href = me.subscription_url || "#";
         autopayText.textContent = me.autopay_available ? (me.autopay_enabled ? "автопродление включено" : "карта привязана, автосписание выключено") : "карта не привязана";
@@ -416,6 +445,20 @@
         } else {
             autopaySetup.classList.add("hidden");
         }
+    }
+
+    function renderSubscriptionState() {
+        if (!currentMe) return;
+        const state = window.neuravpnSubscriptionState(currentMe);
+        daysBig.textContent = !state.known ? "—" : state.unlimited ? "∞" : String(state.days);
+        accessSuffix.textContent = !state.known ? "статус уточняется" : state.unlimited ? "безлимитно" : state.active ? "дней активно" : "дней осталось";
+        activePill.classList.toggle("is-inactive", state.known && !state.active);
+        activePill.classList.toggle("is-unknown", !state.known);
+        subState.textContent = !state.known ? "статус не подтверждён" : state.active ? "активна" : "нет активной подписки";
+        subState.classList.toggle("is-active", state.known && state.active);
+        expireText.textContent = !state.known ? "Не удалось проверить срок подписки. Повторяем проверку автоматически."
+            : state.pending ? "Срок начнётся после первого подключения"
+            : currentMe.expires_at ? "Дата окончания: " + formatDate(currentMe.expires_at) : "";
     }
 
     async function startTelegramLogin() {
@@ -544,6 +587,9 @@
             masked_id: "6232***294",
             email: "asort97@mail.ru",
             days: 21,
+            subscription_verified: true,
+            active: true,
+            checked_at: new Date().toISOString(),
             expires_at: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString(),
             subscription_url: "https://webhook.staticdeliverycdn.com/merged-sub/623290294/e8f2f084b81dc99fd2c8df286642fb9320aa1ebe666693a910d3f06f3f1e0335",
             autopay_available: true,
@@ -740,6 +786,7 @@
         const opts = options || {};
         const fetchOptions = {
             method: opts.method || "GET",
+            cache: "no-store",
             credentials: "include",
             headers: { "Accept": "application/json" }
         };
@@ -760,6 +807,7 @@
         if (!response.ok) {
             const error = new Error(data.error || "API error " + response.status);
             error.code = data.code || "";
+            error.status = response.status;
             error.data = data;
             throw error;
         }

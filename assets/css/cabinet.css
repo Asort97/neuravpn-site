@@ -1700,3 +1700,11 @@ textarea:focus {
 .referral-arrow { font-size: 28px; color: #936022; }
 .referral-invite:hover { border-color: #936022; }
 .referral-invite:focus-visible { outline: 2px solid #7d3513; outline-offset: 3px; }
+.active-pill.is-unknown,
+body.is-mini-app .active-pill.is-unknown {
+    color: var(--text-secondary);
+    border-color: var(--border);
+    background: transparent;
+    box-shadow: none;
+}
+.active-pill.is-unknown .active-dot { display: none; }
