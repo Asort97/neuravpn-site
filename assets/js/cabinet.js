@@ -1,4 +1,16 @@
 (function () {
+    // A cached old page can outlive its script during a rolling deployment.
+    if (!document.getElementById("miniAppRecovery") || !document.getElementById("telegramBotLoginLink")) {
+        const freshURL = new URL(window.location.href);
+        if (freshURL.searchParams.get("auth_rev") !== "20261029") {
+            freshURL.searchParams.set("auth_rev", "20261029");
+            window.location.replace(freshURL.href);
+        } else {
+            const status = document.getElementById("authStatus");
+            if (status) status.textContent = "Обновите страницу кабинета, чтобы загрузить новую версию входа.";
+        }
+        return;
+    }
     const API_BASE = detectAPIBase();
     const TG_WEBAPP = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
     let telegramInitData = readTelegramInitData();

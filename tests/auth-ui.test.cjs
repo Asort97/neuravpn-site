@@ -34,6 +34,7 @@ function fixture(options = {}) {
   for (const match of html.matchAll(/<[^>]+\bid="([^"]+)"[^>]*>/g)) {
     els.set(match[1], element(/class="[^"]*\bhidden\b/.test(match[0])));
   }
+  if (options.oldHTML) els.delete('miniAppRecovery');
   const document = {
     body: element(), title: 'test', hidden: false, visibilityState: 'visible',
     getElementById: id => els.get(id),
@@ -43,7 +44,7 @@ function fixture(options = {}) {
   const calls = [], timers = new Map(), events = {};
   let timerID = 0;
   const window = {
-    location: { search: options.search ?? (options.mini ? '?mini_app=1' : ''), hash: options.hash || '', pathname: '/cabinet/', port: '', protocol: 'https:', hostname: 'neuravpn.ru' },
+    location: { href: 'https://neuravpn.ru/cabinet/?mini_app=1#tgWebAppData=preview-only', replace(url) { this.replacedWith = url; }, search: options.search ?? (options.mini ? '?mini_app=1' : ''), hash: options.hash || '', pathname: '/cabinet/', port: '', protocol: 'https:', hostname: 'neuravpn.ru' },
     history: { replaceState() {} }, addEventListener(name, fn) { events[name] = fn; },
     setTimeout(fn, ms) { timers.set(++timerID, { fn, ms }); return timerID; },
     clearTimeout(id) { timers.delete(id); },
@@ -77,6 +78,15 @@ function fixture(options = {}) {
 }
 
 async function flush() { for (let i = 0; i < 40; i++) await Promise.resolve(); }
+
+test('a cached old HTML page is refreshed without losing Telegram launch data', () => {
+  const f = fixture({ oldHTML: true });
+  const fresh = new URL(f.window.location.replacedWith);
+  assert.equal(fresh.searchParams.get('auth_rev'), '20261029');
+  assert.equal(fresh.searchParams.get('mini_app'), '1');
+  assert.equal(fresh.hash, '#tgWebAppData=preview-only');
+  assert.equal(f.calls.length, 0);
+});
 
 test('blocked storage does not disable forms; SDK is local and deferred', async () => {
   const f = fixture();
