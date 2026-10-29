@@ -1,8 +1,8 @@
 (function () {
     const API_BASE = detectAPIBase();
     const TG_WEBAPP = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    let telegramInitData = readTelegramInitData();
     const IS_MINI_APP = detectMiniApp();
-    const HAS_TELEGRAM_INIT_DATA = Boolean(TG_WEBAPP && TG_WEBAPP.initData);
     const IS_DEMO = new URLSearchParams(window.location.search).get("demo") === "1";
     const authView = document.getElementById("authView");
     const dashboardView = document.getElementById("dashboardView");
@@ -18,8 +18,12 @@
     const signupOffer = document.getElementById("signupOffer");
     const telegramLoginBox = document.getElementById("telegramLoginBox");
     const telegramLoginBtn = document.getElementById("telegramLoginBtn");
-    const telegramWidgetHost = document.getElementById("telegramWidgetHost");
+    const telegramBotLoginLink = document.getElementById("telegramBotLoginLink");
     const telegramLoginStatus = document.getElementById("telegramLoginStatus");
+    const miniAppRecovery = document.getElementById("miniAppRecovery");
+    const retryMiniAppBtn = document.getElementById("retryMiniAppBtn");
+    const requestCodeBtn = document.getElementById("requestCodeBtn");
+    const verifyCodeBtn = document.getElementById("verifyCodeBtn");
     const userMeta = document.getElementById("userMeta");
     const daysBig = document.getElementById("daysBig");
     const accessSuffix = document.getElementById("accessSuffix");
@@ -66,17 +70,25 @@
     let resendLeft = 0;
     let telegramPollTimer = 0;
     let telegramLoginDeadline = 0;
-    let telegramWidgetLoaded = false;
+    let telegramLoginToken = "";
+    let telegramPollBusy = false;
+    let telegramStartBusy = false;
+    let miniAppLoginBusy = false;
+    let miniAppRetryTimer = 0;
+    let miniAppRetries = 0;
+    let bootCancelled = false;
+    let emailRequestBusy = false;
+    let emailVerifyBusy = false;
+    let emailSessionReady = false;
     const TELEGRAM_BOT_USERNAME = String(window.NEURAVPN_TELEGRAM_BOT || "neuravpn_bot").replace(/^@/, "");
-
-    window.onTelegramLoginAuth = handleTelegramLoginWidgetAuth;
 
     if (IS_MINI_APP) {
         document.body.classList.add("is-mini-app");
         if (TG_WEBAPP) {
-            TG_WEBAPP.ready();
-            TG_WEBAPP.expand();
+            try { TG_WEBAPP.ready(); TG_WEBAPP.expand(); } catch (error) {}
         }
+        document.getElementById("authTitle").textContent = "Личный кабинет";
+        document.getElementById("authHint").textContent = "";
     }
 
     boot();
@@ -91,13 +103,18 @@
     });
     window.addEventListener("pageshow", function () {
         clearPendingPaymentStatus();
-        refreshProfile();
+        resumeAuthentication();
     });
     document.addEventListener("visibilitychange", function () {
         if (document.visibilityState === "visible") {
             clearPendingPaymentStatus();
-            refreshProfile();
+            resumeAuthentication();
         }
+    });
+    window.addEventListener("online", resumeAuthentication);
+    retryMiniAppBtn.addEventListener("click", function () {
+        miniAppRetries = 0;
+        completeTelegramMiniAppLogin();
     });
     setInterval(function () {
         if (currentMe && (currentMe.subscription_verified !== true || Date.now() - currentMe.received_at >= 60000)) {
@@ -117,6 +134,8 @@
     });
 
     changeEmailBtn.addEventListener("click", function () {
+        if (emailRequestBusy || emailVerifyBusy) return;
+        emailSessionReady = false;
         codeForm.classList.add("hidden");
         emailForm.classList.remove("hidden");
         accountChooser.classList.add("hidden");
@@ -156,7 +175,13 @@
 
     logoutBtn.addEventListener("click", async function () {
         await api("/api/auth/logout", { method: "POST", body: {} }).catch(function () {});
+        stopTelegramPolling();
+        window.clearTimeout(miniAppRetryTimer);
         showAuth();
+        if (IS_MINI_APP) {
+            if (TG_WEBAPP && typeof TG_WEBAPP.close === "function") TG_WEBAPP.close();
+            else completeTelegramMiniAppLogin();
+        }
         showToast("вы вышли");
     });
 
@@ -219,45 +244,68 @@
             showDemoDashboard();
             return;
         }
-        if (await completeTelegramLoginFromURL()) {
-            showPaymentReturnIfNeeded();
+        if (IS_MINI_APP) {
+            await completeTelegramMiniAppLogin();
             return;
         }
-        if (await completeTelegramMiniAppLogin()) {
-            showPaymentReturnIfNeeded();
-            return;
-        }
+        if (await completeTelegramLoginFromURL()) return;
         try {
             await loadMe();
-            showPaymentReturnIfNeeded();
+            if (!bootCancelled) showPaymentReturnIfNeeded();
         } catch (error) {
+            if (bootCancelled) return;
             showAuth();
-            if (isPaymentReturn()) {
+            if (error.status !== 401) {
+                setStatus(authStatus, "Не удалось загрузить кабинет. Повторяем запрос...", "error");
+                window.setTimeout(function () {
+                    if (!bootCancelled && !currentMe && !document.hidden) boot();
+                }, 3000);
+            } else if (isPaymentReturn()) {
                 setStatus(authStatus, "оплата прошла. Войдите, чтобы увидеть обновлённую подписку.", "ok");
-            } else if (IS_MINI_APP && HAS_TELEGRAM_INIT_DATA) {
-                setStatus(authStatus, "Откройте личный кабинет через кнопку в Telegram-боте.", "error");
             }
         }
     }
 
     async function completeTelegramMiniAppLogin() {
-        if (!IS_MINI_APP || !HAS_TELEGRAM_INIT_DATA) {
+        if (!IS_MINI_APP || miniAppLoginBusy) return false;
+        window.clearTimeout(miniAppRetryTimer);
+        telegramInitData = readTelegramInitData();
+        showAuth();
+        if (!telegramInitData) {
+            setStatus(authStatus, "Telegram не передал данные входа. Закройте кабинет и откройте его кнопкой в боте.", "error");
             return false;
         }
-        const initData = TG_WEBAPP.initData;
+        miniAppLoginBusy = true;
+        retryMiniAppBtn.disabled = true;
         showMiniAppLoading();
-        showToast("входим через Telegram");
         try {
-            await api("/api/auth/telegram-webapp", { method: "POST", body: { init_data: initData } });
+            await api("/api/auth/telegram-webapp", { method: "POST", body: { init_data: telegramInitData } });
             await loadMe();
-            showToast("вход выполнен");
+            miniAppRetries = 0;
+            showPaymentReturnIfNeeded();
             return true;
         } catch (error) {
             showAuth();
-            setStatus(authStatus, error.message || "Telegram Mini App не подтвердил вход", "error");
-            showToast(error.message || "Mini App вход не выполнен", "error");
+            if (error.status === 401 || error.status === 403) {
+                setStatus(authStatus, "Данные входа Telegram устарели. Закройте кабинет и заново откройте его кнопкой в боте.", "error");
+            } else {
+                setStatus(authStatus, "Не удалось связаться с сервером. Повторяем вход автоматически...", "error");
+                const delay = Math.min(15000, 1000 * Math.pow(2, miniAppRetries++));
+                miniAppRetryTimer = window.setTimeout(function () {
+                    if (!document.hidden) completeTelegramMiniAppLogin();
+                }, delay);
+            }
             return false;
+        } finally {
+            miniAppLoginBusy = false;
+            retryMiniAppBtn.disabled = false;
         }
+    }
+
+    function resumeAuthentication() {
+        if (IS_MINI_APP && !currentMe) completeTelegramMiniAppLogin();
+        else refreshProfile();
+        if (telegramLoginToken) checkTelegramLogin(telegramLoginToken);
     }
 
     function showMiniAppLoading() {
@@ -268,6 +316,7 @@
         telegramLoginBox.classList.add("hidden");
         accountChooser.classList.add("hidden");
         signupOffer.classList.add("hidden");
+        miniAppRecovery.classList.remove("hidden");
         setStatus(authStatus, "входим через Telegram...", "ok");
     }
 
@@ -280,28 +329,26 @@
         params.delete("telegram_login");
         const cleanURL = window.location.pathname + (params.toString() ? "?" + params.toString() : "") + window.location.hash;
         window.history.replaceState({}, document.title, cleanURL);
+        telegramLoginToken = token;
+        telegramLoginDeadline = Date.now() + 300000;
+        showAuth();
         showToast("завершаем вход через Telegram");
-        try {
-            const data = await api("/api/auth/telegram/check", { method: "POST", body: { token: token } });
-            if (!data.confirmed) {
-                setStatus(authStatus, "подтверждение Telegram ещё не найдено. Нажмите вход через Telegram ещё раз.", "error");
-                return false;
-            }
-            await loadMe();
-            showToast("вход через Telegram выполнен");
-            return true;
-        } catch (error) {
-            setStatus(authStatus, error.message || "Telegram вход не выполнен", "error");
-            showToast(error.message || "Telegram вход не выполнен", "error");
-            return false;
-        }
+        startTelegramPolling();
+        await checkTelegramLogin(token);
+        return true;
     }
 
     async function verifyCode(userID) {
+        if (emailVerifyBusy || emailRequestBusy || telegramStartBusy) return;
+        cancelBoot();
+        stopTelegramPolling();
+        emailVerifyBusy = true;
+        verifyCodeBtn.disabled = true;
+        changeEmailBtn.disabled = true;
         setStatus(authStatus, "", "");
         showToast("проверяем код");
         try {
-            const response = await api("/api/auth/verify-code", {
+            const response = emailSessionReady ? {} : await api("/api/auth/verify-code", {
                 method: "POST",
                 body: {
                     email: pendingEmail,
@@ -315,16 +362,30 @@
                 showToast("выберите аккаунт");
                 return;
             }
+            emailSessionReady = true;
             await loadMe();
             showPaymentReturnIfNeeded();
             showToast("вход выполнен");
         } catch (error) {
+            if (error.status === 401) emailSessionReady = false;
             setStatus(authStatus, error.message || "код не подошёл", "error");
             showToast(error.message || "код не подошёл", "error");
+        } finally {
+            emailVerifyBusy = false;
+            verifyCodeBtn.disabled = false;
+            changeEmailBtn.disabled = false;
         }
     }
 
     async function requestCode(isResend) {
+        if (emailRequestBusy || emailVerifyBusy || telegramStartBusy) return;
+        cancelBoot();
+        stopTelegramPolling();
+        emailRequestBusy = true;
+        emailSessionReady = false;
+        requestCodeBtn.disabled = true;
+        resendCodeBtn.disabled = true;
+        changeEmailBtn.disabled = true;
         pendingEmail = emailInput.value.trim() || pendingEmail;
         selectedUserID = "";
         setStatus(authStatus, "", "");
@@ -343,17 +404,27 @@
             showToast("код отправлен");
             startResendTimer(120);
         } catch (error) {
-            if (error.code === "account_not_found") {
+            if (error.code === "account_not_found" || error.code === "email_not_verified") {
                 codeForm.classList.add("hidden");
                 emailForm.classList.remove("hidden");
                 signupOffer.classList.remove("hidden");
-                setStatus(authStatus, "аккаунт с этим email не найден", "error");
-                showToast("аккаунт не найден", "error");
+                setStatus(authStatus, error.message, "error");
                 return;
             }
+            if (error.status === 429) startResendTimer(error.data.retry_after || 60);
             setStatus(authStatus, error.message || "не удалось отправить код", "error");
             showToast("не удалось отправить код", "error");
+        } finally {
+            emailRequestBusy = false;
+            requestCodeBtn.disabled = false;
+            changeEmailBtn.disabled = false;
+            updateResendButton();
         }
+    }
+
+    function cancelBoot() {
+        bootCancelled = true;
+        profileVersion++;
     }
 
     function renderAccountChooser(accounts) {
@@ -393,6 +464,7 @@
         profileRefresh = loadMe(false).catch(function (error) {
             if (error.status === 401) {
                 showAuth();
+                if (IS_MINI_APP) completeTelegramMiniAppLogin();
             } else if (currentMe) {
                 currentMe.subscription_verified = false;
                 renderSubscriptionState();
@@ -406,7 +478,8 @@
         authView.classList.remove("hidden");
         dashboardView.classList.add("hidden");
         logoutBtn.classList.add("hidden");
-        if (IS_MINI_APP && HAS_TELEGRAM_INIT_DATA) {
+        miniAppRecovery.classList.toggle("hidden", !IS_MINI_APP);
+        if (IS_MINI_APP) {
             emailForm.classList.add("hidden");
             codeForm.classList.add("hidden");
             telegramLoginBox.classList.add("hidden");
@@ -416,7 +489,7 @@
             emailForm.classList.remove("hidden");
             telegramLoginBox.classList.remove("hidden");
             telegramLoginBtn.classList.remove("hidden");
-            telegramWidgetHost.classList.add("hidden");
+            codeForm.classList.add("hidden");
         }
     }
 
@@ -433,6 +506,7 @@
             referralInvite.removeAttribute("href");
         }
         stopTelegramPolling();
+        window.clearTimeout(miniAppRetryTimer);
         clearPendingPaymentStatus();
         authView.classList.add("hidden");
         dashboardView.classList.remove("hidden");
@@ -466,50 +540,41 @@
     }
 
     async function startTelegramLogin() {
+        if (telegramStartBusy || emailRequestBusy || emailVerifyBusy) return;
+        cancelBoot();
+        stopTelegramPolling();
+        telegramStartBusy = true;
+        telegramLoginBtn.disabled = true;
         setStatus(authStatus, "", "");
-        setStatus(telegramLoginStatus, "", "");
-        telegramLoginBtn.classList.add("hidden");
-        telegramWidgetHost.classList.remove("hidden");
-        renderTelegramLoginWidget();
-        setStatus(telegramLoginStatus, "нажмите кнопку Telegram ниже", "ok");
-        showToast("выберите Telegram");
-    }
-
-    function renderTelegramLoginWidget() {
-        if (telegramWidgetLoaded) {
-            return;
-        }
-        telegramWidgetLoaded = true;
-        telegramWidgetHost.innerHTML = "";
-        const script = document.createElement("script");
-        script.async = true;
-        script.src = "https://telegram.org/js/telegram-widget.js?22";
-        script.setAttribute("data-telegram-login", TELEGRAM_BOT_USERNAME);
-        script.setAttribute("data-size", "large");
-        script.setAttribute("data-radius", "14");
-        script.setAttribute("data-userpic", "false");
-        script.setAttribute("data-request-access", "write");
-        script.setAttribute("data-onauth", "onTelegramLoginAuth(user)");
-        telegramWidgetHost.appendChild(script);
-    }
-
-    async function handleTelegramLoginWidgetAuth(user) {
-        setStatus(telegramLoginStatus, "проверяем Telegram...", "ok");
-        showToast("проверяем Telegram");
+        setStatus(telegramLoginStatus, "готовим вход через бота...", "");
         try {
-            await api("/api/auth/telegram-login", { method: "POST", body: user });
-            await loadMe();
-            showPaymentReturnIfNeeded();
-            showToast("вход через Telegram выполнен");
+            const data = await api("/api/auth/telegram/start", { method: "POST", body: {} });
+            const botURL = new URL(data.bot_url);
+            if (!data.token || botURL.protocol !== "https:" || botURL.hostname !== "t.me") throw new Error("не удалось подготовить ссылку входа");
+            telegramLoginToken = data.token;
+            telegramLoginDeadline = Date.now() + Math.min(data.expires_in || 300, 300) * 1000;
+            telegramBotLoginLink.href = botURL.href;
+            telegramBotLoginLink.classList.remove("hidden");
+            telegramLoginBtn.classList.add("hidden");
+            setStatus(telegramLoginStatus, "подтвердите вход в боте. Кабинет откроется автоматически.", "ok");
+            startTelegramPolling();
         } catch (error) {
-            setStatus(telegramLoginStatus, error.message || "не удалось начать вход через Telegram", "error");
-            showToast(error.message || "Telegram вход не выполнен", "error");
-            telegramLoginBtn.classList.remove("hidden");
+            setStatus(telegramLoginStatus, error.message || "не удалось начать вход. Попробуйте ещё раз.", "error");
+        } finally {
+            telegramStartBusy = false;
+            telegramLoginBtn.disabled = false;
         }
+    }
+
+    function startTelegramPolling() {
+        window.clearInterval(telegramPollTimer);
+        telegramPollTimer = window.setInterval(function () {
+            if (!document.hidden) checkTelegramLogin(telegramLoginToken);
+        }, 2000);
     }
 
     async function checkTelegramLogin(token) {
-        if (!token) {
+        if (!token || telegramPollBusy) {
             return;
         }
         if (Date.now() > telegramLoginDeadline) {
@@ -518,19 +583,22 @@
             showToast("Telegram вход истёк", "error");
             return;
         }
+        telegramPollBusy = true;
         try {
             const data = await api("/api/auth/telegram/check", { method: "POST", body: { token: token } });
+            if (telegramLoginToken !== token) return;
             if (!data.confirmed) {
                 return;
             }
-            stopTelegramPolling();
             await loadMe();
             showPaymentReturnIfNeeded();
             showToast("вход через Telegram выполнен");
         } catch (error) {
-            stopTelegramPolling();
-            setStatus(telegramLoginStatus, error.message || "Telegram вход не выполнен", "error");
-            showToast(error.message || "Telegram вход не выполнен", "error");
+            if (telegramLoginToken !== token) return;
+            if (error.status === 410) stopTelegramPolling();
+            setStatus(telegramLoginStatus, error.message || "Не удалось проверить вход. Повторяем проверку...", "error");
+        } finally {
+            telegramPollBusy = false;
         }
     }
 
@@ -538,6 +606,9 @@
         window.clearInterval(telegramPollTimer);
         telegramPollTimer = 0;
         telegramLoginDeadline = 0;
+        telegramLoginToken = "";
+        telegramBotLoginLink.classList.add("hidden");
+        telegramLoginBtn.classList.remove("hidden");
         if (telegramLoginBtn) {
             telegramLoginBtn.disabled = false;
         }
@@ -798,32 +869,37 @@
             fetchOptions.headers["Content-Type"] = "application/json";
             fetchOptions.body = JSON.stringify(opts.body);
         }
-        const response = await fetch(API_BASE + path, fetchOptions);
-        const text = await response.text();
-        let data = {};
-        if (text) {
-            try {
-                data = JSON.parse(text);
-            } catch (error) {
-                data = { error: fallbackAPIError(response, text) };
+        if (IS_MINI_APP && telegramInitData) {
+            fetchOptions.headers.Authorization = "tma " + telegramInitData;
+        }
+        const controller = new AbortController();
+        fetchOptions.signal = controller.signal;
+        const timeoutMs = path.startsWith("/api/auth/") || path === "/api/me" ? 20000 : 35000;
+        const timeout = window.setTimeout(function () { controller.abort(); }, timeoutMs);
+        try {
+            const response = await fetch(API_BASE + path, fetchOptions);
+            const text = await response.text();
+            let data;
+            try { data = JSON.parse(text); } catch (_) {
+                const error = new Error("сервер вернул некорректный ответ. Повторите попытку.");
+                error.status = response.ok ? 502 : response.status;
+                throw error;
             }
-        }
-        if (!response.ok) {
-            const error = new Error(data.error || "API error " + response.status);
-            error.code = data.code || "";
-            error.status = response.status;
-            error.data = data;
+            if (!data || typeof data !== "object") throw new Error("некорректный ответ сервера");
+            if (!response.ok) {
+                const error = new Error(data.error || "ошибка сервера: " + response.status);
+                error.code = data.code || "";
+                error.status = response.status;
+                error.data = data;
+                throw error;
+            }
+            return data;
+        } catch (error) {
+            if (error.name === "AbortError") throw new Error("сервер не ответил вовремя. Повторите попытку.");
             throw error;
+        } finally {
+            window.clearTimeout(timeout);
         }
-        return data;
-    }
-
-    function fallbackAPIError(response, text) {
-        const normalized = String(text || "").trim().toLowerCase();
-        if (response.status === 501 || normalized.startsWith("<!doctype") || normalized.startsWith("<html")) {
-            return "локальный API не запущен. Для проверки дизайна это нормально.";
-        }
-        return "сервер вернул некорректный ответ";
     }
 
     function logUI(action, details) {
@@ -832,7 +908,7 @@
             details: details || "",
             source: IS_MINI_APP ? "miniapp" : "site"
         });
-        if (navigator.sendBeacon) {
+        if (navigator.sendBeacon && !IS_MINI_APP) {
             const blob = new Blob([payload], { type: "application/json" });
             navigator.sendBeacon(API_BASE + "/api/log/ui", blob);
             return;
@@ -840,7 +916,7 @@
         fetch(API_BASE + "/api/log/ui", {
             method: "POST",
             credentials: "include",
-            headers: { "Content-Type": "application/json" },
+            headers: Object.assign({ "Content-Type": "application/json" }, IS_MINI_APP && telegramInitData ? { Authorization: "tma " + telegramInitData } : {}),
             body: payload,
             keepalive: true
         }).catch(function () {});
@@ -948,22 +1024,23 @@
     }
 
     function detectAPIBase() {
-        if (window.NEURAVPN_API_BASE) {
-            return window.NEURAVPN_API_BASE;
-        }
-        const stored = localStorage.getItem("neuravpn_api_base");
-        if (stored) {
-            return stored;
-        }
-        if (window.location.port === "8085") {
+        // Production requests stay same-origin; stale developer settings must not receive auth data.
+        if (window.location.port === "8085" && ["localhost", "127.0.0.1"].includes(window.location.hostname)) {
             return window.location.protocol + "//" + window.location.hostname + ":8090";
         }
         return "";
     }
 
+    function readTelegramInitData() {
+        const webApp = window.Telegram && window.Telegram.WebApp;
+        if (webApp && webApp.initData) return webApp.initData;
+        const hash = new URLSearchParams(String(window.location.hash || "").replace(/^#/, ""));
+        return hash.get("tgWebAppData") || "";
+    }
+
     function detectMiniApp() {
         const params = new URLSearchParams(window.location.search);
-        return params.get("mini_app") === "1" || Boolean(window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData);
+        return params.get("mini_app") === "1" || Boolean(telegramInitData);
     }
 
     function withMiniAppParam(href) {

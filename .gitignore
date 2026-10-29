@@ -8,3 +8,5 @@ dist/
 build/
 *.local
 .runtime/
+__pycache__/
+*.pyc

@@ -29,29 +29,34 @@
 
     <main>
       <section id="authView" class="cabinet-auth card-panel">
-        <h1>Вход в личный кабинет</h1>
-        <p class="muted">Введите email, который подтвердили в Telegram-боте. Мы отправим одноразовый код для входа.</p>
+        <h1 id="authTitle">Вход в личный кабинет</h1>
+        <p id="authHint" class="muted">Введите email, который подтвердили в Telegram-боте. Мы отправим одноразовый код для входа.</p>
 
-        <form id="emailForm" class="auth-form">
+        <div id="miniAppRecovery" class="hidden">
+          <button id="retryMiniAppBtn" class="btn btn-primary" type="button">повторить вход</button>
+          <a class="btn btn-secondary" href="https://t.me/neuravpn_bot">открыть бота</a>
+        </div>
+
+        <form id="emailForm" class="auth-form" onsubmit="return false">
           <label for="emailInput">подтверждённый email</label>
           <div class="input-row">
             <input id="emailInput" name="email" type="email" autocomplete="email" placeholder="name@example.com" required>
-            <button class="btn btn-primary" type="submit">получить код</button>
+            <button id="requestCodeBtn" class="btn btn-primary" type="submit">получить код</button>
           </div>
         </form>
 
         <div id="telegramLoginBox" class="telegram-login">
           <div class="telegram-divider"><span>или</span></div>
           <button id="telegramLoginBtn" class="btn btn-secondary" type="button">войти через Telegram</button>
-          <div id="telegramWidgetHost" class="telegram-widget-host hidden"></div>
+          <a id="telegramBotLoginLink" class="btn btn-secondary hidden" target="_blank" rel="noopener noreferrer">открыть Telegram и подтвердить вход</a>
           <p id="telegramLoginStatus" class="status-line"></p>
         </div>
 
-        <form id="codeForm" class="auth-form hidden">
+        <form id="codeForm" class="auth-form hidden" onsubmit="return false">
           <label for="codeInput">код из письма</label>
           <div class="input-row code-row">
             <input id="codeInput" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="000000" required>
-            <button class="btn btn-primary" type="submit">войти</button>
+            <button id="verifyCodeBtn" class="btn btn-primary" type="submit">войти</button>
           </div>
           <p class="auth-hint">Если письма нет, проверьте папку «Спам».</p>
           <button id="resendCodeBtn" class="link-button resend-code" type="button" disabled>
@@ -66,8 +71,8 @@
         </div>
 
         <div id="signupOffer" class="signup-offer hidden">
-          <p class="muted">Аккаунт с этим email не найден. Создайте аккаунт в Telegram-боте и укажите эту почту.</p>
-          <a id="signupBotLink" class="btn btn-primary" href="https://t.me/neuravpn_bot?start=site_signup" target="_blank" rel="noopener noreferrer">создать аккаунт</a>
+          <p id="signupOfferText" class="muted">Для входа по почте подтвердите её в профиле Telegram-бота. Также можно войти через Telegram без почты.</p>
+          <a id="signupBotLink" class="btn btn-primary" href="https://t.me/neuravpn_bot?start=site_signup" target="_blank" rel="noopener noreferrer">открыть бота</a>
         </div>
 
         <p id="authStatus" class="status-line"></p>
@@ -212,8 +217,9 @@
       </div>
     </div>
   </div>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="../assets/js/subscription-state.js?v=20261021-status"></script>
-  <script src="../assets/js/cabinet.js?v=20261021-status2"></script>
+  <noscript>Для входа включите JavaScript или откройте кабинет через Telegram-бота.</noscript>
+  <script src="../assets/vendor/telegram-web-app.js?v=20261029" defer></script>
+  <script src="../assets/js/subscription-state.js?v=20261021-status" defer></script>
+  <script src="../assets/js/cabinet.js?v=20261029-auth" defer></script>
 </body>
 </html>

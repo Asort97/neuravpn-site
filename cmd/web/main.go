@@ -7,7 +7,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -17,12 +16,10 @@ import (
 	"io"
 	"log"
 	"math"
-	"mime"
 	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/mail"
-	"net/smtp"
 	"net/url"
 	"os"
 	"sort"
@@ -31,6 +28,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -52,6 +50,8 @@ type app struct {
 	botUsername    string
 	mergedXray     *webXrayClient
 	mergedInbounds []int
+	authLimits     authRateLimits
+	sendCode       func(context.Context, string, string) error
 }
 
 type webLogSession struct {
@@ -170,8 +170,10 @@ func main() {
 	if port == "" {
 		port = "8090"
 	}
-	log.Printf("neuravpn web API listening on :%s", port)
-	if err := http.ListenAndServe(":"+port, a.withCORS(mux)); err != nil {
+	addr := net.JoinHostPort(envOrDefault("WEB_HOST", "127.0.0.1"), port)
+	log.Printf("neuravpn web API listening on %s", addr)
+	server := &http.Server{Addr: addr, Handler: a.withCORS(mux), ReadHeaderTimeout: 5 * time.Second, IdleTimeout: 60 * time.Second}
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -225,6 +227,9 @@ func (a *app) handleRequestCode(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
 		return
 	}
+	if !a.allowAuthRequest(w, r, "email", 60, 10*time.Minute) {
+		return
+	}
 	var req struct {
 		Email string `json:"email"`
 	}
@@ -237,13 +242,22 @@ func (a *app) handleRequestCode(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, errResp("некорректный email"))
 		return
 	}
-	accounts, err := a.usersByEmail(r.Context(), email)
+	accounts, err := usersByEmail(r.Context(), a.db, email)
 	if err != nil {
 		log.Printf("users by email failed: %v", err)
 		writeJSON(w, http.StatusInternalServerError, errResp("ошибка поиска аккаунта"))
 		return
 	}
 	if len(accounts) == 0 {
+		var known bool
+		if err := a.db.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM users WHERE lower(email)=lower($1))`, email).Scan(&known); err != nil {
+			a.authUnavailable(w, "email lookup", err)
+			return
+		}
+		if known {
+			writeJSON(w, http.StatusUnprocessableEntity, map[string]any{"error": "Подтвердите эту почту в Telegram-боте: профиль → e-mail → подтвердить почту. Или войдите через Telegram без почты.", "code": "email_not_verified"})
+			return
+		}
 		writeJSON(w, http.StatusNotFound, map[string]any{
 			"error":      "аккаунт с этим email не найден",
 			"code":       "account_not_found",
@@ -252,20 +266,48 @@ func (a *app) handleRequestCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	code := randomDigits(6)
-	hash := a.codeHash(email, code)
-	_, err = a.db.Exec(r.Context(), `INSERT INTO email_login_codes (email, code_hash, expires_at) VALUES ($1, $2, NOW() + INTERVAL '10 minutes')`, email, hash)
+	tx, err := a.db.Begin(r.Context())
 	if err != nil {
-		log.Printf("request code insert failed: %v", err)
-		writeJSON(w, http.StatusInternalServerError, errResp("не удалось создать код"))
+		a.authUnavailable(w, "email transaction", err)
 		return
 	}
-
-	if err := sendLoginCode(email, code); err != nil {
-		log.Printf("email send failed email=%s code=%s err=%v", email, code, err)
-	} else {
-		log.Printf("email login code sent email=%s", email)
+	defer tx.Rollback(r.Context())
+	// Serialize resends for one email across requests, including during SMTP delivery.
+	if _, err = tx.Exec(r.Context(), `SELECT pg_advisory_xact_lock(hashtext($1)::bigint)`, email); err != nil {
+		a.authUnavailable(w, "email lock", err)
+		return
 	}
+	var recent bool
+	if err = tx.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM email_login_codes WHERE lower(email)=lower($1) AND created_at > NOW()-INTERVAL '60 seconds')`, email).Scan(&recent); err != nil {
+		a.authUnavailable(w, "email cooldown", err)
+		return
+	}
+	if recent {
+		w.Header().Set("Retry-After", "60")
+		writeJSON(w, http.StatusTooManyRequests, map[string]any{"error": "Код уже отправлен. Подождите минуту перед повторной отправкой.", "retry_after": 60})
+		return
+	}
+	code := randomDigits(6)
+	sender := a.sendCode
+	if sender == nil {
+		sender = sendLoginCode
+	}
+	if err = sender(r.Context(), email, code); err != nil {
+		log.Printf("email delivery failed: %s", mailErrorCategory(err))
+		writeJSON(w, http.StatusBadGateway, map[string]any{"error": "Не удалось отправить письмо. Попробуйте позже или войдите через Telegram.", "code": "email_delivery_failed"})
+		return
+	}
+	if _, err = tx.Exec(r.Context(), `UPDATE email_login_codes SET used_at=NOW() WHERE lower(email)=lower($1) AND used_at IS NULL`, email); err == nil {
+		_, err = tx.Exec(r.Context(), `INSERT INTO email_login_codes (email, code_hash, expires_at) VALUES ($1,$2,NOW()+INTERVAL '10 minutes')`, email, a.codeHash(email, code))
+	}
+	if err == nil {
+		err = tx.Commit(r.Context())
+	}
+	if err != nil {
+		a.authUnavailable(w, "email save", err)
+		return
+	}
+	log.Printf("email login code delivered")
 	logUserID := ""
 	if len(accounts) == 1 {
 		logUserID = accounts[0].ID
@@ -277,6 +319,9 @@ func (a *app) handleRequestCode(w http.ResponseWriter, r *http.Request) {
 func (a *app) handleVerifyCode(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
+		return
+	}
+	if !a.allowAuthRequest(w, r, "verify-email", 100, 10*time.Minute) {
 		return
 	}
 	var req struct {
@@ -302,11 +347,21 @@ func (a *app) handleVerifyCode(w http.ResponseWriter, r *http.Request) {
 	var id int64
 	var codeHash string
 	var attempts int
-	err = a.db.QueryRow(r.Context(), `
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		a.authUnavailable(w, "verify transaction", err)
+		return
+	}
+	defer tx.Rollback(r.Context())
+	err = tx.QueryRow(r.Context(), `
 SELECT id, code_hash, attempts FROM email_login_codes
 WHERE lower(email)=lower($1) AND used_at IS NULL AND expires_at > NOW()
-ORDER BY created_at DESC LIMIT 1`, email).Scan(&id, &codeHash, &attempts)
+ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, email).Scan(&id, &codeHash, &attempts)
 	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			a.authUnavailable(w, "verify lookup", err)
+			return
+		}
 		writeJSON(w, http.StatusUnauthorized, errResp("код истёк или не найден"))
 		return
 	}
@@ -315,12 +370,19 @@ ORDER BY created_at DESC LIMIT 1`, email).Scan(&id, &codeHash, &attempts)
 		return
 	}
 	if subtle.ConstantTimeCompare([]byte(codeHash), []byte(a.codeHash(email, code))) != 1 {
-		_, _ = a.db.Exec(r.Context(), `UPDATE email_login_codes SET attempts = attempts + 1 WHERE id=$1`, id)
+		_, err = tx.Exec(r.Context(), `UPDATE email_login_codes SET attempts = attempts + 1 WHERE id=$1`, id)
+		if err == nil {
+			err = tx.Commit(r.Context())
+		}
+		if err != nil {
+			a.authUnavailable(w, "verify attempts", err)
+			return
+		}
 		writeJSON(w, http.StatusUnauthorized, errResp("неверный код"))
 		return
 	}
 
-	accounts, err := a.usersByEmail(r.Context(), email)
+	accounts, err := usersByEmail(r.Context(), tx, email)
 	if err != nil {
 		log.Printf("users by email failed: %v", err)
 		writeJSON(w, http.StatusInternalServerError, errResp("ошибка поиска аккаунта"))
@@ -343,10 +405,15 @@ ORDER BY created_at DESC LIMIT 1`, email).Scan(&id, &codeHash, &attempts)
 		return
 	}
 
-	_, _ = a.db.Exec(r.Context(), `UPDATE email_login_codes SET used_at=NOW() WHERE id=$1`, id)
 	token := randomToken(32)
 	expires := time.Now().Add(30 * 24 * time.Hour)
-	_, err = a.db.Exec(r.Context(), `INSERT INTO web_sessions (token_hash, user_id, expires_at) VALUES ($1,$2,$3)`, sessionHash(token), userID, expires)
+	_, err = tx.Exec(r.Context(), `INSERT INTO web_sessions (token_hash, user_id, expires_at) VALUES ($1,$2,$3)`, sessionHash(token), userID, expires)
+	if err == nil {
+		_, err = tx.Exec(r.Context(), `UPDATE email_login_codes SET used_at=NOW() WHERE id=$1`, id)
+	}
+	if err == nil {
+		err = tx.Commit(r.Context())
+	}
 	if err != nil {
 		log.Printf("session insert failed: %v", err)
 		writeJSON(w, http.StatusInternalServerError, errResp("не удалось создать сессию"))
@@ -360,6 +427,9 @@ ORDER BY created_at DESC LIMIT 1`, email).Scan(&id, &codeHash, &attempts)
 func (a *app) handleTelegramLoginStart(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
+		return
+	}
+	if !a.allowAuthRequest(w, r, "telegram-start", 60, 10*time.Minute) {
 		return
 	}
 	token := randomToken(32)
@@ -401,11 +471,21 @@ func (a *app) handleTelegramLoginCheck(w http.ResponseWriter, r *http.Request) {
 	}
 	var userID string
 	var confirmed bool
-	err := a.db.QueryRow(r.Context(), `
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		a.authUnavailable(w, "telegram token transaction", err)
+		return
+	}
+	defer tx.Rollback(r.Context())
+	err = tx.QueryRow(r.Context(), `
 SELECT COALESCE(user_id, ''), confirmed_at IS NOT NULL
 FROM web_login_tokens
-WHERE token_hash=$1 AND expires_at > NOW()`, sessionHash(token)).Scan(&userID, &confirmed)
+WHERE token_hash=$1 AND expires_at > NOW() FOR UPDATE`, sessionHash(token)).Scan(&userID, &confirmed)
 	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			a.authUnavailable(w, "telegram token lookup", err)
+			return
+		}
 		writeJSON(w, http.StatusGone, errResp("вход через Telegram истёк"))
 		return
 	}
@@ -415,8 +495,11 @@ WHERE token_hash=$1 AND expires_at > NOW()`, sessionHash(token)).Scan(&userID, &
 	}
 	sessionToken := randomToken(32)
 	sessionExpires := time.Now().Add(30 * 24 * time.Hour)
-	_, err = a.db.Exec(r.Context(), `INSERT INTO web_sessions (token_hash, user_id, expires_at) VALUES ($1,$2,$3)`,
+	_, err = tx.Exec(r.Context(), `INSERT INTO web_sessions (token_hash, user_id, expires_at) VALUES ($1,$2,$3)`,
 		sessionHash(sessionToken), userID, sessionExpires)
+	if err == nil {
+		err = tx.Commit(r.Context())
+	}
 	if err != nil {
 		log.Printf("telegram session insert failed: %v", err)
 		writeJSON(w, http.StatusInternalServerError, errResp("не удалось создать сессию"))
@@ -478,12 +561,12 @@ func (a *app) handleTelegramWebAppAuth(w http.ResponseWriter, r *http.Request) {
 	}
 	tgUser, err := a.validateTelegramWebAppInitData(req.InitData)
 	if err != nil {
+		log.Printf("webapp signature rejected: %v", err)
 		writeJSON(w, http.StatusUnauthorized, errResp("Telegram вход не подтверждён"))
 		return
 	}
 	if err := a.ensureWebUser(r.Context(), tgUser.ID); err != nil {
-		log.Printf("webapp ensure user failed: %v", err)
-		writeJSON(w, http.StatusInternalServerError, errResp("не удалось подготовить аккаунт"))
+		a.authUnavailable(w, "webapp ensure user", err)
 		return
 	}
 	token := randomToken(32)
@@ -491,8 +574,7 @@ func (a *app) handleTelegramWebAppAuth(w http.ResponseWriter, r *http.Request) {
 	_, err = a.db.Exec(r.Context(), `INSERT INTO web_sessions (token_hash, user_id, expires_at) VALUES ($1,$2,$3)`,
 		sessionHash(token), tgUser.ID, expires)
 	if err != nil {
-		log.Printf("webapp session insert failed: %v", err)
-		writeJSON(w, http.StatusInternalServerError, errResp("не удалось создать сессию"))
+		a.authUnavailable(w, "webapp session", err)
 		return
 	}
 	setSessionCookie(w, token, expires)
@@ -521,6 +603,10 @@ func (a *app) handleMe(w http.ResponseWriter, r *http.Request, userID string) {
 SELECT COALESCE(email,''), COALESCE(subscription_id,''), autopay_enabled, COALESCE(autopay_plan_id,''), COALESCE(autopay_method_id,'')
 FROM users WHERE id=$1`, userID).Scan(&email, &subID, &autopay, &autopayPlan, &autopayMethod)
 	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			a.authUnavailable(w, "profile lookup", err)
+			return
+		}
 		writeJSON(w, http.StatusNotFound, errResp("пользователь не найден"))
 		return
 	}
@@ -691,6 +777,15 @@ func (a *app) handleUILog(w http.ResponseWriter, r *http.Request, userID string)
 
 func (a *app) requireAuth(next func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if authorization := r.Header.Get("Authorization"); strings.HasPrefix(authorization, "tma ") {
+			user, err := a.validateTelegramWebAppInitData(strings.TrimPrefix(authorization, "tma "))
+			if err != nil {
+				writeJSON(w, http.StatusUnauthorized, errResp("Переоткройте кабинет в Telegram-боте"))
+				return
+			}
+			next(w, r, user.ID)
+			return
+		}
 		cookie, err := r.Cookie("nvpn_session")
 		if err != nil || strings.TrimSpace(cookie.Value) == "" {
 			writeJSON(w, http.StatusUnauthorized, errResp("нужен вход"))
@@ -698,6 +793,10 @@ func (a *app) requireAuth(next func(http.ResponseWriter, *http.Request, string))
 		}
 		userID, err := a.sessionUserID(r.Context(), cookie.Value)
 		if err != nil {
+			if !errors.Is(err, pgx.ErrNoRows) {
+				a.authUnavailable(w, "session lookup", err)
+				return
+			}
 			clearSessionCookie(w)
 			writeJSON(w, http.StatusUnauthorized, errResp("сессия истекла"))
 			return
@@ -714,10 +813,19 @@ func (a *app) sessionUserID(ctx context.Context, token string) (string, error) {
 
 func (a *app) withCORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store, private")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		if strings.HasPrefix(r.URL.Path, "/api/auth/") {
+			ctx, cancel := context.WithTimeout(r.Context(), 18*time.Second)
+			defer cancel()
+			r = r.WithContext(ctx)
+		}
+		r.Body = http.MaxBytesReader(w, r.Body, 64*1024)
 		if a.corsOrigin != "" {
 			w.Header().Set("Access-Control-Allow-Origin", a.corsOrigin)
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 			w.Header().Set("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
 		}
 		if r.Method == http.MethodOptions {
@@ -733,8 +841,12 @@ type account struct {
 	Days int64
 }
 
-func (a *app) usersByEmail(ctx context.Context, email string) ([]account, error) {
-	rows, err := a.db.Query(ctx, `SELECT id, days FROM users WHERE lower(verified_email)=lower($1) ORDER BY verified_email_at DESC NULLS LAST, created_at DESC`, email)
+type accountQuerier interface {
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+}
+
+func usersByEmail(ctx context.Context, db accountQuerier, email string) ([]account, error) {
+	rows, err := db.Query(ctx, `SELECT id, days FROM users WHERE lower(verified_email)=lower($1) ORDER BY verified_email_at DESC NULLS LAST, created_at DESC`, email)
 	if err != nil {
 		return nil, err
 	}
@@ -764,9 +876,17 @@ type telegramWebAppUser struct {
 }
 
 func (a *app) validateTelegramWebAppInitData(initData string) (telegramWebAppUser, error) {
+	if a.botToken == "" || len(initData) > 16384 {
+		return telegramWebAppUser{}, errors.New("invalid init data")
+	}
 	values, err := url.ParseQuery(strings.TrimSpace(initData))
 	if err != nil {
 		return telegramWebAppUser{}, err
+	}
+	for _, values := range values {
+		if len(values) != 1 {
+			return telegramWebAppUser{}, errors.New("duplicate init data field")
+		}
 	}
 	hash := values.Get("hash")
 	if hash == "" {
@@ -2067,61 +2187,4 @@ func envOrDefault(key, fallback string) string {
 		return value
 	}
 	return fallback
-}
-
-func sendLoginCode(email, code string) error {
-	host := strings.TrimSpace(os.Getenv("SMTP_HOST"))
-	user := strings.TrimSpace(os.Getenv("SMTP_USER"))
-	pass := strings.TrimSpace(os.Getenv("SMTP_PASS"))
-	from := strings.TrimSpace(os.Getenv("SMTP_FROM"))
-	port := strings.TrimSpace(os.Getenv("SMTP_PORT"))
-	if host == "" || user == "" || pass == "" {
-		log.Printf("WEB LOGIN CODE email=%s code=%s", email, code)
-		return nil
-	}
-	if from == "" {
-		from = user
-	}
-	if port == "" {
-		port = "587"
-	}
-	addr := net.JoinHostPort(host, port)
-	subject := mime.QEncoding.Encode("UTF-8", "neuravpn код от личного кабинета.")
-	body := "никому не сообщайте код от входа в личный кабинет!\r\n" +
-		"код в neuravpn: " + code + "\r\n" +
-		"Он действует 10 минут.\r\n" +
-		"По вопросам поддержки пишите в телеграм -> https://t.me/neuravpn_support\r\n"
-	msg := []byte("From: " + from + "\r\nTo: " + email + "\r\nSubject: " + subject + "\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n" + body)
-	auth := smtp.PlainAuth("", user, pass, host)
-	if port == "465" {
-		conn, err := tls.Dial("tcp", addr, &tls.Config{ServerName: host, MinVersion: tls.VersionTLS12})
-		if err != nil {
-			return err
-		}
-		defer conn.Close()
-		client, err := smtp.NewClient(conn, host)
-		if err != nil {
-			return err
-		}
-		defer client.Quit()
-		if err := client.Auth(auth); err != nil {
-			return err
-		}
-		if err := client.Mail(from); err != nil {
-			return err
-		}
-		if err := client.Rcpt(email); err != nil {
-			return err
-		}
-		wc, err := client.Data()
-		if err != nil {
-			return err
-		}
-		_, err = wc.Write(msg)
-		if closeErr := wc.Close(); err == nil {
-			err = closeErr
-		}
-		return err
-	}
-	return smtp.SendMail(addr, auth, from, []string{email}, msg)
 }

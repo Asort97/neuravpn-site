@@ -32,9 +32,9 @@ trap cleanup INT TERM EXIT
 API_PID=$!
 
 if command -v python3 >/dev/null 2>&1; then
-  python3 -m http.server "$SITE_PORT" --bind 0.0.0.0 >>"$SITE_LOG" 2>&1 &
+  python3 "$SITE_DIR/deploy/serve_static.py" --port "$SITE_PORT" >>"$SITE_LOG" 2>&1 &
 elif command -v python >/dev/null 2>&1; then
-  python -m http.server "$SITE_PORT" --bind 0.0.0.0 >>"$SITE_LOG" 2>&1 &
+  python "$SITE_DIR/deploy/serve_static.py" --port "$SITE_PORT" >>"$SITE_LOG" 2>&1 &
 else
   echo "python3 is required for static site server"
   exit 1
