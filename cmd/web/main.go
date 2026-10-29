@@ -156,6 +156,10 @@ func main() {
 	mux.HandleFunc("/api/auth/logout", a.handleLogout)
 	mux.HandleFunc("/api/me", a.requireAuth(a.handleMe))
 	mux.HandleFunc("/api/plans", a.requireAuth(a.handlePlans))
+	mux.HandleFunc("/api/devices", a.requireAuth(a.handleDevices))
+	mux.HandleFunc("/api/devices/delete", a.requireAuth(a.handleDevices))
+	mux.HandleFunc("/api/payments/quote", a.requireAuth(a.handlePaymentQuote))
+	mux.HandleFunc("/api/promocode/apply", a.requireAuth(a.handleApplyPromocode))
 	mux.HandleFunc("/api/payments/create", a.requireAuth(a.handleCreatePayment))
 	mux.HandleFunc("/api/traffic/packs", a.requireAuth(a.handleTrafficPacks))
 	mux.HandleFunc("/api/traffic/create", a.requireAuth(a.handleCreateTrafficPayment))
@@ -655,6 +659,7 @@ func (a *app) handleCreatePayment(w http.ResponseWriter, r *http.Request, userID
 	var req struct {
 		PlanID   string `json:"plan_id"`
 		SaveCard bool   `json:"save_card"`
+		Quote    string `json:"quote"`
 	}
 	if err := readJSON(r, &req); err != nil {
 		writeJSON(w, http.StatusBadRequest, errResp("bad json"))
@@ -667,6 +672,20 @@ func (a *app) handleCreatePayment(w http.ResponseWriter, r *http.Request, userID
 	}
 	if a.yooShopID == "" || a.yooSecret == "" {
 		writeJSON(w, http.StatusServiceUnavailable, errResp("YooKassa не настроена для web API"))
+		return
+	}
+	promo, promoErr := a.activePromocode(r.Context(), userID)
+	if promoErr != nil {
+		writeJSON(w, http.StatusServiceUnavailable, errResp("Не удалось проверить скидку. Повторите попытку."))
+		return
+	}
+	if !a.validPaymentQuote(req.Quote, userID, p, promo) {
+		writeJSON(w, http.StatusConflict, errResp("Срок расчёта истёк или цена изменилась. Проверьте обновлённую сумму и повторите оплату."))
+		return
+	}
+	p = discountedPlan(p, promo)
+	if p.Amount < 1 {
+		writeJSON(w, http.StatusUnprocessableEntity, errResp("Для бесплатного продления обратитесь в поддержку."))
 		return
 	}
 	var email string

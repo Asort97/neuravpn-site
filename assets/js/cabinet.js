@@ -93,6 +93,7 @@
     let emailVerifyBusy = false;
     let emailSessionReady = false;
     const TELEGRAM_BOT_USERNAME = String(window.NEURAVPN_TELEGRAM_BOT || "neuravpn_bot").replace(/^@/, "");
+    const features = window.neuravpnCabinetFeatures ? window.neuravpnCabinetFeatures({ api: api, demo: IS_DEMO }) : null;
 
     if (IS_MINI_APP) {
         document.body.classList.add("is-mini-app");
@@ -218,14 +219,12 @@
         if (!selectedPlan) {
             return;
         }
-        closePaymentChoice();
         createPayment(selectedPlan.id, false);
     });
     payAutopayBtn.addEventListener("click", function () {
         if (!selectedPlan) {
             return;
         }
-        closePaymentChoice();
         createPayment(selectedPlan.id, true);
     });
     document.querySelectorAll(".platform-card[data-platform]").forEach(function (link) {
@@ -655,15 +654,18 @@
     }
 
     function openPaymentChoice(plan) {
+        if (!features) { showToast("Обновите страницу кабинета.", "error"); return; }
         selectedPlan = plan;
         logUI("plan_selected", plan.title + " · " + Number(plan.amount).toFixed(0) + " ₽");
         paymentChoiceText.textContent = plan.title + " · " + Number(plan.amount).toFixed(0) + " ₽";
         payAutopayBtn.textContent = "Картой с автопродлением";
         paymentChoiceModal.classList.remove("hidden");
+        features.openCheckout(plan);
         setStatus(paymentStatus, "", "");
     }
 
     function closePaymentChoice() {
+        if (features && !features.closeCheckout()) return;
         paymentChoiceModal.classList.add("hidden");
         clearPendingPaymentStatus();
     }
@@ -740,14 +742,18 @@
     }
 
     async function createPayment(planID, enableAutopay) {
+        const quote = features && features.beginPayment();
+        if (!quote) return;
         setStatus(paymentStatus, "создаём платёж...", "");
         showToast("создаём платёж");
         try {
             const data = await api("/api/payments/create", {
                 method: "POST",
-                body: { plan_id: planID, save_card: enableAutopay }
+                body: { plan_id: planID, save_card: enableAutopay, quote: quote }
             });
             if (data.confirmation_url) {
+                features.endPayment();
+                closePaymentChoice();
                 showToast("переходим к оплате");
                 setStatus(paymentStatus, "", "");
                 window.location.href = data.confirmation_url;
@@ -755,7 +761,9 @@
             }
             setStatus(paymentStatus, "платёж создан, но ссылка не пришла", "error");
             showToast("ссылка оплаты не пришла", "error");
+            await features.paymentError(new Error("Ссылка оплаты не пришла. Повторите попытку."));
         } catch (error) {
+            await features.paymentError(error);
             setStatus(paymentStatus, error.message || "не удалось создать платёж", "error");
             showToast(error.message || "не удалось создать платёж", "error");
         }
