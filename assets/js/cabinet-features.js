@@ -8,6 +8,8 @@
         const payment = $("paymentChoiceModal");
         let loading = false, deleting = false, selected = null, deviceVersion = 0;
         let checkoutVersion = 0, plan = null, quote = null, checking = false, paying = false, paymentFocus = null;
+        const slotDialog = $("deviceSlotDialog");
+        let devicePlan = null, slotBusy = false, slotOrder = null, slotMode = "purchase";
         const demoDevices = [{ id: "demo-android", name: "Samsung Galaxy S24 · Android", last_seen: Date.now() }, { id: "demo-ios", name: "iPhone 15 · iOS", last_seen: Date.now() - 3600000 }];
 
         function status(id, text, error) {
@@ -24,7 +26,12 @@
         }
         function renderDevices(data) {
             list.replaceChildren();
-            $("devicesCount").textContent = (data.partial ? "Найдено: " : "Всего: ") + data.devices.length;
+            devicePlan = data.device_plan || { enabled: false, extra_slots: 0 };
+            $("devicesCount").textContent = (data.partial ? "Найдено: " : "Зарегистрировано: ") + data.devices.length + (devicePlan.enabled ? " из " + (5 + devicePlan.extra_slots) : "");
+            $("devicePlanSummary").textContent = devicePlan.enabled ? "5 устройств включено. Дополнительных мест: " + devicePlan.extra_slots + (devicePlan.extra_slots ? " · +" + (devicePlan.extra_slots * 50) + " ₽ при каждом продлении." : ".") : "Для вас лимит устройств пока не включён. Доплачивать не нужно.";
+            $("addDeviceSlotBtn").classList.toggle("hidden", !devicePlan.enabled);
+            $("reduceDeviceSlotBtn").classList.toggle("hidden", !devicePlan.enabled || !devicePlan.extra_slots);
+            $("addDeviceSlotBtn").disabled = devicePlan.extra_slots >= 95;
             status("devicesStatus", data.partial ? "Список неполный: часть панелей недоступна. Попробуйте обновить позже." : data.devices.length ? "" : "Пока нет зарегистрированных устройств.", data.partial);
             data.devices.forEach(device => {
                 const row = document.createElement("li"); row.className = "device-row";
@@ -63,6 +70,8 @@
             } catch (e) {
                 if (version === deviceVersion && devices.open) {
                     list.replaceChildren(); $("devicesCount").textContent = "";
+                    devicePlan = null; $("devicePlanSummary").textContent = "";
+                    $("addDeviceSlotBtn").classList.add("hidden"); $("reduceDeviceSlotBtn").classList.add("hidden");
                     status("devicesStatus", e.message || "Не удалось загрузить устройства. Повторите попытку.", true);
                 }
             } finally {
@@ -105,6 +114,45 @@
             }
         });
 
+        function showSlotDialog(mode) {
+            if (!devicePlan || !devicePlan.enabled || loading || deleting || slotBusy) return;
+            slotMode = mode; slotOrder = null;
+            $("deviceSlotTitle").textContent = mode === "reduce" ? "Убрать дополнительное место?" : "Дополнительное устройство";
+            $("deviceSlotPrice").textContent = mode === "reduce" ? "Лимит: " + (4 + devicePlan.extra_slots) : "50 ₽";
+            $("deviceSlotTerms").textContent = mode === "reduce" ? "Лимит уменьшится на одно место сразу. Сначала удалите лишнее устройство из списка. Оплата за текущий срок не возвращается. При каждом следующем продлении цена снизится на 50 ₽. Автопродление отключится." : "Одно место до окончания текущей VPN-подписки. При каждом продлении +50 ₽ за место, независимо от срока тарифа. Дни не добавляются. После изменения числа мест автопродление отключится: его можно включить заново.";
+            $("confirmDeviceSlotBtn").textContent = mode === "reduce" ? "Убрать место" : "Продолжить";
+            $("deviceSlotPayLink").classList.add("hidden"); status("deviceSlotStatus", "");
+            slotDialog.showModal(); $("cancelDeviceSlotBtn").focus();
+        }
+        $("addDeviceSlotBtn").addEventListener("click", () => showSlotDialog("purchase"));
+        $("reduceDeviceSlotBtn").addEventListener("click", () => showSlotDialog("reduce"));
+        $("cancelDeviceSlotBtn").addEventListener("click", () => { if (!slotBusy) slotDialog.close(); });
+        slotDialog.addEventListener("cancel", e => { if (slotBusy) e.preventDefault(); });
+        $("confirmDeviceSlotBtn").addEventListener("click", async () => {
+            if (slotBusy || !devicePlan || !devicePlan.enabled) return;
+            if (options.demo) { status("deviceSlotStatus", "Оплата в демо-режиме отключена.", true); return; }
+            slotBusy = true; $("confirmDeviceSlotBtn").disabled = $("cancelDeviceSlotBtn").disabled = true;
+            status("deviceSlotStatus", slotOrder ? "Проверяем оплату..." : "Обрабатываем запрос...");
+            try {
+                const action = slotMode === "reduce" ? "reduce" : slotOrder ? "check" : "purchase";
+                const data = await api("/api/devices/" + action, { method: "POST", body: { id: slotOrder ? slotOrder.id : "" } });
+                if (action === "reduce" || data.order && data.order.applied) {
+                    slotDialog.close(); slotOrder = null;
+                    await loadDevices();
+                    if (options.onDevicePlanChanged) await options.onDevicePlanChanged();
+                    status("devicesStatus", action === "reduce" ? "Одно дополнительное место убрано. Автопродление отключено." : "Оплата подтверждена. Место добавлено; синхронизация с панелью займёт до минуты. Обновите VPN-подписку.");
+                } else if (data.order && data.order.confirmation_url) {
+                    const link = new URL(data.order.confirmation_url);
+                    if (link.protocol !== "https:") throw new Error("Некорректная ссылка оплаты");
+                    slotOrder = data.order;
+                    $("deviceSlotPayLink").href = link.href; $("deviceSlotPayLink").classList.remove("hidden");
+                    $("confirmDeviceSlotBtn").textContent = "Я оплатил";
+                    status("deviceSlotStatus", action === "check" ? "Оплата пока не подтверждена. Повторите проверку после оплаты." : "Счёт готов. Оплатите его, затем проверьте оплату.");
+                } else throw new Error("Не удалось проверить платёж. Повторите попытку.");
+            } catch (e) { status("deviceSlotStatus", e.message || "Не удалось выполнить запрос.", true); }
+            finally { slotBusy = false; $("confirmDeviceSlotBtn").disabled = $("cancelDeviceSlotBtn").disabled = false; }
+        });
+
         function paymentButtons() {
             $("payAnyMethodBtn").disabled = $("payAutopayBtn").disabled = checking || paying || !quote;
             $("applyPromoBtn").disabled = checking || paying;
@@ -116,6 +164,7 @@
             quote = q;
             const line = $("paymentChoiceText"); line.replaceChildren();
             const total = document.createElement("strong"); total.textContent = plan.title + " · " + money(q.amount); line.append(total);
+            $("paymentDevicePrice").textContent = q.device_extra_slots ? "В сумме учтено дополнительных мест: " + q.device_extra_slots + " · " + money(q.device_amount) + " за выбранный срок. Скидка по промокоду применяется только к тарифу." : "5 устройств включено. Для аккаунтов без включённого лимита ограничения пока не применяются.";
             if (q.discount) {
                 const old = document.createElement("del"); old.textContent = money(q.base_amount); line.append(old);
                 status("promoStatus", (message ? message + " " : "") + "Скидка " + q.discount + "% по коду " + q.promo_code + " применена.");
@@ -158,6 +207,7 @@
                 ++checkoutVersion; plan = p; quote = null; checking = paying = false;
                 paymentFocus = document.activeElement;
                 $("promoInput").value = ""; status("promoStatus", ""); status("checkoutStatus", "");
+                $("paymentDevicePrice").textContent = "";
                 document.querySelector(".cabinet-shell").inert = true;
                 document.body.classList.add("checkout-open");
                 refreshQuote(false); $("paymentChoiceTitle").focus();

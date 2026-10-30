@@ -1734,6 +1734,14 @@ body.is-mini-app .btn.devices-button {
 .dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .dialog-tools { display: flex; gap: 2px; flex-shrink: 0; }
 .device-count { margin: 0 0 10px; color: #755c47; font-size: 14px; }
+.device-plan-section { margin: 4px 0 14px; padding-bottom: 14px; border-bottom: 1px solid #754f3024; }
+.device-plan-summary { font-size: 14px; line-height: 1.5; margin: 0 0 12px; color: #285f57; }
+.device-plan-section .devices-button { font-size: 15px; padding: 12px; }
+.device-plan-section .link-button { font-size: 13px; margin-top: 4px; }
+.slot-price { color: #28655e; font-size: 28px; font-weight: 700; margin: 18px 0 12px; letter-spacing: 0; }
+#deviceSlotPayLink { box-sizing: border-box; margin-top: 16px; text-decoration: none; font-size: 15px; padding: 13px; }
+#deviceSlotDialog .devices-button { margin-bottom: 0; }
+#paymentDevicePrice:empty { display: none; }
 .device-list { list-style: none; padding: 0; margin: 6px 0 0; }
 .device-row { display: flex; align-items: center; gap: 12px; padding: 15px 0; border-bottom: 1px solid #754f3024; }
 .device-symbol { color: #34766b; width: 26px; height: 26px; flex-basis: 26px; }

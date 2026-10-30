@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>neuravpn - личный кабинет</title>
   <link rel="stylesheet" href="../assets/css/site.css?v=20260601-6">
-  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20261029-devices">
+  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20261030-slots">
 </head>
 <body>
   <div class="grid-overlay"></div>
@@ -193,6 +193,7 @@
     <div class="modal-card">
       <h2 id="paymentChoiceTitle" tabindex="-1">Выберите способ оплаты</h2>
       <p id="paymentChoiceText" class="muted"></p>
+      <p id="paymentDevicePrice" class="devices-note"></p>
       <form id="promoForm" class="promo-form">
         <label for="promoInput">Промокод</label>
         <div class="promo-input-group">
@@ -218,9 +219,25 @@
       </div>
     </div>
     <p id="devicesCount" class="device-count" role="status"></p>
+    <div class="device-plan-section">
+      <p id="devicePlanSummary" class="device-plan-summary"></p>
+      <button id="addDeviceSlotBtn" class="btn devices-button hidden" type="button"><span class="ui-icon icon-devices" aria-hidden="true"></span>Добавить место · 50 ₽</button>
+      <button id="reduceDeviceSlotBtn" class="link-button hidden" type="button">Убрать дополнительное место</button>
+    </div>
     <p id="devicesStatus" class="status-line" role="status" aria-live="polite"></p>
     <ul id="deviceList" class="device-list" aria-busy="false"></ul>
     <p id="devicesNote" class="devices-note">Устройства, зарегистрированные по HWID, а не подключения онлайн. Некоторые приложения не передают HWID.</p>
+  </dialog>
+  <dialog id="deviceSlotDialog" class="account-dialog confirm-device-dialog" aria-labelledby="deviceSlotTitle" aria-describedby="deviceSlotTerms">
+    <h2 id="deviceSlotTitle">Дополнительное устройство</h2>
+    <p id="deviceSlotPrice" class="slot-price">50 ₽</p>
+    <p id="deviceSlotTerms" class="muted">Одно место до окончания текущей VPN-подписки. При каждом продлении +50 ₽ за место, независимо от срока тарифа. Дни не добавляются. После изменения числа мест автопродление отключится: его можно включить заново.</p>
+    <p id="deviceSlotStatus" class="status-line" role="status" aria-live="polite"></p>
+    <a id="deviceSlotPayLink" class="btn devices-button hidden" target="_blank" rel="noopener noreferrer">Перейти к оплате</a>
+    <div class="confirm-device-actions">
+      <button id="cancelDeviceSlotBtn" class="btn btn-secondary" type="button">Отмена</button>
+      <button id="confirmDeviceSlotBtn" class="btn devices-button" type="button">Продолжить</button>
+    </div>
   </dialog>
   <dialog id="deleteDeviceDialog" class="account-dialog confirm-device-dialog" aria-labelledby="deleteDeviceTitle" aria-describedby="deleteDeviceNote">
     <h2 id="deleteDeviceTitle">Удалить устройство?</h2>
@@ -255,7 +272,7 @@
   <noscript>Для входа включите JavaScript или откройте кабинет через Telegram-бота.</noscript>
   <script src="../assets/vendor/telegram-web-app.js?v=20261029" defer></script>
   <script src="../assets/js/subscription-state.js?v=20261021-status" defer></script>
-  <script src="../assets/js/cabinet-features.js?v=20261029-devices" defer></script>
-  <script src="../assets/js/cabinet.js?v=20261029-devices" defer></script>
+  <script src="../assets/js/cabinet-features.js?v=20261030-slots" defer></script>
+  <script src="../assets/js/cabinet.js?v=20261030-slots" defer></script>
 </body>
 </html>

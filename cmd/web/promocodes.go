@@ -42,20 +42,23 @@ ORDER BY up.discount_until DESC LIMIT 1`, userID).Scan(&promo.Code, &promo.Disco
 }
 
 type paymentQuote struct {
-	UserID     string  `json:"user_id"`
-	PlanID     string  `json:"plan_id"`
-	Amount     float64 `json:"amount"`
-	BaseAmount float64 `json:"base_amount"`
-	Discount   int     `json:"discount"`
-	PromoCode  string  `json:"promo_code"`
-	Expires    int64   `json:"expires"`
-	Token      string  `json:"quote,omitempty"`
+	UserID       string  `json:"user_id"`
+	PlanID       string  `json:"plan_id"`
+	Amount       float64 `json:"amount"`
+	BaseAmount   float64 `json:"base_amount"`
+	Discount     int     `json:"discount"`
+	PromoCode    string  `json:"promo_code"`
+	Expires      int64   `json:"expires"`
+	Token        string  `json:"quote,omitempty"`
+	DeviceExtra  int     `json:"device_extra_slots"`
+	DeviceAmount int     `json:"device_amount"`
 }
 
 func discountedPlan(p plan, promo *activePromo) plan {
 	if promo != nil {
 		p.Amount = math.Round(p.Amount*(1-float64(promo.Discount)/100)*100) / 100
 	}
+	p.Amount += float64(p.DeviceExtra * 50)
 	return p
 }
 
@@ -66,7 +69,7 @@ func (a *app) quoteMAC(payload string) string {
 }
 
 func (a *app) makePaymentQuote(userID string, p plan, promo *activePromo) paymentQuote {
-	q := paymentQuote{UserID: userID, PlanID: p.ID, Amount: discountedPlan(p, promo).Amount, BaseAmount: p.Amount, Expires: time.Now().Add(10 * time.Minute).Unix()}
+	q := paymentQuote{UserID: userID, PlanID: p.ID, Amount: discountedPlan(p, promo).Amount, BaseAmount: p.Amount + float64(p.DeviceExtra*50), DeviceExtra: p.DeviceExtra, DeviceAmount: p.DeviceExtra * 50, Expires: time.Now().Add(10 * time.Minute).Unix()}
 	if promo != nil {
 		q.PromoCode, q.Discount = promo.Code, promo.Discount
 		q.Expires = min(q.Expires, promo.Until.Unix())
@@ -94,7 +97,7 @@ func (a *app) validPaymentQuote(token, userID string, p plan, promo *activePromo
 	if promo != nil {
 		code, discount = promo.Code, promo.Discount
 	}
-	return q.UserID == userID && q.PlanID == p.ID && q.Expires > time.Now().Unix() && q.Amount == discountedPlan(p, promo).Amount && q.BaseAmount == p.Amount && q.PromoCode == code && q.Discount == discount
+	return q.UserID == userID && q.PlanID == p.ID && q.Expires > time.Now().Unix() && q.Amount == discountedPlan(p, promo).Amount && q.BaseAmount == p.Amount+float64(p.DeviceExtra*50) && q.DeviceExtra == p.DeviceExtra && q.DeviceAmount == p.DeviceExtra*50 && q.PromoCode == code && q.Discount == discount
 }
 
 func (a *app) handlePaymentQuote(w http.ResponseWriter, r *http.Request, userID string) {
@@ -179,6 +182,12 @@ ON CONFLICT (user_id,code) DO NOTHING`, userID, code)
 		writeJSON(w, http.StatusConflict, errResp("Срок действия промокода истёк. Скидка не применена."))
 		return
 	}
+	devicePlan, deviceErr := a.devicePlan(ctx, userID)
+	if deviceErr != nil {
+		writeJSON(w, 503, errResp("Не удалось проверить стоимость дополнительных мест."))
+		return
+	}
+	p.DeviceExtra = devicePlan.ExtraSlots
 	quote := a.makePaymentQuote(userID, p, promo)
 	if quote.Amount < 1 {
 		writeJSON(w, http.StatusUnprocessableEntity, errResp("Действует полная скидка. Для бесплатного продления обратитесь в поддержку, платёж не нужен."))

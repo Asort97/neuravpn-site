@@ -29,12 +29,52 @@ function fixture(api) {
   for (const m of html.matchAll(/id="([^"]+)"/g)) nodes.set(m[1], element());
   document = { body: element(), activeElement: element(), getElementById: id => nodes.get(id), createElement: element, querySelector: () => element() };
   const window = {};
-  vm.runInNewContext(source, { window, document, Date, Number, console });
+  vm.runInNewContext(source, { window, document, Date, Number, URL, console });
   const calls = [];
   const features = window.neuravpnCabinetFeatures({ api: async (url, opts) => { calls.push([url, opts]); return api(url, opts); } });
   return { nodes, features, calls, click: id => nodes.get(id).click(), submit: () => nodes.get('promoForm').listeners.submit({ preventDefault() {} }) };
 }
 const device = { id: 'a'.repeat(64), name: '<img onerror=alert(1)>', last_seen: 0 };
+
+test('rollout hides payments for unlimited accounts, enabled accounts see their limit', async () => {
+  const f = fixture(() => ({devices:[device],device_plan:{enabled:false,extra_slots:0}}));
+  f.click('devicesBtn'); await flush();
+  assert.equal(f.nodes.get('addDeviceSlotBtn').classList.contains('hidden'),true);
+  f.click('addDeviceSlotBtn'); assert.equal(f.nodes.get('deviceSlotDialog').open,false);
+  const g=fixture(() => ({devices:[device],device_plan:{enabled:true,extra_slots:2}}));
+  g.click('devicesBtn');await flush();
+  assert.match(g.nodes.get('devicesCount').textContent,/из 7/);
+  assert.match(g.nodes.get('devicePlanSummary').textContent,/100/);
+});
+
+test('slot purchase requires confirmation, is not duplicated, and checks the owned order', async () => {
+  let finish;
+  const f=fixture(url=>{
+    if(url.endsWith('/purchase'))return new Promise(resolve=>{finish=resolve;});
+    if(url.endsWith('/check'))return {devices:[],order:{id:'owned-order',applied:true}};
+    return {devices:[device],device_plan:{enabled:true,extra_slots:0}};
+  });
+  f.click('devicesBtn');await flush();f.click('addDeviceSlotBtn');
+  assert.equal(f.calls.length,1);assert.equal(f.nodes.get('deviceSlotDialog').open,true);
+  assert.match(f.nodes.get('deviceSlotTerms').textContent,/каждом продлении/);
+  const pending=f.click('confirmDeviceSlotBtn');f.click('confirmDeviceSlotBtn');
+  assert.equal(f.calls.filter(c=>c[0].endsWith('/purchase')).length,1);
+  finish({devices:[],order:{id:'owned-order',confirmation_url:'https://example.invalid/pay',applied:false}});await pending;
+  assert.equal(f.nodes.get('deviceSlotPayLink').href,'https://example.invalid/pay');
+  await f.click('confirmDeviceSlotBtn');
+  assert.equal(f.calls.find(c=>c[0].endsWith('/check'))[1].body.id,'owned-order');
+  assert.equal(f.nodes.get('deviceSlotDialog').open,false);
+});
+
+test('slot removal has a separate confirmation and does not charge a payment',async()=>{
+ const f=fixture(()=>({devices:[],device_plan:{enabled:true,extra_slots:1}}));
+ f.click('devicesBtn');await flush();f.click('reduceDeviceSlotBtn');
+ assert.equal(f.calls.length,1);assert.match(f.nodes.get('deviceSlotTerms').textContent,/не возвращается/);
+ f.click('cancelDeviceSlotBtn');assert.equal(f.calls.length,1);
+ f.click('reduceDeviceSlotBtn');await f.click('confirmDeviceSlotBtn');
+ assert.equal(f.calls.filter(c=>c[0].endsWith('/reduce')).length,1);
+ assert.equal(f.calls.filter(c=>c[0].endsWith('/purchase')).length,0);
+});
 const baseQuote = { amount: 419, base_amount: 419, discount: 0, quote: 'signed-base' };
 async function flush() { for (let i = 0; i < 30; i++) await Promise.resolve(); }
 

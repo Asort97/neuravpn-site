@@ -93,7 +93,7 @@
     let emailVerifyBusy = false;
     let emailSessionReady = false;
     const TELEGRAM_BOT_USERNAME = String(window.NEURAVPN_TELEGRAM_BOT || "neuravpn_bot").replace(/^@/, "");
-    const features = window.neuravpnCabinetFeatures ? window.neuravpnCabinetFeatures({ api: api, demo: IS_DEMO }) : null;
+    const features = window.neuravpnCabinetFeatures ? window.neuravpnCabinetFeatures({ api: api, demo: IS_DEMO, onDevicePlanChanged: () => loadMe() }) : null;
 
     if (IS_MINI_APP) {
         document.body.classList.add("is-mini-app");
@@ -736,7 +736,7 @@
 
     function showAutopayStatus(me) {
         autopayToggle.checked = Boolean(me.autopay_enabled);
-        autopayPlanTitle.textContent = "Автопродление";
+        autopayPlanTitle.textContent = "Автопродление" + (me.autopay_amount > 0 ? " · " + me.autopay_amount + " ₽" : "");
         autopayNextText.textContent = me.autopay_enabled ? "Следующее автосписание: " + nextAutopayText(0) : "";
         autopaySetup.classList.remove("hidden");
     }
@@ -801,9 +801,10 @@
     }
 
     async function enableAutopay() {
+        if (!confirmAutopayPrice()) { autopayToggle.checked = false; return; }
         autopayToggle.disabled = true;
         try {
-            await api("/api/autopay/enable", { method: "POST", body: {} });
+            await api("/api/autopay/enable", { method: "POST", body: { device_extra_slots: Number(currentMe.device_extra_slots) || 0 } });
             await loadMe();
             showToast("автосписание включено");
         } catch (error) {
@@ -854,9 +855,10 @@
     }
 
     async function enableAutopayFromReturn() {
+        if (!confirmAutopayPrice()) return;
         enableReturnAutopayBtn.disabled = true;
         try {
-            await api("/api/autopay/enable", { method: "POST", body: {} });
+            await api("/api/autopay/enable", { method: "POST", body: { device_extra_slots: Number(currentMe.device_extra_slots) || 0 } });
             await loadMe();
             paymentReturnText.textContent = "Автосписание включено. Следующее списание будет ближе к окончанию подписки.";
             enableReturnAutopayBtn.classList.add("hidden");
@@ -866,6 +868,11 @@
         } finally {
             enableReturnAutopayBtn.disabled = false;
         }
+    }
+
+    function confirmAutopayPrice() {
+        if (!currentMe || !(currentMe.autopay_amount > 0)) { showToast("Обновите страницу, чтобы проверить стоимость", "error"); return false; }
+        return window.confirm("Включить автосписание " + currentMe.autopay_amount + " ₽ при каждом продлении? В стоимость включены дополнительные места: " + (Number(currentMe.device_extra_slots) || 0) + ".");
     }
 
     function isPaymentReturn() {

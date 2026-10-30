@@ -15,6 +15,8 @@ import (
 	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 const webDevicesPath = "/internal/web/devices"
@@ -34,9 +36,52 @@ type webDevice struct {
 }
 
 type webDeviceList struct {
-	Devices []webDevice `json:"devices"`
-	Partial bool        `json:"partial"`
-	Result  string      `json:"result"`
+	Devices    []webDevice  `json:"devices"`
+	Partial    bool         `json:"partial"`
+	Result     string       `json:"result"`
+	DevicePlan devicePlan   `json:"device_plan"`
+	Order      *deviceOrder `json:"order,omitempty"`
+}
+
+type devicePlan struct {
+	Enabled    bool `json:"enabled"`
+	ExtraSlots int  `json:"extra_slots"`
+}
+type deviceOrder struct {
+	ID      string `json:"id"`
+	URL     string `json:"confirmation_url,omitempty"`
+	Applied bool   `json:"applied"`
+}
+
+func (a *app) devicePlan(ctx context.Context, userID string) (devicePlan, error) {
+	var p devicePlan
+	err := a.db.QueryRow(ctx, `SELECT enabled,extra_slots FROM device_plans WHERE user_id=$1`, userID).Scan(&p.Enabled, &p.ExtraSlots)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return p, nil
+	}
+	return p, err
+}
+
+func (a *app) enableAutopayWithDevices(ctx context.Context, userID string, expected int) (string, error) {
+	tx, err := a.db.Begin(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer tx.Rollback(ctx)
+	var extra int
+	err = tx.QueryRow(ctx, `SELECT extra_slots FROM device_plans WHERE user_id=$1 FOR UPDATE`, userID).Scan(&extra)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return "", err
+	}
+	if extra != expected {
+		return "", errors.New("device price changed")
+	}
+	var planID string
+	err = tx.QueryRow(ctx, `UPDATE users SET autopay_enabled=TRUE,updated_at=NOW() WHERE id=$1 AND COALESCE(autopay_method_id,'')<>'' AND COALESCE(autopay_plan_id,'')<>'' RETURNING autopay_plan_id`, userID).Scan(&planID)
+	if err != nil {
+		return "", err
+	}
+	return planID, tx.Commit(ctx)
 }
 
 func (a *app) fetchDevices(ctx context.Context, userID, action, id string) (webDeviceList, error) {
@@ -89,7 +134,16 @@ func (a *app) handleDevices(w http.ResponseWriter, r *http.Request, userID strin
 	if r.URL.Path == "/api/devices/delete" {
 		action = "delete"
 	}
-	if (action == "list" && r.Method != http.MethodGet) || (action == "delete" && r.Method != http.MethodPost) {
+	if r.URL.Path == "/api/devices/purchase" {
+		action = "purchase"
+	}
+	if r.URL.Path == "/api/devices/check" {
+		action = "check"
+	}
+	if r.URL.Path == "/api/devices/reduce" {
+		action = "reduce"
+	}
+	if (action == "list" && r.Method != http.MethodGet) || (action != "list" && r.Method != http.MethodPost) {
 		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
 		return
 	}
@@ -108,6 +162,16 @@ func (a *app) handleDevices(w http.ResponseWriter, r *http.Request, userID strin
 		decoded, err := hex.DecodeString(req.ID)
 		if err != nil || len(decoded) != 32 {
 			writeJSON(w, 400, errResp("Обновите список устройств."))
+			return
+		}
+		id = req.ID
+	}
+	if action == "check" {
+		var req struct {
+			ID string `json:"id"`
+		}
+		if readJSON(r, &req) != nil || len(req.ID) != 36 {
+			writeJSON(w, 400, errResp("Некорректный номер платежа"))
 			return
 		}
 		id = req.ID

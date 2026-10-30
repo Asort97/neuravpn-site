@@ -69,10 +69,11 @@ type webLogSession struct {
 }
 
 type plan struct {
-	ID     string  `json:"id"`
-	Title  string  `json:"title"`
-	Amount float64 `json:"amount"`
-	Days   int     `json:"days"`
+	ID          string  `json:"id"`
+	Title       string  `json:"title"`
+	Amount      float64 `json:"amount"`
+	Days        int     `json:"days"`
+	DeviceExtra int     `json:"device_extra_slots,omitempty"`
 }
 
 type trafficPack struct {
@@ -158,6 +159,9 @@ func main() {
 	mux.HandleFunc("/api/plans", a.requireAuth(a.handlePlans))
 	mux.HandleFunc("/api/devices", a.requireAuth(a.handleDevices))
 	mux.HandleFunc("/api/devices/delete", a.requireAuth(a.handleDevices))
+	mux.HandleFunc("/api/devices/purchase", a.requireAuth(a.handleDevices))
+	mux.HandleFunc("/api/devices/check", a.requireAuth(a.handleDevices))
+	mux.HandleFunc("/api/devices/reduce", a.requireAuth(a.handleDevices))
 	mux.HandleFunc("/api/payments/quote", a.requireAuth(a.handlePaymentQuote))
 	mux.HandleFunc("/api/promocode/apply", a.requireAuth(a.handleApplyPromocode))
 	mux.HandleFunc("/api/payments/create", a.requireAuth(a.handleCreatePayment))
@@ -219,6 +223,12 @@ CREATE TABLE IF NOT EXISTS merged_traffic (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 ALTER TABLE merged_traffic ADD COLUMN IF NOT EXISTS last_synced_limit_bytes BIGINT NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS device_plans (
+ user_id TEXT PRIMARY KEY REFERENCES users(id),
+ enabled BOOLEAN NOT NULL DEFAULT FALSE,
+ extra_slots INTEGER NOT NULL DEFAULT 0 CHECK(extra_slots BETWEEN 0 AND 95),
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 DELETE FROM email_login_codes WHERE expires_at < NOW() - INTERVAL '1 day';
 DELETE FROM web_sessions WHERE expires_at < NOW();
 DELETE FROM web_login_tokens WHERE expires_at < NOW() - INTERVAL '1 day';
@@ -623,7 +633,14 @@ FROM users WHERE id=$1`, userID).Scan(&email, &subID, &autopay, &autopayPlan, &a
 	} else {
 		log.Printf("web subscription status unavailable user=%s: %v", userID, statusErr)
 	}
+	dp, dpErr := a.devicePlan(r.Context(), userID)
+	autoAmount := 0.0
+	if ap, ok := a.findPlan(userID, autopayPlan); ok && dpErr == nil {
+		autoAmount = ap.Amount + float64(dp.ExtraSlots*50)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
+		"device_extra_slots":    dp.ExtraSlots,
+		"autopay_amount":        autoAmount,
 		"subscription_verified": statusErr == nil,
 		"active":                live.Active,
 		"unlimited":             live.Unlimited,
@@ -647,6 +664,15 @@ func (a *app) handlePlans(w http.ResponseWriter, r *http.Request, userID string)
 	visible := append([]plan(nil), plans...)
 	if a.adminIDs[userID] {
 		visible = append(visible, testPlan)
+	}
+	dp, err := a.devicePlan(r.Context(), userID)
+	if err != nil {
+		writeJSON(w, 503, errResp("Не удалось проверить стоимость. Обновите страницу."))
+		return
+	}
+	for i := range visible {
+		visible[i].DeviceExtra = dp.ExtraSlots
+		visible[i].Amount += float64(dp.ExtraSlots * 50)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"plans": visible})
 }
@@ -679,6 +705,12 @@ func (a *app) handleCreatePayment(w http.ResponseWriter, r *http.Request, userID
 		writeJSON(w, http.StatusServiceUnavailable, errResp("Не удалось проверить скидку. Повторите попытку."))
 		return
 	}
+	devicePlan, deviceErr := a.devicePlan(r.Context(), userID)
+	if deviceErr != nil {
+		writeJSON(w, 503, errResp("Не удалось проверить стоимость дополнительных мест."))
+		return
+	}
+	p.DeviceExtra = devicePlan.ExtraSlots
 	if !a.validPaymentQuote(req.Quote, userID, p, promo) {
 		writeJSON(w, http.StatusConflict, errResp("Срок расчёта истёк или цена изменилась. Проверьте обновлённую сумму и повторите оплату."))
 		return
@@ -757,14 +789,16 @@ func (a *app) handleEnableAutopay(w http.ResponseWriter, r *http.Request, userID
 		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
 		return
 	}
-	var planID string
-	err := a.db.QueryRow(r.Context(), `
-UPDATE users
-SET autopay_enabled=TRUE, updated_at=NOW()
-WHERE id=$1 AND COALESCE(autopay_method_id,'') <> ''
-RETURNING COALESCE(autopay_plan_id,'')`, userID).Scan(&planID)
+	var req struct {
+		Extra int `json:"device_extra_slots"`
+	}
+	if readJSON(r, &req) != nil || req.Extra < 0 || req.Extra > 95 {
+		writeJSON(w, 400, errResp("Обновите страницу и подтвердите цену"))
+		return
+	}
+	planID, err := a.enableAutopayWithDevices(r.Context(), userID, req.Extra)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, errResp("сохранённая карта не найдена"))
+		writeJSON(w, http.StatusConflict, errResp("Цена изменилась или карта недоступна. Обновите страницу."))
 		return
 	}
 	a.sendWebLog(r, userID, "", "включил автосписание", fmt.Sprintf("plan: %s", planID))
@@ -1610,13 +1644,14 @@ func (a *app) createYooPayment(ctx context.Context, userID, email string, p plan
 		"save_payment_method": saveCard,
 		"expires_at":          time.Now().UTC().Add(20 * time.Minute).Format(time.RFC3339),
 		"metadata": map[string]any{
-			"chat_id":     chatID,
-			"user_id":     userID,
-			"plan_id":     p.ID,
-			"plan_title":  p.Title,
-			"plan_days":   p.Days,
-			"plan_amount": p.Amount,
-			"source":      "website",
+			"chat_id":            chatID,
+			"user_id":            userID,
+			"plan_id":            p.ID,
+			"plan_title":         p.Title,
+			"plan_days":          p.Days,
+			"plan_amount":        p.Amount,
+			"device_extra_slots": p.DeviceExtra,
+			"source":             "website",
 		},
 	}
 	if email != "" {
