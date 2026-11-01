@@ -3,7 +3,7 @@ import argparse
 import functools
 import http.server
 from pathlib import Path, PurePosixPath
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 PUBLIC_DIRS = {"assets", "cabinet", "instructions", "open"}
 PUBLIC_FILES = {"index.html", "google85f383bcf0c57a91.html"}
@@ -42,10 +42,21 @@ class PublicHandler(http.server.SimpleHTTPRequestHandler):
         self.send_error(404)
         return None
 
+    def send_response(self, code, message=None):
+        self.response_status = code
+        super().send_response(code, message)
+
     def end_headers(self):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
-        self.send_header("Cache-Control", "no-cache")
+        url = urlsplit(self.path)
+        suffix = PurePosixPath(url.path).suffix.lower()
+        if getattr(self, "response_status", 0) in (200, 304) and url.path.startswith("/assets/") and suffix in PUBLIC_SUFFIXES and suffix != ".html":
+            version = parse_qs(url.query).get("v", [""])[0]
+            policy = "public, max-age=31536000, immutable" if version else "public, max-age=86400"
+        else:
+            policy = "no-cache"
+        self.send_header("Cache-Control", policy)
         super().end_headers()
 
 

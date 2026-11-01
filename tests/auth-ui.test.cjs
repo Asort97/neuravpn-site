@@ -74,10 +74,26 @@ function fixture(options = {}) {
     }
     await flush();
   }
-  return { els, calls, timers, events, window, visible, click, submit, tick };
+  return { els, calls, timers, events, window, document, visible, click, submit, tick };
 }
 
 async function flush() { for (let i = 0; i < 40; i++) await Promise.resolve(); }
+
+test('pageshow does not refetch a fresh verified profile; unknown status still retries', async () => {
+  for (const verified of [true, false]) {
+    const f = fixture({ mini: true, fetch: url => response(200,
+      url === '/api/me' ? { user_id: '42', subscription_verified: verified } : { ok: true }) });
+    await flush();
+    const before = f.calls.filter(([url]) => url === '/api/me').length;
+    f.events.pageshow();
+    await flush();
+    assert.equal(f.calls.filter(([url]) => url === '/api/me').length, before + (verified ? 0 : 1));
+    f.document.hidden = true;
+    const hiddenCalls = f.calls.length;
+    await f.tick(10000);
+    assert.equal(f.calls.length, hiddenCalls);
+  }
+});
 
 test('a cached old HTML page is refreshed without losing Telegram launch data', () => {
   const f = fixture({ oldHTML: true });

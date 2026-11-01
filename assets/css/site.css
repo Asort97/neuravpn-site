@@ -1,4 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+/* Self-hosted subsets avoid an external stylesheet on the critical path. */
+@font-face {
+    font-family: 'Inter'; font-style: normal; font-weight: 400 900; font-display: optional;
+    src: url('../fonts/inter-cyrillic-v20.woff2') format('woff2');
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+    font-family: 'Inter'; font-style: normal; font-weight: 400 900; font-display: optional;
+    src: url('../fonts/inter-latin-v20.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+    font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400 700; font-display: optional;
+    src: url('../fonts/jetbrains-cyrillic-v24.woff2') format('woff2');
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+    font-family: 'JetBrains Mono'; font-style: normal; font-weight: 400 700; font-display: optional;
+    src: url('../fonts/jetbrains-latin-v24.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 :root {
     --bg-dark: #efe1ce;
@@ -16,7 +36,7 @@
     --font-main: 'Inter', sans-serif;
     --font-tech: 'JetBrains Mono', monospace;
     --grid-line: rgba(92, 45, 18, 0.055);
-    --type-big: clamp(1.1rem, 2.4vw, 1.3rem);
+    --type-big: 1.3rem;
     --type-small: 0.92rem;
 }
 
@@ -36,7 +56,7 @@ body {
         radial-gradient(circle at 82% 4%, rgba(255, 255, 255, 0.58), transparent 30%),
         radial-gradient(circle at 10% 12%, rgba(130, 65, 24, 0.05), transparent 34%),
         linear-gradient(rgba(244, 234, 218, 0.67), rgba(226, 199, 164, 0.61)),
-        url("../brand/neura-paper-bg.webp") center / cover no-repeat fixed,
+        url("../brand/neura-paper-1280.webp") center top / cover no-repeat,
         var(--bg-dark);
     color: var(--text-primary);
     font-family: var(--font-main);
@@ -46,23 +66,6 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-body::after {
-    content: "";
-    position: fixed;
-    inset: 7% -18% auto auto;
-    width: 74vw;
-    height: 48vh;
-    z-index: -2;
-    border-radius: 44% 56% 58% 42% / 38% 44% 56% 62%;
-    background:
-        radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.48), transparent 23%),
-        radial-gradient(circle at 74% 66%, rgba(130, 63, 22, 0.18), transparent 42%),
-        linear-gradient(135deg, rgba(255, 252, 242, 0.38), rgba(121, 59, 22, 0.08));
-    filter: blur(18px) saturate(1.08);
-    opacity: 0.62;
-    pointer-events: none;
-    transform: rotate(-8deg);
-}
 
 body::selection,
 *::selection {
@@ -81,18 +84,7 @@ body::selection,
     z-index: -2;
 }
 
-.ambient-glow {
-    position: fixed;
-    right: -180px;
-    top: 120px;
-    width: 520px;
-    height: 520px;
-    border-radius: 999px;
-    background: rgba(130, 65, 24, 0.11);
-    filter: blur(80px);
-    pointer-events: none;
-    z-index: -1;
-}
+.ambient-glow { display: none; }
 
 .scan-line {
     display: none;
@@ -118,7 +110,7 @@ h2,
 h3 {
     font-size: var(--type-big);
     font-weight: 800;
-    letter-spacing: -0.045em;
+    letter-spacing: 0;
 }
 
 a {
@@ -135,6 +127,7 @@ a {
 }
 
 .btn {
+    position: relative;
     min-height: 54px;
     padding: 14px 22px;
     border-radius: 22px;
@@ -148,8 +141,27 @@ a {
     font-weight: 800;
     text-decoration: none;
     cursor: pointer;
-    transition: 0.16s ease;
-    will-change: transform;
+    transition: transform 0.14s ease-out, opacity 0.14s ease-out, color 0.14s ease-out;
+}
+
+/* Short, user-triggered feedback. No continuous decorative animation. */
+.ui-ripple-layer { position: absolute; inset: 0; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.ui-ripple { position: absolute; border-radius: 50%; background: currentColor; pointer-events: none; animation: ui-ripple 420ms ease-out both; }
+@keyframes ui-ripple { from { transform: scale(0); opacity: 0.22; } to { transform: scale(1); opacity: 0; } }
+@keyframes ui-enter { from { opacity: 0.4; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ui-fade { from { opacity: 0.5; } to { opacity: 1; } }
+
+@media (hover: none) {
+    body .btn:hover { transform: none; }
+}
+@media (max-width: 780px), (pointer: coarse) {
+    body .card, body details, body .onboarding-card, body .download-panel { backdrop-filter: none; }
+    .grid-overlay { display: none; }
+    body .card:hover, body details:hover, body .onboarding-card:hover, body .platform-item:hover { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+    .ui-ripple-layer { display: none; }
 }
 
 .btn:hover {
@@ -199,7 +211,7 @@ textarea:focus-visible {
         linear-gradient(145deg, rgba(255, 239, 208, 0.38), transparent 44%),
         rgba(207, 169, 124, 0.5);
     border-color: rgba(86, 42, 17, 0.38);
-    color: var(--text-secondary);
+    color: #624630;
     box-shadow:
         inset 0 1px 0 rgba(255, 246, 226, 0.42),
         inset 0 -14px 28px rgba(82, 39, 15, 0.055),
@@ -328,29 +340,12 @@ body.is-mini-app {
         radial-gradient(circle at 82% 4%, rgba(255, 255, 255, 0.58), transparent 30%),
         radial-gradient(circle at 10% 12%, rgba(130, 65, 24, 0.05), transparent 34%),
         linear-gradient(rgba(244, 234, 218, 0.67), rgba(226, 199, 164, 0.61)),
-        url("../brand/neura-paper-bg.webp") center / cover no-repeat fixed,
+        url("../brand/neura-paper-1280.webp") center top / cover no-repeat,
         #efe1ce;
     color: var(--text-primary);
     overflow-x: hidden;
 }
 
-body.is-mini-app::after {
-    content: "";
-    position: fixed;
-    inset: 7% -18% auto auto;
-    width: 74vw;
-    height: 48vh;
-    z-index: -2;
-    border-radius: 44% 56% 58% 42% / 38% 44% 56% 62%;
-    background:
-        radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.48), transparent 23%),
-        radial-gradient(circle at 74% 66%, rgba(130, 63, 22, 0.18), transparent 42%),
-        linear-gradient(135deg, rgba(255, 252, 242, 0.38), rgba(121, 59, 22, 0.08));
-    filter: blur(18px) saturate(1.08);
-    opacity: 0.62;
-    pointer-events: none;
-    transform: rotate(-8deg);
-}
 
 body.is-mini-app .btn {
     border-radius: 22px;
@@ -380,7 +375,7 @@ body.is-mini-app .btn-secondary {
         linear-gradient(145deg, rgba(255, 239, 208, 0.38), transparent 44%),
         rgba(207, 169, 124, 0.5);
     border-color: rgba(86, 42, 17, 0.38);
-    color: var(--text-secondary);
+    color: #624630;
     box-shadow:
         inset 0 1px 0 rgba(255, 246, 226, 0.42),
         inset 0 -14px 28px rgba(82, 39, 15, 0.055),
@@ -469,7 +464,7 @@ header[style] {
     margin: 28px 0 18px;
     font-size: 4.25rem !important;
     line-height: 0.96;
-    letter-spacing: -0.04em;
+    letter-spacing: 0;
 }
 
 .hero-text p,
@@ -561,7 +556,7 @@ header[style] {
     min-width: 0;
     font-size: 1.05rem !important;
     line-height: 1.16;
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
 }
 
 .hero-flow-panel {
@@ -584,7 +579,7 @@ header[style] {
     margin: 0;
     font-size: 1.75rem !important;
     line-height: 1.1;
-    letter-spacing: -0.04em;
+    letter-spacing: 0;
 }
 
 .flow-steps {
@@ -1042,7 +1037,7 @@ h3,
 @media (max-width: 620px) {
     .hero-text .landing-hero-title {
         font-size: 2.5rem !important;
-        letter-spacing: -0.035em;
+        letter-spacing: 0;
     }
 
     .landing-hero-lead {

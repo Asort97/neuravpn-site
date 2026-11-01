@@ -31,7 +31,7 @@ body.is-mini-app .guide-hero {
     text-decoration: none;
     font-weight: 800;
     font-size: var(--type-big);
-    letter-spacing: -0.06em;
+    letter-spacing: 0;
 }
 
 .brand-link span {
@@ -98,7 +98,7 @@ body.is-mini-app .guide-hero {
 .guide-hero h1 {
     font-size: var(--type-big);
     line-height: 1.12;
-    letter-spacing: -0.065em;
+    letter-spacing: 0;
     margin-bottom: 14px;
 }
 
@@ -316,6 +316,25 @@ body.is-mini-app .guide-hero {
 .step-media video {
     pointer-events: none;
 }
+.step-media video[controls] { pointer-events: auto; }
+.step-media video[controls]::-webkit-media-controls,
+.step-media video[controls]::-webkit-media-controls-panel,
+.step-media video[controls]::-webkit-media-controls-play-button,
+.step-media video[controls]::-webkit-media-controls-timeline {
+    display: flex !important; opacity: 1 !important; pointer-events: auto !important;
+}
+.step-media video { height: auto; }
+
+@media (max-width: 780px), (pointer: coarse) {
+    body .guide-hero, body .guide-step, body .instructions-hero,
+    body.is-mini-app main .guide-hero, body.is-mini-app main .guide-step {
+        backdrop-filter: none;
+        background: linear-gradient(145deg, #faf3e6, #efdfc8);
+        box-shadow: inset 0 1px 0 #ffffffa3, 0 8px 20px #50271014;
+        transition: border-color 140ms ease-out;
+    }
+    body .guide-step:hover, body .guide-card:hover { transform: none; }
+}
 
 /* Mini App instruction pages use the same parchment glass layer as cabinet. */
 body.is-mini-app .instructions-shell {
@@ -379,7 +398,7 @@ body.is-mini-app .guide-hero::before {
     top: -18px;
     width: 126px;
     height: 126px;
-    background: url("../brand/neura-tools.webp") center / contain no-repeat;
+    background: url("../brand/neura-tools-128.webp") center / contain no-repeat;
     opacity: 0.18;
     transform: rotate(7deg);
     pointer-events: none;
@@ -392,7 +411,7 @@ body.is-mini-app .guide-step:nth-child(2n)::before {
     top: 12px;
     width: 54px;
     height: 54px;
-    background: url("../brand/neura-network.webp") center / contain no-repeat;
+    background: url("../brand/neura-network-128.webp") center / contain no-repeat;
     opacity: 0.16;
     pointer-events: none;
 }

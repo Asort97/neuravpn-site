@@ -134,7 +134,9 @@
             refreshProfile();
         }
     }, 10000);
-    setInterval(renderSubscriptionState, 30000);
+    setInterval(function () {
+        if (!document.hidden) renderSubscriptionState();
+    }, 30000);
 
     emailForm.addEventListener("submit", async function (event) {
         event.preventDefault();
@@ -315,7 +317,7 @@
 
     function resumeAuthentication() {
         if (IS_MINI_APP && !currentMe) completeTelegramMiniAppLogin();
-        else refreshProfile();
+        else if (currentMe && (currentMe.subscription_verified !== true || Date.now() - currentMe.received_at >= 5000)) refreshProfile();
         if (telegramLoginToken) checkTelegramLogin(telegramLoginToken);
     }
 

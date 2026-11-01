@@ -51,6 +51,18 @@ class PublicFilesTest(unittest.TestCase):
         for path in ['/.env.web', '/.git/config', '/start_web.sh', '/cmd/main.go', '/assets/', '/assets/.env', '/assets/settings.json', '/assets/../.env.web', '/assets/%2e%2e/.env.web', '/assets/%2eenv', '/assets%5c..%5c.env.web', '/%2eenv.web', '/assets/%252e%252e/.env.web']:
             self.assertEqual(self.request(path)[0], 404, path)
 
+    def test_asset_cache_does_not_cache_pages_or_errors(self):
+        policies = {
+            '/assets/app.js?v=123': 'public, max-age=31536000, immutable',
+            '/assets/photo.webp': 'public, max-age=86400',
+            '/cabinet/': 'no-cache',
+            '/': 'no-cache',
+            '/assets/missing.js?v=123': 'no-cache',
+            '/assets/.env?v=123': 'no-cache',
+        }
+        for path, policy in policies.items():
+            self.assertEqual(dict(self.request(path)[1])['Cache-Control'], policy, path)
+
     def test_symlink_to_secret_is_not_public(self):
         try:
             (self.root / 'assets/leak.js').symlink_to(self.root / '.env.web')
