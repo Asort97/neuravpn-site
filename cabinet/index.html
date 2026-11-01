@@ -210,7 +210,7 @@
       <button id="closePaymentModalBtn" class="link-button" type="button">отмена</button>
     </div>
   </div>
-  <dialog id="devicesDialog" class="account-dialog" aria-labelledby="devicesTitle" aria-describedby="devicesNote">
+  <dialog id="devicesDialog" class="account-dialog" aria-labelledby="devicesTitle">
     <div class="dialog-heading">
       <h2 id="devicesTitle">Устройства</h2>
       <div class="dialog-tools">
@@ -226,7 +226,6 @@
     </div>
     <p id="devicesStatus" class="status-line" role="status" aria-live="polite"></p>
     <ul id="deviceList" class="device-list" aria-busy="false"></ul>
-    <p id="devicesNote" class="devices-note">Устройства, зарегистрированные по HWID, а не подключения онлайн. Некоторые приложения не передают HWID.</p>
   </dialog>
   <dialog id="deviceSlotDialog" class="account-dialog confirm-device-dialog" aria-labelledby="deviceSlotTitle" aria-describedby="deviceSlotTerms">
     <h2 id="deviceSlotTitle">Дополнительное устройство</h2>
@@ -239,10 +238,9 @@
       <button id="confirmDeviceSlotBtn" class="btn devices-button" type="button">Продолжить</button>
     </div>
   </dialog>
-  <dialog id="deleteDeviceDialog" class="account-dialog confirm-device-dialog" aria-labelledby="deleteDeviceTitle" aria-describedby="deleteDeviceNote">
+  <dialog id="deleteDeviceDialog" class="account-dialog confirm-device-dialog" aria-labelledby="deleteDeviceTitle" aria-describedby="deleteDeviceName">
     <h2 id="deleteDeviceTitle">Удалить устройство?</h2>
     <p id="deleteDeviceName" class="confirm-device-name"></p>
-    <p id="deleteDeviceNote" class="muted">Удалится запись со всех доступных серверов подписки. Это не отключает VPN: после обновления подписки устройство может появиться снова.</p>
     <p id="deleteDeviceStatus" class="status-line" role="status" aria-live="polite"></p>
     <div class="confirm-device-actions">
       <button id="cancelDeleteDeviceBtn" class="btn btn-secondary" type="button" autofocus>Отмена</button>
@@ -272,7 +270,7 @@
   <noscript>Для входа включите JavaScript или откройте кабинет через Telegram-бота.</noscript>
   <script src="../assets/vendor/telegram-web-app.js?v=20261029" defer></script>
   <script src="../assets/js/subscription-state.js?v=20261021-status" defer></script>
-  <script src="../assets/js/cabinet-features.js?v=20261030-slots" defer></script>
+  <script src="../assets/js/cabinet-features.js?v=20261101-device-delete" defer></script>
   <script src="../assets/js/cabinet.js?v=20261030-slots" defer></script>
 </body>
 </html>

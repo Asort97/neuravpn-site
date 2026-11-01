@@ -93,7 +93,7 @@ test('device deletion requires a second confirmation and sends only opaque ID', 
   assert.equal(f.calls.length, 2);
   assert.equal(JSON.stringify(f.calls[1][1].body), JSON.stringify({ id: device.id }));
   assert.equal(list.children.length, 0);
-  assert.match(f.nodes.get('devicesStatus').textContent, /удалена/);
+  assert.match(f.nodes.get('devicesStatus').textContent, /удалено/);
 });
 
 test('unavailable panels are not displayed as a successful zero count', async () => {
@@ -103,7 +103,8 @@ test('unavailable panels are not displayed as a successful zero count', async ()
   assert.equal(f.nodes.get('devicesStatus').classList.contains('is-error'), true);
   const partial = fixture(() => ({ devices: [device], partial: true }));
   partial.click('devicesBtn'); await flush();
-  assert.match(partial.nodes.get('devicesStatus').textContent, /неполный/);
+  assert.equal(partial.nodes.get('deviceList').children.length, 1);
+  assert.equal(partial.nodes.get('devicesStatus').textContent, '');
 });
 
 test('double delete cannot send two destructive requests', async () => {
@@ -115,8 +116,21 @@ test('double delete cannot send two destructive requests', async () => {
   f.click('confirmDeleteDeviceBtn');
   assert.equal(f.calls.filter(c => c[0].endsWith('/delete')).length, 1);
   assert.equal(f.nodes.get('cancelDeleteDeviceBtn').disabled, true);
-  finish({ devices: [], partial: true, result: 'partial' }); await pending;
-  assert.match(f.nodes.get('devicesStatus').textContent, /не на всех/);
+  finish({ devices: [], partial: true, result: 'queued' }); await pending;
+  assert.equal(f.nodes.get('deviceList').children.length, 0);
+  assert.equal(f.nodes.get('deleteDeviceDialog').open, false);
+  assert.doesNotMatch(f.nodes.get('devicesStatus').textContent, /сервер|подтвержден|не на всех|не полностью/);
+});
+
+test('failed durable deletion keeps the device and allows retry', async () => {
+  const f = fixture(url => { if (url.endsWith('/delete')) throw new Error('Database unavailable'); return { devices: [device], partial: false }; });
+  f.click('devicesBtn'); await flush();
+  f.nodes.get('deviceList').children[0].children[2].click();
+  await f.click('confirmDeleteDeviceBtn');
+  assert.equal(f.nodes.get('deviceList').children.length, 1);
+  assert.equal(f.nodes.get('deleteDeviceDialog').open, true);
+  assert.equal(f.nodes.get('confirmDeleteDeviceBtn').disabled, false);
+  assert.doesNotMatch(f.nodes.get('deleteDeviceStatus').textContent, /Database|панел|подтверд/);
 });
 
 test('payment waits for a server quote and prevents concurrent creation', async () => {

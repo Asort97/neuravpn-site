@@ -32,7 +32,7 @@
             $("addDeviceSlotBtn").classList.toggle("hidden", !devicePlan.enabled);
             $("reduceDeviceSlotBtn").classList.toggle("hidden", !devicePlan.enabled || !devicePlan.extra_slots);
             $("addDeviceSlotBtn").disabled = devicePlan.extra_slots >= 95;
-            status("devicesStatus", data.partial ? "Список неполный: часть панелей недоступна. Попробуйте обновить позже." : data.devices.length ? "" : "Пока нет зарегистрированных устройств.", data.partial);
+            status("devicesStatus", data.devices.length ? "" : "Нет устройств в списке.");
             data.devices.forEach(device => {
                 const row = document.createElement("li"); row.className = "device-row";
                 const badge = icon("devices"); badge.classList.add("device-symbol");
@@ -63,7 +63,7 @@
             loading = true; refresh.disabled = true;
             list.setAttribute("aria-busy", "true");
             list.querySelectorAll("button").forEach(b => b.disabled = true);
-            status("devicesStatus", "Загружаем устройства со всех серверов...");
+            status("devicesStatus", "Загружаем устройства...");
             try {
                 const data = options.demo ? { devices: demoDevices, partial: false } : await api("/api/devices");
                 if (version === deviceVersion && devices.open) renderDevices(data);
@@ -93,7 +93,7 @@
             if (!selected || deleting) return;
             deleting = true;
             $("confirmDeleteDeviceBtn").disabled = $("cancelDeleteDeviceBtn").disabled = refresh.disabled = true;
-            status("deleteDeviceStatus", "Удаляем запись...");
+            status("deleteDeviceStatus", "Удаляем устройство...");
             try {
                 let data;
                 if (options.demo) {
@@ -103,11 +103,10 @@
                 } else data = await api("/api/devices/delete", { method: "POST", body: { id: selected.id } });
                 confirm.close(); selected = null;
                 renderDevices(data);
-                status("devicesStatus", data.result === "partial" ? "Удаление подтверждено не на всех серверах. Обновите список и повторите позже." : data.result === "absent" ? "Запись уже отсутствует." : "Запись устройства удалена.", data.result === "partial");
-                if (data.partial && data.result !== "partial") status("devicesStatus", "Удаление выполнено, но список обновлён не полностью. Повторите обновление позже.", true);
+                if (data.result === "deleted") status("devicesStatus", "Устройство удалено.");
                 refresh.focus();
             } catch (e) {
-                status("deleteDeviceStatus", (e.message || "Не удалось подтвердить удаление.") + " Закройте это окно и обновите список перед повторной попыткой.", true);
+                status("deleteDeviceStatus", "Не удалось сохранить изменение. Попробуйте ещё раз.", true);
             } finally {
                 deleting = false;
                 $("confirmDeleteDeviceBtn").disabled = $("cancelDeleteDeviceBtn").disabled = refresh.disabled = false;
