@@ -11,6 +11,34 @@
         const slotDialog = $("deviceSlotDialog");
         let devicePlan = null, slotBusy = false, slotOrder = null, slotMode = "purchase";
         const demoDevices = [{ id: "demo-android", name: "Samsung Galaxy S24 · Android", last_seen: Date.now() }, { id: "demo-ios", name: "iPhone 15 · iOS", last_seen: Date.now() - 3600000 }];
+        let reissue = null, reissueBusy = false, reissueChecking = false, reissueExpected = "initial";
+        const reissueDialog = $("reissueDialog");
+        $("reissueSubscriptionBtn").addEventListener("click", () => {
+            if (!reissue?.allowed || loading || deleting || reissueBusy) return;
+            reissueChecking = !!reissue.pending;
+            reissueExpected = reissue.generation;
+            $("confirmReissueBtn").textContent = reissueChecking ? "Проверить" : "Подтвердить";
+            status("reissueStatus", reissueChecking ? "Подготавливаем новые ключи." : "");
+            reissueDialog.showModal(); $("cancelReissueBtn").focus();
+        });
+        $("cancelReissueBtn").addEventListener("click", () => { if (!reissueBusy) reissueDialog.close(); });
+        reissueDialog.addEventListener("cancel", e => { if (reissueBusy) e.preventDefault(); });
+        $("confirmReissueBtn").addEventListener("click", async () => {
+            if (!reissue?.allowed || reissueBusy) return;
+            reissueBusy = true;
+            $("confirmReissueBtn").disabled = $("cancelReissueBtn").disabled = true;
+            try {
+                const result = await api(reissueChecking ? "/api/devices/reissue-status" : "/api/devices/reissue", { method: "POST", body: { id: reissueExpected } });
+                reissue = result.reissue;
+                reissueChecking = true;
+                $("confirmReissueBtn").textContent = "Проверить";
+                if (reissue?.ready) {
+                    await options.onSubscriptionChanged?.();
+                    reissueDialog.close(); devices.close();
+                } else status("reissueStatus", "Перевыпуск запущен. Подготавливаем новую ссылку.");
+            } catch (e) { status("reissueStatus", "Не удалось проверить перевыпуск. Повторите запрос.", true); }
+            finally { reissueBusy = false; $("confirmReissueBtn").disabled = $("cancelReissueBtn").disabled = false; }
+        });
 
         function status(id, text, error) {
             const el = $(id);
@@ -25,6 +53,8 @@
             return el;
         }
         function renderDevices(data) {
+            reissue = data.reissue || null;
+            $("reissueSubscriptionBtn").classList.toggle("hidden", !reissue?.allowed);
             list.replaceChildren();
             devicePlan = data.device_plan || { enabled: false, extra_slots: 0 };
             $("devicesCount").textContent = (data.partial ? "Найдено: " : "Зарегистрировано: ") + data.devices.length + (devicePlan.enabled ? " из " + (5 + devicePlan.extra_slots) : "");
@@ -71,6 +101,7 @@
                 if (version === deviceVersion && devices.open) {
                     list.replaceChildren(); $("devicesCount").textContent = "";
                     devicePlan = null; $("devicePlanSummary").textContent = "";
+                    reissue = null; $("reissueSubscriptionBtn").classList.add("hidden");
                     $("addDeviceSlotBtn").classList.add("hidden"); $("reduceDeviceSlotBtn").classList.add("hidden");
                     status("devicesStatus", e.message || "Не удалось загрузить устройства. Повторите попытку.", true);
                 }

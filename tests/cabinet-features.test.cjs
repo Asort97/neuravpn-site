@@ -36,6 +36,22 @@ function fixture(api) {
 }
 const device = { id: 'a'.repeat(64), name: '<img onerror=alert(1)>', last_seen: 0 };
 
+test('reissue is pilot-only, requires confirmation and never double-submits',async()=>{
+ let finish;
+ const hidden=fixture(()=>({devices:[device],reissue:{allowed:false}}));hidden.click('devicesBtn');await flush();hidden.click('reissueSubscriptionBtn');
+ assert.equal(hidden.nodes.get('reissueDialog').open,false);
+ const f=fixture(url=>url.endsWith('/reissue')?new Promise(resolve=>{finish=resolve;}):{devices:[device],reissue:{allowed:true,generation:'initial',pending:false,ready:false}});
+ f.click('devicesBtn');await flush();f.click('reissueSubscriptionBtn');
+ assert.equal(f.calls.length,1);assert.equal(f.nodes.get('reissueDialog').open,true);
+ f.click('cancelReissueBtn');assert.equal(f.calls.length,1);
+ f.click('reissueSubscriptionBtn');const pending=f.click('confirmReissueBtn');f.click('confirmReissueBtn');
+ assert.equal(f.calls.filter(c=>c[0].endsWith('/reissue')).length,1);
+ assert.equal(f.calls[1][1].body.id,'initial');
+ finish({devices:[],reissue:{allowed:true,generation:'new',pending:true,ready:false}});await pending;
+ assert.equal(f.nodes.get('confirmReissueBtn').textContent,'Проверить');
+ await f.click('confirmReissueBtn');assert.equal(f.calls.at(-1)[0],'/api/devices/reissue-status');
+});
+
 test('rollout hides payments for unlimited accounts, enabled accounts see their limit', async () => {
   const f = fixture(() => ({devices:[device],device_plan:{enabled:false,extra_slots:0}}));
   f.click('devicesBtn'); await flush();

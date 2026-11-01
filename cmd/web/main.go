@@ -162,6 +162,8 @@ func main() {
 	mux.HandleFunc("/api/devices/purchase", a.requireAuth(a.handleDevices))
 	mux.HandleFunc("/api/devices/check", a.requireAuth(a.handleDevices))
 	mux.HandleFunc("/api/devices/reduce", a.requireAuth(a.handleDevices))
+	mux.HandleFunc("/api/devices/reissue", a.requireAuth(a.handleDevices))
+	mux.HandleFunc("/api/devices/reissue-status", a.requireAuth(a.handleDevices))
 	mux.HandleFunc("/api/payments/quote", a.requireAuth(a.handlePaymentQuote))
 	mux.HandleFunc("/api/promocode/apply", a.requireAuth(a.handleApplyPromocode))
 	mux.HandleFunc("/api/payments/create", a.requireAuth(a.handleCreatePayment))
@@ -1104,6 +1106,25 @@ func (a *app) subscriptionURL(userID, subID string) string {
 	if a.mergedBase != "" && a.mergedSecret != "" {
 		h := hmac.New(sha256.New, []byte(a.mergedSecret))
 		_, _ = h.Write([]byte(userID))
+		if userID == "623290294" {
+			if a.db == nil {
+				return ""
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			var generation string
+			var active bool
+			err := a.db.QueryRow(ctx, `SELECT generation,active FROM subscription_reissues WHERE user_id=$1`, userID).Scan(&generation, &active)
+			cancel()
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				return ""
+			}
+			if generation != "" {
+				if !active {
+					return ""
+				}
+				_, _ = h.Write([]byte("\nreissue-v1\n" + generation))
+			}
+		}
 		return fmt.Sprintf("%s/merged-sub/%s/%s", a.mergedBase, url.PathEscape(userID), hex.EncodeToString(h.Sum(nil)))
 	}
 	if a.subBase != "" && strings.TrimSpace(subID) != "" {

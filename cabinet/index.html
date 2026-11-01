@@ -226,6 +226,16 @@
     </div>
     <p id="devicesStatus" class="status-line" role="status" aria-live="polite"></p>
     <ul id="deviceList" class="device-list" aria-busy="false"></ul>
+    <button id="reissueSubscriptionBtn" class="link-button hidden" type="button"><span class="ui-icon icon-refresh" aria-hidden="true"></span>Перевыпустить подписку</button>
+  </dialog>
+  <dialog id="reissueDialog" class="account-dialog confirm-device-dialog" aria-labelledby="reissueTitle" aria-describedby="reissueTerms">
+    <h2 id="reissueTitle">Перевыпустить подписку?</h2>
+    <p id="reissueTerms" class="muted">Старые ссылки и ключи перестанут работать. На всех своих устройствах нужно будет добавить новую ссылку. Оплаченные дни и лимит сохранятся.</p>
+    <p id="reissueStatus" class="status-line" role="status" aria-live="polite"></p>
+    <div class="confirm-device-actions">
+      <button id="cancelReissueBtn" class="btn btn-secondary" type="button">Отмена</button>
+      <button id="confirmReissueBtn" class="btn danger-button" type="button">Подтвердить</button>
+    </div>
   </dialog>
   <dialog id="deviceSlotDialog" class="account-dialog confirm-device-dialog" aria-labelledby="deviceSlotTitle" aria-describedby="deviceSlotTerms">
     <h2 id="deviceSlotTitle">Дополнительное устройство</h2>
@@ -270,7 +280,7 @@
   <noscript>Для входа включите JavaScript или откройте кабинет через Telegram-бота.</noscript>
   <script src="../assets/vendor/telegram-web-app.js?v=20261029" defer></script>
   <script src="../assets/js/subscription-state.js?v=20261021-status" defer></script>
-  <script src="../assets/js/cabinet-features.js?v=20261101-device-delete" defer></script>
-  <script src="../assets/js/cabinet.js?v=20261030-slots" defer></script>
+  <script src="../assets/js/cabinet-features.js?v=20261102-reissue-pilot" defer></script>
+  <script src="../assets/js/cabinet.js?v=20261102-reissue-pilot" defer></script>
 </body>
 </html>

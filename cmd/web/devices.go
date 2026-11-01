@@ -36,11 +36,12 @@ type webDevice struct {
 }
 
 type webDeviceList struct {
-	Devices    []webDevice  `json:"devices"`
-	Partial    bool         `json:"partial"`
-	Result     string       `json:"result"`
-	DevicePlan devicePlan   `json:"device_plan"`
-	Order      *deviceOrder `json:"order,omitempty"`
+	Reissue    json.RawMessage `json:"reissue,omitempty"`
+	Devices    []webDevice     `json:"devices"`
+	Partial    bool            `json:"partial"`
+	Result     string          `json:"result"`
+	DevicePlan devicePlan      `json:"device_plan"`
+	Order      *deviceOrder    `json:"order,omitempty"`
 }
 
 type devicePlan struct {
@@ -142,6 +143,28 @@ func (a *app) handleDevices(w http.ResponseWriter, r *http.Request, userID strin
 	}
 	if r.URL.Path == "/api/devices/reduce" {
 		action = "reduce"
+	}
+	if r.URL.Path == "/api/devices/reissue" {
+		action = "reissue"
+	}
+	if r.URL.Path == "/api/devices/reissue-status" {
+		action = "reissue_status"
+	}
+	if action == "reissue" || action == "reissue_status" {
+		if userID != "623290294" {
+			writeJSON(w, 403, errResp("Недоступно"))
+			return
+		}
+		if action == "reissue" {
+			var req struct {
+				ID string `json:"id"`
+			}
+			if readJSON(r, &req) != nil || (req.ID != "initial" && len(req.ID) != 36) {
+				writeJSON(w, 400, errResp("Обновите подтверждение"))
+				return
+			}
+			id = req.ID
+		}
 	}
 	if (action == "list" && r.Method != http.MethodGet) || (action != "list" && r.Method != http.MethodPost) {
 		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))

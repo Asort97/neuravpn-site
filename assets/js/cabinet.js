@@ -93,7 +93,7 @@
     let emailVerifyBusy = false;
     let emailSessionReady = false;
     const TELEGRAM_BOT_USERNAME = String(window.NEURAVPN_TELEGRAM_BOT || "neuravpn_bot").replace(/^@/, "");
-    const features = window.neuravpnCabinetFeatures ? window.neuravpnCabinetFeatures({ api: api, demo: IS_DEMO, onDevicePlanChanged: () => loadMe() }) : null;
+    const features = window.neuravpnCabinetFeatures ? window.neuravpnCabinetFeatures({ api: api, demo: IS_DEMO, onDevicePlanChanged: () => loadMe(), onSubscriptionChanged: () => loadMe() }) : null;
 
     if (IS_MINI_APP) {
         document.body.classList.add("is-mini-app");
