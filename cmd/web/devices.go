@@ -10,10 +10,12 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -36,12 +38,13 @@ type webDevice struct {
 }
 
 type webDeviceList struct {
-	Reissue    json.RawMessage `json:"reissue,omitempty"`
-	Devices    []webDevice     `json:"devices"`
-	Partial    bool            `json:"partial"`
-	Result     string          `json:"result"`
-	DevicePlan devicePlan      `json:"device_plan"`
-	Order      *deviceOrder    `json:"order,omitempty"`
+	Reissue      json.RawMessage `json:"reissue,omitempty"`
+	Devices      []webDevice     `json:"devices"`
+	Partial      bool            `json:"partial"`
+	Result       string          `json:"result"`
+	ActionDevice string          `json:"action_device,omitempty"`
+	DevicePlan   devicePlan      `json:"device_plan"`
+	Order        *deviceOrder    `json:"order,omitempty"`
 }
 
 type devicePlan struct {
@@ -208,9 +211,46 @@ func (a *app) handleDevices(w http.ResponseWriter, r *http.Request, userID strin
 		id = req.ID
 	}
 	result, err := a.fetchDevices(r.Context(), userID, action, id)
+	if action == "delete" || action == "restore" {
+		a.logDeviceAction(r, userID, action, result, err)
+	}
 	if err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, errResp("Не удалось получить ответ от панелей. Обновите список устройств."))
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
+}
+
+func deviceActionLogText(action, result string, failed bool) string {
+	verb := "удаление устройства"
+	if action == "restore" {
+		verb = "разблокировка устройства"
+	}
+	if failed {
+		return verb + ": не удалось получить подтверждение сервера"
+	}
+	if action == "delete" && result == "queued" {
+		return "удалил устройство; выдача подписки заблокирована"
+	}
+	if action == "restore" && result == "restored" {
+		return "разблокировал устройство"
+	}
+	if result == "absent" {
+		return verb + ": запись уже отсутствует"
+	}
+	return verb + ": результат не подтверждён"
+}
+
+func (a *app) logDeviceAction(r *http.Request, userID, action string, result webDeviceList, err error) {
+	source := "site"
+	if strings.HasPrefix(r.Header.Get("Authorization"), "tma ") {
+		source = "miniapp"
+	}
+	name := []rune(strings.Join(strings.Fields(result.ActionDevice), " "))
+	if len(name) > 100 {
+		name = name[:100]
+	}
+	text := deviceActionLogText(action, result.Result, err != nil)
+	log.Printf("[device-action] source=%s user=%s action=%s result=%q confirmed=%t", source, userID, action, result.Result, err == nil)
+	a.sendWebLogWithSource(r, userID, "", "", text, string(name), source)
 }
