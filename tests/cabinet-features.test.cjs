@@ -7,7 +7,7 @@ const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'cabinet/index.html'), 'utf8');
 const source = fs.readFileSync(path.join(root, 'assets/js/cabinet-features.js'), 'utf8');
 
-function fixture(api) {
+function fixture(api, omit = []) {
   const nodes = new Map();
   let document;
   function element(tag = 'div') {
@@ -27,6 +27,7 @@ function fixture(api) {
     };
   }
   for (const m of html.matchAll(/id="([^"]+)"/g)) nodes.set(m[1], element());
+  omit.forEach(id => nodes.delete(id));
   document = { body: element(), activeElement: element(), getElementById: id => nodes.get(id), createElement: element, querySelector: () => element() };
   const window = {};
   vm.runInNewContext(source, { window, document, Date, Number, URL, console });
@@ -110,6 +111,58 @@ test('device deletion requires a second confirmation and sends only opaque ID', 
   assert.equal(JSON.stringify(f.calls[1][1].body), JSON.stringify({ id: device.id }));
   assert.equal(list.children.length, 0);
   assert.match(f.nodes.get('devicesStatus').textContent, /удалено/);
+});
+
+test('deleted list remains usable when panels are down and restore requires confirmation', async () => {
+  let finish;
+  const f = fixture(url => {
+    if (url === '/api/devices') throw new Error('Panels unavailable');
+    if (url === '/api/devices/deleted') return { devices: [device] };
+    if (url === '/api/devices/restore') return new Promise(resolve => { finish = resolve; });
+    throw new Error('unexpected request');
+  });
+  f.click('devicesBtn'); await flush();
+  f.click('removedDevicesBtn'); await flush();
+  assert.equal(f.nodes.get('removedDevicesBtn')['aria-pressed'], 'true');
+  assert.equal(f.nodes.get('devicePlanSection').classList.contains('hidden'), true);
+  assert.equal(f.nodes.get('deviceList').children.length, 1);
+  f.nodes.get('deviceList').children[0].children[2].click();
+  assert.equal(f.nodes.get('deleteDeviceTitle').textContent, 'Разблокировать устройство?');
+  assert.equal(f.calls.filter(c => c[0].endsWith('/restore')).length, 0);
+  f.click('activeDevicesBtn');
+  assert.equal(f.nodes.get('removedDevicesBtn')['aria-pressed'], 'true');
+  const pending = f.click('confirmDeleteDeviceBtn');
+  f.click('confirmDeleteDeviceBtn');
+  f.click('activeDevicesBtn');
+  assert.equal(f.calls.filter(c => c[0].endsWith('/restore')).length, 1);
+  assert.equal(JSON.stringify(f.calls.at(-1)[1].body), JSON.stringify({id: device.id}));
+  finish({devices: [], result: 'restored'}); await pending;
+  assert.equal(f.nodes.get('deviceList').children.length, 0);
+  assert.match(f.nodes.get('devicesStatus').textContent, /разблокировано/);
+  assert.equal(f.nodes.get('deleteDeviceDialog').open, false);
+});
+
+test('failed restore keeps the revoked row and allows retry without changing active devices', async () => {
+  const f = fixture(url => {
+    if (url.endsWith('/restore')) throw new Error('database unavailable');
+    return {devices: [device]};
+  });
+  f.click('devicesBtn'); await flush();
+  f.click('removedDevicesBtn'); await flush();
+  f.nodes.get('deviceList').children[0].children[2].click();
+  await f.click('confirmDeleteDeviceBtn');
+  assert.equal(f.nodes.get('deviceList').children.length, 1);
+  assert.equal(f.nodes.get('deleteDeviceDialog').open, true);
+  assert.equal(f.nodes.get('confirmDeleteDeviceBtn').disabled, false);
+  assert.equal(f.nodes.get('deleteDeviceStatus').classList.contains('is-error'), true);
+  assert.equal(f.calls.some(c => c[0].endsWith('/delete')), false);
+});
+
+test('new feature script remains compatible with cached HTML during deployment', async () => {
+  const f = fixture(() => ({devices: [device]}), ['activeDevicesBtn', 'removedDevicesBtn', 'devicePlanSection']);
+  f.click('devicesBtn'); await flush();
+  assert.equal(f.nodes.get('deviceList').children.length, 1);
+  assert.equal(f.nodes.get('devicesStatus').classList.contains('is-error'), false);
 });
 
 test('unavailable panels are not displayed as a successful zero count', async () => {

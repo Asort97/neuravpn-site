@@ -70,12 +70,47 @@ func TestDeviceProxySignsAuthenticatedOwnerAndRejectsRedirect(t *testing.T) {
 
 func TestFeaturesRequireAuthentication(t *testing.T) {
 	a := &app{}
-	for path, handler := range map[string]func(http.ResponseWriter, *http.Request, string){"/api/devices": a.handleDevices, "/api/devices/delete": a.handleDevices, "/api/promocode/apply": a.handleApplyPromocode, "/api/payments/quote": a.handlePaymentQuote} {
+	for path, handler := range map[string]func(http.ResponseWriter, *http.Request, string){"/api/devices": a.handleDevices, "/api/devices/delete": a.handleDevices, "/api/devices/deleted": a.handleDevices, "/api/devices/restore": a.handleDevices, "/api/promocode/apply": a.handleApplyPromocode, "/api/payments/quote": a.handlePaymentQuote} {
 		w := httptest.NewRecorder()
 		a.requireAuth(handler)(w, httptest.NewRequest("POST", path, strings.NewReader(`{}`)))
 		if w.Code != 401 {
 			t.Fatal(path, w.Code)
 		}
+	}
+}
+
+func TestRevokedDeviceProxyMethodsOwnerAndOpaqueID(t *testing.T) {
+	a := &app{botToken: "test-secret"}
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		var req map[string]string
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		if req["user_id"] != "42" || (req["action"] != "deleted" && req["action"] != "restore") {
+			t.Error("invalid authenticated bridge request", req)
+		}
+		io.WriteString(w, `{"devices":[],"result":"restored"}`)
+	}))
+	defer server.Close()
+	t.Setenv("BOT_WEB_DEVICES_URL", server.URL+webDevicesPath)
+	for _, tc := range []struct {
+		method, path, body string
+		code               int
+	}{
+		{"GET", "/api/devices/deleted", "", 200},
+		{"POST", "/api/devices/deleted", "{}", 405},
+		{"GET", "/api/devices/restore", "", 405},
+		{"POST", "/api/devices/restore", `{"id":"raw-hwid"}`, 400},
+		{"POST", "/api/devices/restore", `{"id":"` + strings.Repeat("a", 64) + `","user_id":"999"}`, 200},
+	} {
+		w := httptest.NewRecorder()
+		a.handleDevices(w, httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body)), "42")
+		if w.Code != tc.code {
+			t.Fatal(tc.path, w.Code, w.Body.String())
+		}
+	}
+	if calls != 2 {
+		t.Fatal("invalid action reached bridge", calls)
 	}
 }
 

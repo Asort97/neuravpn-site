@@ -159,6 +159,8 @@ func main() {
 	mux.HandleFunc("/api/plans", a.requireAuth(a.handlePlans))
 	mux.HandleFunc("/api/devices", a.requireAuth(a.handleDevices))
 	mux.HandleFunc("/api/devices/delete", a.requireAuth(a.handleDevices))
+	mux.HandleFunc("/api/devices/deleted", a.requireAuth(a.handleDevices))
+	mux.HandleFunc("/api/devices/restore", a.requireAuth(a.handleDevices))
 	mux.HandleFunc("/api/devices/purchase", a.requireAuth(a.handleDevices))
 	mux.HandleFunc("/api/devices/check", a.requireAuth(a.handleDevices))
 	mux.HandleFunc("/api/devices/reduce", a.requireAuth(a.handleDevices))

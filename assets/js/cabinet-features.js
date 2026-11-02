@@ -7,6 +7,8 @@
         const list = $("deviceList"), refresh = $("refreshDevicesBtn");
         const payment = $("paymentChoiceModal");
         let loading = false, deleting = false, selected = null, deviceVersion = 0;
+        let removedView = false;
+        const demoRemovedDevices = [];
         let checkoutVersion = 0, plan = null, quote = null, checking = false, paying = false, paymentFocus = null;
         const slotDialog = $("deviceSlotDialog");
         let devicePlan = null, slotBusy = false, slotOrder = null, slotMode = "purchase";
@@ -54,15 +56,16 @@
         }
         function renderDevices(data) {
             reissue = data.reissue || null;
-            $("reissueSubscriptionBtn").classList.toggle("hidden", !reissue?.allowed);
+            $("reissueSubscriptionBtn").classList.toggle("hidden", removedView || !reissue?.allowed);
+            $("devicePlanSection")?.classList.toggle("hidden", removedView);
             list.replaceChildren();
             devicePlan = data.device_plan || { enabled: false, extra_slots: 0 };
-            $("devicesCount").textContent = (data.partial ? "Найдено: " : "Зарегистрировано: ") + data.devices.length + (devicePlan.enabled ? " из " + (5 + devicePlan.extra_slots) : "");
+            $("devicesCount").textContent = (removedView ? "Удалено: " : data.partial ? "Найдено: " : "Зарегистрировано: ") + data.devices.length + (!removedView && devicePlan.enabled ? " из " + (5 + devicePlan.extra_slots) : "");
             $("devicePlanSummary").textContent = devicePlan.enabled ? "5 устройств включено. Дополнительных мест: " + devicePlan.extra_slots + (devicePlan.extra_slots ? " · +" + (devicePlan.extra_slots * 50) + " ₽ при каждом продлении." : ".") : "Для вас лимит устройств пока не включён. Доплачивать не нужно.";
             $("addDeviceSlotBtn").classList.toggle("hidden", !devicePlan.enabled);
             $("reduceDeviceSlotBtn").classList.toggle("hidden", !devicePlan.enabled || !devicePlan.extra_slots);
             $("addDeviceSlotBtn").disabled = devicePlan.extra_slots >= 95;
-            status("devicesStatus", data.devices.length ? "" : "Нет устройств в списке.");
+            status("devicesStatus", data.devices.length ? "" : removedView ? "Нет удалённых устройств." : "Нет устройств в списке.");
             data.devices.forEach(device => {
                 const row = document.createElement("li"); row.className = "device-row";
                 const badge = icon("devices"); badge.classList.add("device-symbol");
@@ -70,15 +73,21 @@
                 const name = document.createElement("strong"); name.textContent = device.name;
                 const seen = document.createElement("span");
                 const date = new Date(device.last_seen);
-                seen.textContent = device.last_seen > 0 && Number.isFinite(date.getTime()) ? "Обновлено " + date.toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Дата обновления неизвестна";
+                seen.textContent = device.last_seen > 0 && Number.isFinite(date.getTime()) ? (removedView ? "Удалено " : "Обновлено ") + date.toLocaleString("ru-RU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "Дата неизвестна";
                 text.append(name, seen);
                 const remove = document.createElement("button");
-                remove.type = "button"; remove.className = "icon-button delete-device";
-                remove.title = "Удалить устройство"; remove.setAttribute("aria-label", "Удалить " + device.name);
-                remove.append(icon("trash"));
+                remove.type = "button"; remove.className = "icon-button " + (removedView ? "restore-device" : "delete-device");
+                remove.title = removedView ? "Разблокировать устройство" : "Удалить устройство";
+                remove.setAttribute("aria-label", (removedView ? "Разблокировать " : "Удалить ") + device.name);
+                remove.append(icon(removedView ? "refresh" : "trash"));
                 remove.addEventListener("click", () => {
                     if (loading || deleting) return;
                     selected = device;
+                    $("deleteDeviceTitle").textContent = removedView ? "Разблокировать устройство?" : "Удалить устройство?";
+                    const action = $("confirmDeleteDeviceBtn");
+                    action.classList.toggle("danger-button", !removedView);
+                    action.classList.toggle("devices-button", removedView);
+                    action.textContent = removedView ? "Разблокировать" : "Удалить";
                     $("deleteDeviceName").textContent = device.name;
                     status("deleteDeviceStatus", "");
                     confirm.showModal();
@@ -91,11 +100,12 @@
             if (loading || deleting) return;
             const version = ++deviceVersion;
             loading = true; refresh.disabled = true;
+            updateDeviceViewButtons();
             list.setAttribute("aria-busy", "true");
             list.querySelectorAll("button").forEach(b => b.disabled = true);
             status("devicesStatus", "Загружаем устройства...");
             try {
-                const data = options.demo ? { devices: demoDevices, partial: false } : await api("/api/devices");
+                const data = options.demo ? { devices: removedView ? demoRemovedDevices : demoDevices, partial: false } : await api(removedView ? "/api/devices/deleted" : "/api/devices");
                 if (version === deviceVersion && devices.open) renderDevices(data);
             } catch (e) {
                 if (version === deviceVersion && devices.open) {
@@ -107,9 +117,28 @@
                 }
             } finally {
                 loading = false; refresh.disabled = false; list.setAttribute("aria-busy", "false");
+                updateDeviceViewButtons();
                 if (devices.open && version !== deviceVersion) loadDevices();
             }
         }
+        function updateDeviceViewButtons() {
+            if (!$("activeDevicesBtn") || !$("removedDevicesBtn")) return;
+            $("activeDevicesBtn").setAttribute("aria-pressed", String(!removedView));
+            $("removedDevicesBtn").setAttribute("aria-pressed", String(removedView));
+            $("activeDevicesBtn").disabled = $("removedDevicesBtn").disabled = loading || deleting;
+        }
+        function switchDeviceView(removed) {
+            if (loading || deleting || confirm.open || removedView === removed) return;
+            removedView = removed;
+            list.replaceChildren(); $("devicesCount").textContent = "";
+            $("devicePlanSection")?.classList.toggle("hidden", removedView);
+            $("reissueSubscriptionBtn").classList.add("hidden");
+            updateDeviceViewButtons();
+            loadDevices();
+        }
+        // Cached HTML may predate the deleted-device controls during a rollout.
+        $("activeDevicesBtn")?.addEventListener("click", () => switchDeviceView(false));
+        $("removedDevicesBtn")?.addEventListener("click", () => switchDeviceView(true));
         $("devicesBtn").addEventListener("click", () => {
             if (!devices.open) devices.showModal();
             loadDevices();
@@ -123,23 +152,31 @@
         $("confirmDeleteDeviceBtn").addEventListener("click", async () => {
             if (!selected || deleting) return;
             deleting = true;
+            updateDeviceViewButtons();
             $("confirmDeleteDeviceBtn").disabled = $("cancelDeleteDeviceBtn").disabled = refresh.disabled = true;
-            status("deleteDeviceStatus", "Удаляем устройство...");
+            status("deleteDeviceStatus", removedView ? "Разблокируем устройство..." : "Удаляем устройство...");
             try {
                 let data;
                 if (options.demo) {
-                    const index = demoDevices.findIndex(d => d.id === selected.id);
-                    if (index >= 0) demoDevices.splice(index, 1);
-                    data = { devices: demoDevices, partial: false, result: "deleted" };
-                } else data = await api("/api/devices/delete", { method: "POST", body: { id: selected.id } });
+                    const source = removedView ? demoRemovedDevices : demoDevices;
+                    const index = source.findIndex(d => d.id === selected.id);
+                    if (index >= 0) {
+                        const item = source.splice(index, 1)[0];
+                        if (!removedView) demoRemovedDevices.push({ ...item, last_seen: Date.now() });
+                    }
+                    data = { devices: source, partial: false, result: removedView ? "restored" : "deleted" };
+                } else data = await api(removedView ? "/api/devices/restore" : "/api/devices/delete", { method: "POST", body: { id: selected.id } });
                 confirm.close(); selected = null;
                 renderDevices(data);
-                if (data.result === "deleted") status("devicesStatus", "Устройство удалено.");
+                if (data.result === "deleted" || data.result === "queued") status("devicesStatus", "Устройство удалено. Обновление подписки для него заблокировано.");
+                if (data.result === "restored") status("devicesStatus", "Устройство разблокировано. Обновите подписку в приложении. Лимит устройств продолжает действовать.");
+                if (removedView && data.result === "absent") status("devicesStatus", "Список обновлён. Устройство уже разблокировано или запись изменилась.");
                 refresh.focus();
             } catch (e) {
                 status("deleteDeviceStatus", "Не удалось сохранить изменение. Попробуйте ещё раз.", true);
             } finally {
                 deleting = false;
+                updateDeviceViewButtons();
                 $("confirmDeleteDeviceBtn").disabled = $("cancelDeleteDeviceBtn").disabled = refresh.disabled = false;
             }
         });

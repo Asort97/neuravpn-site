@@ -1734,6 +1734,13 @@ body.is-mini-app .btn.devices-button {
 .icon-button:hover { background: #ffffff80; border-color: #72574233; }
 .icon-button.delete-device { color: #a03b30; }
 .icon-button.delete-device:hover { background: #a03b3010; border-color: #a03b3040; }
+.icon-button.restore-device { color: #236663; }
+.icon-button.restore-device:hover { background: #23666312; border-color: #23666350; }
+.device-view-switch { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px; padding: 4px; margin: 12px 0; border: 1px solid #754f3024; border-radius: 8px; }
+.device-view-switch button { min-height: 40px; padding: 8px; border: 0; border-radius: 6px; background: transparent; color: var(--text-primary); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.device-view-switch button[aria-pressed="true"] { background: #236663; color: #fff; }
+.device-view-switch button:focus-visible { outline: 2px solid #236663; outline-offset: 2px; }
+.device-view-switch button:disabled { cursor: wait; opacity: .65; }
 .icon-button:focus-visible, .devices-button:focus-visible, .account-dialog button:focus-visible, .promo-input-group button:focus-visible { outline: 3px solid #30766b; outline-offset: 2px; }
 .account-dialog { margin: auto; width: min(540px, calc(100% - 28px)); max-height: calc(100dvh - 40px); padding: 24px; box-sizing: border-box; overflow-y: auto; overscroll-behavior: contain; color: var(--text-primary); background: #f3e8d7; background: linear-gradient(145deg, #faf4e9, #efdfc9); border: 1px solid #ffffffb0; border-radius: 26px; box-shadow: inset 0 1px 0 #fff, 0 24px 70px #5027103b; }
 .account-dialog::backdrop { background: #49261155; backdrop-filter: blur(8px); }
@@ -1767,6 +1774,7 @@ body.is-mini-app .btn.devices-button {
 .confirm-device-dialog .muted { font-size: 14px; line-height: 1.55; }
 .confirm-device-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin-top: 20px; }
 .confirm-device-actions .btn { padding: 12px 10px; min-height: 48px; justify-content: center; font-size: 15px; gap: 6px; }
+.confirm-device-actions .devices-button { margin-bottom: 0; overflow-wrap: anywhere; }
 .btn.danger-button, body.is-mini-app .btn.danger-button { background: #a13b30; border-color: #8e3229; color: #fff; }
 body:has(.account-dialog[open]), body.checkout-open { overflow: hidden; }
 .account-dialog .status-line, #promoStatus, #checkoutStatus { margin: 8px 0; font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
@@ -1785,6 +1793,9 @@ body:has(.account-dialog[open]), body.checkout-open { overflow: hidden; }
 #paymentChoiceText del { color: #836a56; font-size: 15px; font-weight: 400; }
 #paymentChoiceModal .modal-card { max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; }
 .account-dialog button:disabled, .promo-input-group button:disabled { opacity: 0.5; cursor: wait; }
+@media (max-width: 480px) {
+    .confirm-device-actions:has(#confirmDeleteDeviceBtn.devices-button) { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 380px) {
     .account-dialog { padding: 18px; }
     .device-row { gap: 8px; }

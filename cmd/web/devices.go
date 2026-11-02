@@ -132,6 +132,12 @@ func (a *app) fetchDevices(ctx context.Context, userID, action, id string) (webD
 
 func (a *app) handleDevices(w http.ResponseWriter, r *http.Request, userID string) {
 	action, id := "list", ""
+	if r.URL.Path == "/api/devices/deleted" {
+		action = "deleted"
+	}
+	if r.URL.Path == "/api/devices/restore" {
+		action = "restore"
+	}
 	if r.URL.Path == "/api/devices/delete" {
 		action = "delete"
 	}
@@ -166,7 +172,8 @@ func (a *app) handleDevices(w http.ResponseWriter, r *http.Request, userID strin
 			id = req.ID
 		}
 	}
-	if (action == "list" && r.Method != http.MethodGet) || (action != "list" && r.Method != http.MethodPost) {
+	reading := action == "list" || action == "deleted"
+	if (reading && r.Method != http.MethodGet) || (!reading && r.Method != http.MethodPost) {
 		writeJSON(w, http.StatusMethodNotAllowed, errResp("method not allowed"))
 		return
 	}
@@ -174,7 +181,7 @@ func (a *app) handleDevices(w http.ResponseWriter, r *http.Request, userID strin
 		writeJSON(w, http.StatusTooManyRequests, errResp("Слишком много запросов. Подождите минуту."))
 		return
 	}
-	if action == "delete" {
+	if action == "delete" || action == "restore" {
 		var req struct {
 			ID string `json:"id"`
 		}

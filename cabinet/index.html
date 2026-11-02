@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>neuravpn - личный кабинет</title>
   <link rel="stylesheet" href="../assets/css/site.css?v=20261102-perf">
-  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20261102-perf">
+  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20261102-revoked-devices">
 </head>
 <body>
   <div class="grid-overlay"></div>
@@ -218,8 +218,12 @@
         <button id="closeDevicesBtn" class="icon-button" type="button" title="Закрыть" aria-label="Закрыть устройства"><span class="ui-icon icon-close" aria-hidden="true"></span></button>
       </div>
     </div>
+    <div class="device-view-switch" role="group" aria-label="Список устройств">
+      <button id="activeDevicesBtn" type="button" aria-pressed="true">Устройства</button>
+      <button id="removedDevicesBtn" type="button" aria-pressed="false">Удалённые</button>
+    </div>
     <p id="devicesCount" class="device-count" role="status"></p>
-    <div class="device-plan-section">
+    <div id="devicePlanSection" class="device-plan-section">
       <p id="devicePlanSummary" class="device-plan-summary"></p>
       <button id="addDeviceSlotBtn" class="btn devices-button hidden" type="button"><span class="ui-icon icon-devices" aria-hidden="true"></span>Добавить место · 50 ₽</button>
       <button id="reduceDeviceSlotBtn" class="link-button hidden" type="button">Убрать дополнительное место</button>
@@ -280,7 +284,7 @@
   <noscript>Для входа включите JavaScript или откройте кабинет через Telegram-бота.</noscript>
   <script src="../assets/vendor/telegram-web-app.js?v=20261029" defer></script>
   <script src="../assets/js/subscription-state.js?v=20261021-status" defer></script>
-  <script src="../assets/js/cabinet-features.js?v=20261102-reissue-pilot" defer></script>
+  <script src="../assets/js/cabinet-features.js?v=20261102-revoked-devices" defer></script>
   <script src="../assets/js/cabinet.js?v=20261102-perf" defer></script>
   <script src="../assets/js/ui-motion.js?v=20261102-perf" defer></script>
 </body>
