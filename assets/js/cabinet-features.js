@@ -60,8 +60,9 @@
             $("devicePlanSection")?.classList.toggle("hidden", removedView);
             list.replaceChildren();
             devicePlan = data.device_plan || { enabled: false, extra_slots: 0 };
-            $("devicesCount").textContent = (removedView ? "Удалено: " : data.partial ? "Найдено: " : "Зарегистрировано: ") + data.devices.length + (!removedView && devicePlan.enabled ? " из " + (5 + devicePlan.extra_slots) : "");
-            $("devicePlanSummary").textContent = devicePlan.enabled ? "5 устройств включено. Дополнительных мест: " + devicePlan.extra_slots + (devicePlan.extra_slots ? " · +" + (devicePlan.extra_slots * 50) + " ₽ при каждом продлении." : ".") : "Для вас лимит устройств пока не включён. Доплачивать не нужно.";
+            const bonus = devicePlan.bonus_slots || 0;
+            $("devicesCount").textContent = (removedView ? "Удалено: " : data.partial ? "Найдено: " : "Зарегистрировано: ") + data.devices.length + (!removedView && devicePlan.enabled ? " из " + (5 + devicePlan.extra_slots + bonus) : "");
+            $("devicePlanSummary").textContent = devicePlan.enabled ? "5 устройств включено. " + (bonus ? "Бесплатных мест навсегда: " + bonus + ". " : "") + "Платных мест: " + devicePlan.extra_slots + (devicePlan.extra_slots ? " · +" + (devicePlan.extra_slots * 50) + " ₽ при каждом продлении." : ".") : "Для вас лимит устройств пока не включён. Доплачивать не нужно." + (bonus ? " Бесплатный бонус сохранён: " + bonus + "." : "");
             $("addDeviceSlotBtn").classList.toggle("hidden", !devicePlan.enabled);
             $("reduceDeviceSlotBtn").classList.toggle("hidden", !devicePlan.enabled || !devicePlan.extra_slots);
             $("addDeviceSlotBtn").disabled = devicePlan.extra_slots >= 95;
@@ -185,7 +186,7 @@
             if (!devicePlan || !devicePlan.enabled || loading || deleting || slotBusy) return;
             slotMode = mode; slotOrder = null;
             $("deviceSlotTitle").textContent = mode === "reduce" ? "Убрать дополнительное место?" : "Дополнительное устройство";
-            $("deviceSlotPrice").textContent = mode === "reduce" ? "Лимит: " + (4 + devicePlan.extra_slots) : "50 ₽";
+            $("deviceSlotPrice").textContent = mode === "reduce" ? "Лимит: " + (4 + devicePlan.extra_slots + (devicePlan.bonus_slots || 0)) : "50 ₽";
             $("deviceSlotTerms").textContent = mode === "reduce" ? "Лимит уменьшится на одно место сразу. Сначала удалите лишнее устройство из списка. Оплата за текущий срок не возвращается. При каждом следующем продлении цена снизится на 50 ₽. Автопродление отключится." : "Одно место до окончания текущей VPN-подписки. При каждом продлении +50 ₽ за место, независимо от срока тарифа. Дни не добавляются. После изменения числа мест автопродление отключится: его можно включить заново.";
             $("confirmDeviceSlotBtn").textContent = mode === "reduce" ? "Убрать место" : "Продолжить";
             $("deviceSlotPayLink").classList.add("hidden"); status("deviceSlotStatus", "");

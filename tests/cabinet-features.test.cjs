@@ -37,6 +37,16 @@ function fixture(api, omit = []) {
 }
 const device = { id: 'a'.repeat(64), name: '<img onerror=alert(1)>', last_seen: 0 };
 
+test('permanent free slots increase capacity without changing paid slots or removal target', async () => {
+  const f = fixture(() => ({devices: [device], device_plan: {enabled: true, extra_slots: 2, bonus_slots: 3}}));
+  f.click('devicesBtn'); await flush();
+  assert.match(f.nodes.get('devicesCount').textContent, /из 10/);
+  assert.match(f.nodes.get('devicePlanSummary').textContent, /навсегда: 3/);
+  assert.match(f.nodes.get('devicePlanSummary').textContent, /100/);
+  f.click('reduceDeviceSlotBtn');
+  assert.equal(f.nodes.get('deviceSlotPrice').textContent, 'Лимит: 9');
+});
+
 test('reissue is pilot-only, requires confirmation and never double-submits',async()=>{
  let finish;
  const hidden=fixture(()=>({devices:[device],reissue:{allowed:false}}));hidden.click('devicesBtn');await flush();hidden.click('reissueSubscriptionBtn');

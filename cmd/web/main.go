@@ -233,6 +233,7 @@ CREATE TABLE IF NOT EXISTS device_plans (
  extra_slots INTEGER NOT NULL DEFAULT 0 CHECK(extra_slots BETWEEN 0 AND 95),
  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE device_plans ADD COLUMN IF NOT EXISTS bonus_slots INTEGER NOT NULL DEFAULT 0 CHECK(bonus_slots BETWEEN 0 AND 95);
 DELETE FROM email_login_codes WHERE expires_at < NOW() - INTERVAL '1 day';
 DELETE FROM web_sessions WHERE expires_at < NOW();
 DELETE FROM web_login_tokens WHERE expires_at < NOW() - INTERVAL '1 day';

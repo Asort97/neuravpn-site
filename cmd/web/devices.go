@@ -47,6 +47,7 @@ type webDeviceList struct {
 type devicePlan struct {
 	Enabled    bool `json:"enabled"`
 	ExtraSlots int  `json:"extra_slots"`
+	BonusSlots int  `json:"bonus_slots"`
 }
 type deviceOrder struct {
 	ID      string `json:"id"`
@@ -56,7 +57,7 @@ type deviceOrder struct {
 
 func (a *app) devicePlan(ctx context.Context, userID string) (devicePlan, error) {
 	var p devicePlan
-	err := a.db.QueryRow(ctx, `SELECT enabled,extra_slots FROM device_plans WHERE user_id=$1`, userID).Scan(&p.Enabled, &p.ExtraSlots)
+	err := a.db.QueryRow(ctx, `SELECT enabled,extra_slots,bonus_slots FROM device_plans WHERE user_id=$1`, userID).Scan(&p.Enabled, &p.ExtraSlots, &p.BonusSlots)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return p, nil
 	}

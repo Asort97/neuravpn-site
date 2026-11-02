@@ -26,13 +26,17 @@ func TestDeviceExtrasAreNotDiscountedAndInvalidateOldQuote(t *testing.T) {
 func TestDeviceAutopayIntegrationPriceConfirmation(t *testing.T) {
 	a := integrationApp(t)
 	ctx := context.Background()
-	_, err := a.db.Exec(ctx, `ALTER TABLE users ADD COLUMN autopay_method_id TEXT, ADD COLUMN autopay_plan_id TEXT, ADD COLUMN autopay_enabled BOOLEAN DEFAULT FALSE; INSERT INTO users(id,autopay_method_id,autopay_plan_id) VALUES('42','saved','90d'); INSERT INTO device_plans(user_id,enabled,extra_slots) VALUES('42',TRUE,2)`)
+	_, err := a.db.Exec(ctx, `ALTER TABLE users ADD COLUMN autopay_method_id TEXT, ADD COLUMN autopay_plan_id TEXT, ADD COLUMN autopay_enabled BOOLEAN DEFAULT FALSE; INSERT INTO users(id,autopay_method_id,autopay_plan_id) VALUES('42','saved','90d'); INSERT INTO device_plans(user_id,enabled,extra_slots,bonus_slots) VALUES('42',TRUE,2,3)`)
 	if err != nil {
 		t.Fatal(err)
 	}
 	p, err := a.devicePlan(ctx, "43")
 	if err != nil || p.Enabled || p.ExtraSlots != 0 {
 		t.Fatal("default limit not off")
+	}
+	p, err = a.devicePlan(ctx, "42")
+	if err != nil || p.ExtraSlots != 2 || p.BonusSlots != 3 {
+		t.Fatal("bonus and paid slots not separated", p, err)
 	}
 	for _, body := range []string{`{}`, `{"device_extra_slots":1}`} {
 		w := postAuth(func(w http.ResponseWriter, r *http.Request) { a.handleEnableAutopay(w, r, "42") }, "/api/autopay/enable", body)
