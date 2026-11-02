@@ -86,3 +86,37 @@ func TestDeviceHandlerRecordsResultWithoutTrustingClientName(t *testing.T) {
 		})
 	}
 }
+
+func TestTrackedLogRecoversUneditableTelegramMessage(t *testing.T) {
+	for _, tc := range []struct {
+		description string
+		sends       int
+		messageID   int
+	}{
+		{"Bad Request: message is not modified", 0, 17},
+		{"Bad Request: message to edit not found", 1, 18},
+	} {
+		t.Run(tc.description, func(t *testing.T) {
+			old := http.DefaultTransport
+			t.Cleanup(func() { http.DefaultTransport = old })
+			sends := 0
+			http.DefaultTransport = featureRoundTrip(func(r *http.Request) (*http.Response, error) {
+				if r.URL.Host != "api.telegram.org" {
+					t.Fatal("unexpected host")
+				}
+				code, body := 400, `{"ok":false,"description":"`+tc.description+`"}`
+				if strings.HasSuffix(r.URL.Path, "/sendMessage") {
+					sends++
+					code, body = 200, `{"ok":true,"result":{"message_id":18}}`
+				}
+				return &http.Response{StatusCode: code, Status: http.StatusText(code), Body: io.NopCloser(strings.NewReader(body)), Header: make(http.Header)}, nil
+			})
+			s := &webLogSession{Start: time.Now(), Last: time.Now(), UserID: "42", MsgID: 17, Sending: true, Actions: []string{"разблокировал устройство"}}
+			a := &app{botToken: "test", webLogChatID: "test", webLogs: map[string]*webLogSession{"site:u:42": s}}
+			a.flushWebLogSession("site:u:42")
+			if sends != tc.sends || s.MsgID != tc.messageID || s.Sending {
+				t.Fatal(sends, s)
+			}
+		})
+	}
+}

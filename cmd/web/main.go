@@ -1939,6 +1939,10 @@ func (a *app) flushWebLogSession(key string) {
 			newMsgID, err = a.telegramSendMessage(text)
 		} else {
 			err = a.telegramEditMessage(msgID, text)
+			if err != nil {
+				// A deleted or otherwise uneditable log message must not lose new events.
+				newMsgID, err = a.telegramSendMessage(text)
+			}
 		}
 		if err != nil {
 			log.Printf("web log telegram failed: %v", err)
@@ -2059,11 +2063,22 @@ func (a *app) telegramRequest(method string, messageID int, text string, dst any
 		return err
 	}
 	defer resp.Body.Close()
-	if err := json.NewDecoder(resp.Body).Decode(dst); err != nil {
+	var body json.RawMessage
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 64<<10)).Decode(&body); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(body, dst); err != nil {
 		return err
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("%s status=%s", method, resp.Status)
+		var failure struct {
+			Description string `json:"description"`
+		}
+		_ = json.Unmarshal(body, &failure)
+		if method == "editMessageText" && strings.Contains(strings.ToLower(failure.Description), "message is not modified") {
+			return nil
+		}
+		return fmt.Errorf("%s status=%s: %s", method, resp.Status, failure.Description)
 	}
 	return nil
 }
