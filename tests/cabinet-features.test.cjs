@@ -47,7 +47,7 @@ test('permanent free slots increase capacity without changing paid slots or remo
   assert.equal(f.nodes.get('deviceSlotPrice').textContent, 'Лимит: 9');
 });
 
-test('reissue is pilot-only, requires confirmation and never double-submits',async()=>{
+test('reissue respects server availability, requires confirmation and never double-submits',async()=>{
  let finish;
  const hidden=fixture(()=>({devices:[device],reissue:{allowed:false}}));hidden.click('devicesBtn');await flush();hidden.click('reissueSubscriptionBtn');
  assert.equal(hidden.nodes.get('reissueDialog').open,false);

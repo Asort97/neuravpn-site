@@ -161,10 +161,6 @@ func (a *app) handleDevices(w http.ResponseWriter, r *http.Request, userID strin
 		action = "reissue_status"
 	}
 	if action == "reissue" || action == "reissue_status" {
-		if userID != "623290294" {
-			writeJSON(w, 403, errResp("Недоступно"))
-			return
-		}
 		if action == "reissue" {
 			var req struct {
 				ID string `json:"id"`

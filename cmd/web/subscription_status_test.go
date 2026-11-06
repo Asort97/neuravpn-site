@@ -25,8 +25,7 @@ func TestSubscriptionStatusUsesSignedBotStatus(t *testing.T) {
 		_, _ = w.Write([]byte(`{"days":0,"active":false,"expires_at":"2026-10-20T12:00:00Z","checked_at":"2026-10-21T12:00:00Z"}`))
 	}))
 	defer server.Close()
-	a := &app{mergedBase: server.URL, mergedSecret: "test-secret"}
-	got, err := a.subscriptionStatus(context.Background(), "42")
+	got, err := fetchSubscriptionStatus(context.Background(), server.URL+wantPath+"?status=1")
 	if err != nil || got.Days != 0 || got.Active || got.ExpiresAt == nil || got.ExpiresAt.Format("2006-01-02") != "2026-10-20" {
 		t.Fatalf("real expired state was not preserved: %+v %v", got, err)
 	}
@@ -43,8 +42,7 @@ func TestSubscriptionStatusDoesNotInventDatesOnFailure(t *testing.T) {
 			w.WriteHeader(response.code)
 			_, _ = w.Write([]byte(response.body))
 		}))
-		a := &app{mergedBase: server.URL, mergedSecret: "secret"}
-		_, err := a.subscriptionStatus(context.Background(), "42")
+		_, err := fetchSubscriptionStatus(context.Background(), server.URL+"/merged-sub/42/token?status=1")
 		server.Close()
 		if err == nil {
 			t.Fatalf("expected unavailable state for %d %s", response.code, response.body)

@@ -26,7 +26,15 @@ func (a *app) subscriptionStatus(ctx context.Context, userID string) (subscripti
 	if a.mergedBase == "" || a.mergedSecret == "" {
 		return status, errors.New("merged subscription status is not configured")
 	}
-	endpoint := strings.TrimRight(a.subscriptionURL(userID, ""), "/") + "?status=1"
+	link := a.subscriptionURL(userID, "")
+	if link == "" {
+		return status, errors.New("subscription status link unavailable")
+	}
+	return fetchSubscriptionStatus(ctx, strings.TrimRight(link, "/")+"?status=1")
+}
+
+func fetchSubscriptionStatus(ctx context.Context, endpoint string) (subscriptionStatus, error) {
+	var status subscriptionStatus
 	ctx, cancel := context.WithTimeout(ctx, 6*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
