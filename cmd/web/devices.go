@@ -38,6 +38,7 @@ type webDevice struct {
 }
 
 type webDeviceList struct {
+	SlotPrice    *float64        `json:"slot_price,omitempty"`
 	Reissue      json.RawMessage `json:"reissue,omitempty"`
 	Devices      []webDevice     `json:"devices"`
 	Partial      bool            `json:"partial"`
@@ -53,9 +54,10 @@ type devicePlan struct {
 	BonusSlots int  `json:"bonus_slots"`
 }
 type deviceOrder struct {
-	ID      string `json:"id"`
-	URL     string `json:"confirmation_url,omitempty"`
-	Applied bool   `json:"applied"`
+	Amount  float64 `json:"amount"`
+	ID      string  `json:"id"`
+	URL     string  `json:"confirmation_url,omitempty"`
+	Applied bool    `json:"applied"`
 }
 
 func (a *app) devicePlan(ctx context.Context, userID string) (devicePlan, error) {
@@ -213,6 +215,16 @@ func (a *app) handleDevices(w http.ResponseWriter, r *http.Request, userID strin
 	if err != nil {
 		writeJSON(w, http.StatusServiceUnavailable, errResp("Не удалось получить ответ от панелей. Обновите список устройств."))
 		return
+	}
+	if action == "list" || action == "deleted" || action == "reduce" {
+		sale, err := a.activeSale(r.Context())
+		if err == nil {
+			price := 50.0
+			if sale != nil {
+				price = saleAmount(price, sale.Discount)
+			}
+			result.SlotPrice = &price
+		}
 	}
 	writeJSON(w, http.StatusOK, result)
 }

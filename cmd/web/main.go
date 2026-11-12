@@ -69,11 +69,12 @@ type webLogSession struct {
 }
 
 type plan struct {
-	ID          string  `json:"id"`
-	Title       string  `json:"title"`
-	Amount      float64 `json:"amount"`
-	Days        int     `json:"days"`
-	DeviceExtra int     `json:"device_extra_slots,omitempty"`
+	Sale        *activePromo `json:"-"`
+	ID          string       `json:"id"`
+	Title       string       `json:"title"`
+	Amount      float64      `json:"amount"`
+	Days        int          `json:"days"`
+	DeviceExtra int          `json:"device_extra_slots,omitempty"`
 }
 
 type trafficPack struct {
@@ -191,6 +192,9 @@ func main() {
 }
 
 func (a *app) initSchema(ctx context.Context) error {
+	if _, err := a.db.Exec(ctx, saleSchema); err != nil {
+		return err
+	}
 	_, err := a.db.Exec(ctx, `
 CREATE TABLE IF NOT EXISTS email_login_codes (
     id BIGSERIAL PRIMARY KEY,
@@ -642,6 +646,9 @@ FROM users WHERE id=$1`, userID).Scan(&email, &subID, &autopay, &autopayPlan, &a
 	autoAmount := 0.0
 	if ap, ok := a.findPlan(userID, autopayPlan); ok && dpErr == nil {
 		autoAmount = ap.Amount + float64(dp.ExtraSlots*50)
+		if sale, err := a.activeSale(r.Context()); err == nil && sale != nil {
+			autoAmount = saleAmount(autoAmount, sale.Discount)
+		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"device_extra_slots":    dp.ExtraSlots,
@@ -675,9 +682,16 @@ func (a *app) handlePlans(w http.ResponseWriter, r *http.Request, userID string)
 		writeJSON(w, 503, errResp("Не удалось проверить стоимость. Обновите страницу."))
 		return
 	}
+	sale, saleErr := a.activeSale(r.Context())
+	promo, promoErr := a.activePromocode(r.Context(), userID)
+	if saleErr != nil || promoErr != nil {
+		writeJSON(w, 503, errResp("Не удалось проверить скидку."))
+		return
+	}
 	for i := range visible {
 		visible[i].DeviceExtra = dp.ExtraSlots
-		visible[i].Amount += float64(dp.ExtraSlots * 50)
+		visible[i].Sale = sale
+		visible[i] = discountedPlan(visible[i], promo)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"plans": visible})
 }
@@ -716,6 +730,12 @@ func (a *app) handleCreatePayment(w http.ResponseWriter, r *http.Request, userID
 		return
 	}
 	p.DeviceExtra = devicePlan.ExtraSlots
+	var saleErr error
+	p.Sale, saleErr = a.activeSale(r.Context())
+	if saleErr != nil {
+		writeJSON(w, 503, errResp("Не удалось проверить акцию."))
+		return
+	}
 	if !a.validPaymentQuote(req.Quote, userID, p, promo) {
 		writeJSON(w, http.StatusConflict, errResp("Срок расчёта истёк или цена изменилась. Проверьте обновлённую сумму и повторите оплату."))
 		return

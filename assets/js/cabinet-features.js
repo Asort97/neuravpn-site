@@ -12,6 +12,7 @@
         let checkoutVersion = 0, plan = null, quote = null, checking = false, paying = false, paymentFocus = null;
         const slotDialog = $("deviceSlotDialog");
         let devicePlan = null, slotBusy = false, slotOrder = null, slotMode = "purchase";
+		let slotPrice = null;
         const demoDevices = [{ id: "demo-android", name: "Samsung Galaxy S24 · Android", last_seen: Date.now() }, { id: "demo-ios", name: "iPhone 15 · iOS", last_seen: Date.now() - 3600000 }];
         let reissue = null, reissueBusy = false, reissueChecking = false, reissueExpected = "initial";
         const reissueDialog = $("reissueDialog");
@@ -60,12 +61,14 @@
             $("devicePlanSection")?.classList.toggle("hidden", removedView);
             list.replaceChildren();
             devicePlan = data.device_plan || { enabled: false, extra_slots: 0 };
+			slotPrice = Number.isFinite(data.slot_price) ? data.slot_price : null;
             const bonus = devicePlan.bonus_slots || 0;
             $("devicesCount").textContent = (removedView ? "Удалено: " : data.partial ? "Найдено: " : "Зарегистрировано: ") + data.devices.length + (!removedView && devicePlan.enabled ? " из " + (5 + devicePlan.extra_slots + bonus) : "");
-            $("devicePlanSummary").textContent = devicePlan.enabled ? "5 устройств включено. " + (bonus ? "Бесплатных мест навсегда: " + bonus + ". " : "") + "Платных мест: " + devicePlan.extra_slots + (devicePlan.extra_slots ? " · +" + (devicePlan.extra_slots * 50) + " ₽ при каждом продлении." : ".") : "Для вас лимит устройств пока не включён. Доплачивать не нужно." + (bonus ? " Бесплатный бонус сохранён: " + bonus + "." : "");
+            $("devicePlanSummary").textContent = devicePlan.enabled ? "5 устройств включено. " + (bonus ? "Бесплатных мест навсегда: " + bonus + ". " : "") + "Платных мест: " + devicePlan.extra_slots + (devicePlan.extra_slots ? " · обычная доплата при продлении: " + (devicePlan.extra_slots * 50) + " ₽ (до скидок)." : ".") : "Для вас лимит устройств пока не включён. Доплачивать не нужно." + (bonus ? " Бесплатный бонус сохранён: " + bonus + "." : "");
             $("addDeviceSlotBtn").classList.toggle("hidden", !devicePlan.enabled);
             $("reduceDeviceSlotBtn").classList.toggle("hidden", !devicePlan.enabled || !devicePlan.extra_slots);
             $("addDeviceSlotBtn").disabled = devicePlan.extra_slots >= 95;
+			$("addDeviceSlotBtn").textContent = "Добавить место" + (slotPrice === null ? "" : " · " + money(slotPrice));
             status("devicesStatus", data.devices.length ? "" : removedView ? "Нет удалённых устройств." : "Нет устройств в списке.");
             data.devices.forEach(device => {
                 const row = document.createElement("li"); row.className = "device-row";
@@ -186,8 +189,8 @@
             if (!devicePlan || !devicePlan.enabled || loading || deleting || slotBusy) return;
             slotMode = mode; slotOrder = null;
             $("deviceSlotTitle").textContent = mode === "reduce" ? "Убрать дополнительное место?" : "Дополнительное устройство";
-            $("deviceSlotPrice").textContent = mode === "reduce" ? "Лимит: " + (4 + devicePlan.extra_slots + (devicePlan.bonus_slots || 0)) : "50 ₽";
-            $("deviceSlotTerms").textContent = mode === "reduce" ? "Лимит уменьшится на одно место сразу. Сначала удалите лишнее устройство из списка. Оплата за текущий срок не возвращается. При каждом следующем продлении цена снизится на 50 ₽. Автопродление отключится." : "Одно место до окончания текущей VPN-подписки. При каждом продлении +50 ₽ за место, независимо от срока тарифа. Дни не добавляются. После изменения числа мест автопродление отключится: его можно включить заново.";
+            $("deviceSlotPrice").textContent = mode === "reduce" ? "Лимит: " + (4 + devicePlan.extra_slots + (devicePlan.bonus_slots || 0)) : slotPrice === null ? "Стоимость уточняется при создании счёта" : money(slotPrice);
+            $("deviceSlotTerms").textContent = mode === "reduce" ? "Лимит уменьшится на одно место сразу. Сначала удалите лишнее устройство из списка. Оплата за текущий срок не возвращается. При следующем продлении одно место не будет учтено в цене. Автопродление отключится." : "Одно место до окончания текущей VPN-подписки. Обычная цена при каждом продлении: +50 ₽ за место. Во время акции действует скидка; после окончания возвращается обычная цена. Дни не добавляются. После изменения числа мест автопродление отключится: его можно включить заново.";
             $("confirmDeviceSlotBtn").textContent = mode === "reduce" ? "Убрать место" : "Продолжить";
             $("deviceSlotPayLink").classList.add("hidden"); status("deviceSlotStatus", "");
             slotDialog.showModal(); $("cancelDeviceSlotBtn").focus();
@@ -213,6 +216,7 @@
                     const link = new URL(data.order.confirmation_url);
                     if (link.protocol !== "https:") throw new Error("Некорректная ссылка оплаты");
                     slotOrder = data.order;
+					if (Number.isFinite(slotOrder.amount)) $("deviceSlotPrice").textContent = money(slotOrder.amount);
                     $("deviceSlotPayLink").href = link.href; $("deviceSlotPayLink").classList.remove("hidden");
                     $("confirmDeviceSlotBtn").textContent = "Я оплатил";
                     status("deviceSlotStatus", action === "check" ? "Оплата пока не подтверждена. Повторите проверку после оплаты." : "Счёт готов. Оплатите его, затем проверьте оплату.");
@@ -232,10 +236,10 @@
             quote = q;
             const line = $("paymentChoiceText"); line.replaceChildren();
             const total = document.createElement("strong"); total.textContent = plan.title + " · " + money(q.amount); line.append(total);
-            $("paymentDevicePrice").textContent = q.device_extra_slots ? "В сумме учтено дополнительных мест: " + q.device_extra_slots + " · " + money(q.device_amount) + " за выбранный срок. Скидка по промокоду применяется только к тарифу." : "5 устройств включено. Для аккаунтов без включённого лимита ограничения пока не применяются.";
+            $("paymentDevicePrice").textContent = q.device_extra_slots ? "В сумме учтено дополнительных мест: " + q.device_extra_slots + " · " + money(q.device_amount) + " за выбранный срок. " + (q.sale ? "Акция действует и на дополнительные места." : "Скидка по промокоду применяется только к тарифу.") : "5 устройств включено. Для аккаунтов без включённого лимита ограничения пока не применяются.";
             if (q.discount) {
                 const old = document.createElement("del"); old.textContent = money(q.base_amount); line.append(old);
-                status("promoStatus", (message ? message + " " : "") + "Скидка " + q.discount + "% по коду " + q.promo_code + " применена.");
+                status("promoStatus", (message ? message + " " : "") + (q.sale ? "Акция " : "Промокод ") + q.promo_code + ": скидка " + q.discount + "% применена." + (q.sale ? " После окончания акции вернутся обычные цены." : ""));
             } else status("promoStatus", message || "");
         }
         async function refreshQuote(apply) {

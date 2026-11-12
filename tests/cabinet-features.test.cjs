@@ -103,6 +103,20 @@ test('slot removal has a separate confirmation and does not charge a payment',as
  assert.equal(f.calls.filter(c=>c[0].endsWith('/purchase')).length,0);
 });
 const baseQuote = { amount: 419, base_amount: 419, discount: 0, quote: 'signed-base' };
+test('global sale is automatic and slot invoice uses its saved price',async()=>{
+ const f=fixture(url=>{
+  if(url.endsWith('/purchase'))return {devices:[],order:{id:'order',amount:25,confirmation_url:'https://example.invalid/pay'}};
+  if(url.includes('/payments/quote'))return {quote:{amount:124.5,base_amount:249,device_extra_slots:2,device_amount:50,discount:50,promo_code:'BLACKFRIDAY',sale:true,quote:'signed-sale'}};
+  return {devices:[],device_plan:{enabled:true,extra_slots:2},slot_price:25};
+ });
+ f.click('devicesBtn');await flush();f.click('addDeviceSlotBtn');
+ assert.match(f.nodes.get('deviceSlotPrice').textContent,/25/);
+ await f.click('confirmDeviceSlotBtn');assert.match(f.nodes.get('deviceSlotPrice').textContent,/25/);
+ f.features.openCheckout({id:'30d',title:'30 дней',amount:249});await flush();
+ assert.match(f.nodes.get('promoStatus').textContent,/Акция BLACKFRIDAY/);
+ assert.match(f.nodes.get('paymentDevicePrice').textContent,/Акция действует и на дополнительные места/);
+ assert.equal(f.features.beginPayment(),'signed-sale');
+});
 async function flush() { for (let i = 0; i < 30; i++) await Promise.resolve(); }
 
 test('device deletion requires a second confirmation and sends only opaque ID', async () => {

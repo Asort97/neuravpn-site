@@ -17,9 +17,10 @@ import (
 )
 
 type activePromo struct {
-	Code     string
-	Discount int
-	Until    time.Time
+	AllProducts bool
+	Code        string
+	Discount    int
+	Until       time.Time
 }
 
 func (a *app) activePromocode(ctx context.Context, userID string) (*activePromo, error) {
@@ -51,10 +52,16 @@ type paymentQuote struct {
 	Expires      int64   `json:"expires"`
 	Token        string  `json:"quote,omitempty"`
 	DeviceExtra  int     `json:"device_extra_slots"`
-	DeviceAmount int     `json:"device_amount"`
+	DeviceAmount float64 `json:"device_amount"`
+	Sale         bool    `json:"sale"`
 }
 
 func discountedPlan(p plan, promo *activePromo) plan {
+	promo = effectivePromotion(p, promo)
+	if promo != nil && promo.AllProducts {
+		p.Amount = saleAmount(p.Amount+float64(p.DeviceExtra*50), promo.Discount)
+		return p
+	}
 	if promo != nil {
 		p.Amount = math.Round(p.Amount*(1-float64(promo.Discount)/100)*100) / 100
 	}
@@ -69,8 +76,13 @@ func (a *app) quoteMAC(payload string) string {
 }
 
 func (a *app) makePaymentQuote(userID string, p plan, promo *activePromo) paymentQuote {
-	q := paymentQuote{UserID: userID, PlanID: p.ID, Amount: discountedPlan(p, promo).Amount, BaseAmount: p.Amount + float64(p.DeviceExtra*50), DeviceExtra: p.DeviceExtra, DeviceAmount: p.DeviceExtra * 50, Expires: time.Now().Add(10 * time.Minute).Unix()}
+	promo = effectivePromotion(p, promo)
+	q := paymentQuote{UserID: userID, PlanID: p.ID, Amount: discountedPlan(p, promo).Amount, BaseAmount: p.Amount + float64(p.DeviceExtra*50), DeviceExtra: p.DeviceExtra, DeviceAmount: float64(p.DeviceExtra * 50), Expires: time.Now().Add(10 * time.Minute).Unix()}
 	if promo != nil {
+		q.Sale = promo.AllProducts
+		if q.Sale && p.DeviceExtra > 0 {
+			q.DeviceAmount = math.Round(float64(p.DeviceExtra*50)*(100-float64(promo.Discount))) / 100
+		}
 		q.PromoCode, q.Discount = promo.Code, promo.Discount
 		q.Expires = min(q.Expires, promo.Until.Unix())
 	}
@@ -81,6 +93,7 @@ func (a *app) makePaymentQuote(userID string, p plan, promo *activePromo) paymen
 }
 
 func (a *app) validPaymentQuote(token, userID string, p plan, promo *activePromo) bool {
+	promo = effectivePromotion(p, promo)
 	if len(token) > 2048 {
 		return false
 	}
@@ -97,7 +110,8 @@ func (a *app) validPaymentQuote(token, userID string, p plan, promo *activePromo
 	if promo != nil {
 		code, discount = promo.Code, promo.Discount
 	}
-	return q.UserID == userID && q.PlanID == p.ID && q.Expires > time.Now().Unix() && q.Amount == discountedPlan(p, promo).Amount && q.BaseAmount == p.Amount+float64(p.DeviceExtra*50) && q.DeviceExtra == p.DeviceExtra && q.DeviceAmount == p.DeviceExtra*50 && q.PromoCode == code && q.Discount == discount
+	expected := a.makePaymentQuote(userID, p, promo)
+	return q.UserID == userID && q.PlanID == p.ID && q.Expires > time.Now().Unix() && q.Expires <= expected.Expires && q.Amount == expected.Amount && q.BaseAmount == expected.BaseAmount && q.DeviceExtra == p.DeviceExtra && q.DeviceAmount == expected.DeviceAmount && q.PromoCode == code && q.Discount == discount && q.Sale == expected.Sale
 }
 
 func (a *app) handlePaymentQuote(w http.ResponseWriter, r *http.Request, userID string) {
@@ -188,6 +202,11 @@ ON CONFLICT (user_id,code) DO NOTHING`, userID, code)
 		return
 	}
 	p.DeviceExtra = devicePlan.ExtraSlots
+	p.Sale, err = a.activeSale(ctx)
+	if err != nil {
+		writeJSON(w, 503, errResp("Не удалось проверить акцию. Повторите попытку."))
+		return
+	}
 	quote := a.makePaymentQuote(userID, p, promo)
 	if quote.Amount < 1 {
 		writeJSON(w, http.StatusUnprocessableEntity, errResp("Действует полная скидка. Для бесплатного продления обратитесь в поддержку, платёж не нужен."))
