@@ -99,6 +99,12 @@
         document.body.classList.add("is-mini-app");
         if (TG_WEBAPP) {
             try { TG_WEBAPP.ready(); TG_WEBAPP.expand(); } catch (error) {}
+            // Match Telegram's chrome to the night-paper page so the Mini App reads as one surface.
+            try {
+                if (typeof TG_WEBAPP.setHeaderColor === "function") TG_WEBAPP.setHeaderColor("#1a100a");
+                if (typeof TG_WEBAPP.setBackgroundColor === "function") TG_WEBAPP.setBackgroundColor("#1a100a");
+                if (typeof TG_WEBAPP.setBottomBarColor === "function") TG_WEBAPP.setBottomBarColor("#1a100a");
+            } catch (error) {}
         }
         document.getElementById("authTitle").textContent = "Личный кабинет";
         document.getElementById("authHint").textContent = "";
@@ -648,7 +654,7 @@
             button.type = "button";
             button.innerHTML = [
                 "<strong>" + escapeHTML(plan.title) + "</strong>",
-                '<span class="plan-price">' + Number(plan.amount).toFixed(0) + " ₽</span>"
+                '<span class="plan-price">' + Math.round(Number(plan.amount)).toLocaleString("ru-RU") + " ₽</span>"
             ].join("");
             button.addEventListener("click", function () { openPaymentChoice(plan); });
             plansEl.appendChild(button);

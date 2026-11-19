@@ -3,66 +3,68 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>neuravpn - личный кабинет</title>
-  <link rel="stylesheet" href="../assets/css/site.css?v=20261102-perf">
-  <link rel="stylesheet" href="../assets/css/cabinet.css?v=20261102-revoked-devices">
+  <title>neuravpn — личный кабинет</title>
+  <meta name="theme-color" content="#1a100a">
+  <link rel="preload" href="../assets/fonts/tenor-cyrillic-v21.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="../assets/fonts/inter-cyrillic-v20.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../assets/css/cabinet-night.css?v=20261119-n4">
 </head>
 <body>
-  <div class="grid-overlay"></div>
-  <div class="ambient-glow"></div>
-  <div class="scan-line"></div>
-
   <div class="container cabinet-shell">
     <header class="cabinet-header">
-      <a href="../" class="brand-link"><span class="brand-main">neura</span><span class="brand-accent">vpn</span></a>
+      <a href="../" class="brand-link" aria-label="neuravpn, на главную">
+        <img class="brand-mark" src="../assets/art/mark.webp" width="40" height="40" alt="">
+        <img class="brand-word" src="../assets/art/wordmark.webp" width="480" height="150" alt="">
+      </a>
       <nav class="cabinet-nav">
-        <a href="../">главная</a>
-        <a href="https://t.me/neuravpn_support" target="_blank" rel="noopener noreferrer">поддержка</a>
+        <a href="../">Главная</a>
+        <a href="https://t.me/neuravpn_support" target="_blank" rel="noopener noreferrer">Поддержка</a>
         <button id="logoutBtn" class="nav-logout hidden" type="button" aria-label="Выйти из личного кабинета">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M14 3H6.8C5.8 3 5 3.8 5 4.8v14.4c0 1 .8 1.8 1.8 1.8H14v-2H7V5h7V3Zm3.6 5.4-1.4 1.4 1.7 1.7H10v2h7.9l-1.7 1.7 1.4 1.4L22 12l-4.4-3.6Z"/>
           </svg>
-          <span>выйти</span>
+          <span>Выйти</span>
         </button>
       </nav>
     </header>
 
     <main>
       <section id="authView" class="cabinet-auth card-panel">
+        <img class="auth-mark" src="../assets/art/mark.webp" width="96" height="96" alt="">
         <h1 id="authTitle">Вход в личный кабинет</h1>
         <p id="authHint" class="muted">Введите email, который подтвердили в Telegram-боте. Мы отправим одноразовый код для входа.</p>
 
         <div id="miniAppRecovery" class="hidden">
-          <button id="retryMiniAppBtn" class="btn btn-primary" type="button">повторить вход</button>
-          <a class="btn btn-secondary" href="https://t.me/neuravpn_bot">открыть бота</a>
+          <button id="retryMiniAppBtn" class="btn btn-primary" type="button">Повторить вход</button>
+          <a class="btn btn-secondary" href="https://t.me/neuravpn_bot">Открыть бота</a>
         </div>
 
         <form id="emailForm" class="auth-form" onsubmit="return false">
-          <label for="emailInput">подтверждённый email</label>
+          <label for="emailInput">Подтверждённый email</label>
           <div class="input-row">
             <input id="emailInput" name="email" type="email" autocomplete="email" placeholder="name@example.com" required>
-            <button id="requestCodeBtn" class="btn btn-primary" type="submit">получить код</button>
+            <button id="requestCodeBtn" class="btn btn-primary" type="submit">Получить код</button>
           </div>
         </form>
 
         <div id="telegramLoginBox" class="telegram-login">
           <div class="telegram-divider"><span>или</span></div>
-          <button id="telegramLoginBtn" class="btn btn-secondary" type="button">войти через Telegram</button>
-          <a id="telegramBotLoginLink" class="btn btn-secondary hidden" target="_blank" rel="noopener noreferrer">открыть Telegram и подтвердить вход</a>
+          <button id="telegramLoginBtn" class="btn btn-secondary" type="button">Войти через Telegram</button>
+          <a id="telegramBotLoginLink" class="btn btn-secondary hidden" target="_blank" rel="noopener noreferrer">Открыть Telegram и подтвердить вход</a>
           <p id="telegramLoginStatus" class="status-line"></p>
         </div>
 
         <form id="codeForm" class="auth-form hidden" onsubmit="return false">
-          <label for="codeInput">код из письма</label>
+          <label for="codeInput">Код из письма</label>
           <div class="input-row code-row">
             <input id="codeInput" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="000000" required>
-            <button id="verifyCodeBtn" class="btn btn-primary" type="submit">войти</button>
+            <button id="verifyCodeBtn" class="btn btn-primary" type="submit">Войти</button>
           </div>
           <p class="auth-hint">Если письма нет, проверьте папку «Спам».</p>
           <button id="resendCodeBtn" class="link-button resend-code" type="button" disabled>
             получить код заново через <span id="resendTimer">120</span> сек.
           </button>
-          <button id="changeEmailBtn" class="link-button" type="button">изменить email</button>
+          <button id="changeEmailBtn" class="link-button" type="button">Изменить email</button>
         </form>
 
         <div id="accountChooser" class="account-chooser hidden">
@@ -72,7 +74,7 @@
 
         <div id="signupOffer" class="signup-offer hidden">
           <p id="signupOfferText" class="muted">Для входа по почте подтвердите её в профиле Telegram-бота. Также можно войти через Telegram без почты.</p>
-          <a id="signupBotLink" class="btn btn-primary" href="https://t.me/neuravpn_bot?start=site_signup" target="_blank" rel="noopener noreferrer">открыть бота</a>
+          <a id="signupBotLink" class="btn btn-primary" href="https://t.me/neuravpn_bot?start=site_signup" target="_blank" rel="noopener noreferrer">Открыть бота</a>
         </div>
 
         <p id="authStatus" class="status-line"></p>
@@ -80,8 +82,9 @@
 
       <section id="dashboardView" class="hidden">
         <div class="dashboard-hero card-panel">
+          <img class="hero-mark" src="../assets/art/mark.webp" width="84" height="84" alt="">
           <div class="profile-summary">
-            <p id="userMeta" class="muted title-with-mark title-shield">загрузка профиля...</p>
+            <p id="userMeta" class="muted">загрузка профиля...</p>
           </div>
           <div class="active-pill" aria-live="polite">
             <span class="active-dot"></span>
@@ -93,7 +96,7 @@
           <section class="card-panel subscription-card">
             <div class="section-head">
               <div>
-                <h2 class="title-with-mark title-network">Подключение</h2>
+                <h2>Подключение</h2>
                 <p id="expireText" class="muted"></p>
               </div>
               <div id="subState" class="state-pill">проверка</div>
@@ -105,15 +108,15 @@
               <textarea id="subLink" class="hidden" readonly placeholder="Ссылка появится после загрузки"></textarea>
               <div class="secret-actions">
                 <button id="copySubBtn" class="btn btn-primary" type="button">Скопировать ключ</button>
-                <a id="openSubBtn" class="btn btn-secondary" href="#" target="_blank" rel="noopener noreferrer">открыть</a>
+                <a id="openSubBtn" class="btn btn-secondary" href="#" target="_blank" rel="noopener noreferrer">Открыть</a>
               </div>
             </div>
           </section>
 
           <a id="referralInvite" class="referral-invite hidden" aria-label="Пригласить друга и получить 15 дней бесплатно">
-            <span class="referral-gift" aria-hidden="true">🎁</span>
+            <img class="referral-gift" src="../assets/art/icon-key.webp" width="288" height="288" alt="">
             <span class="referral-copy">
-              <strong>пригласи друга</strong>
+              <strong>Пригласи друга</strong>
               <span>получи 15 дней бесплатно</span>
               <small>когда друг подтвердит подписку на наш канал</small>
             </span>
@@ -124,13 +127,13 @@
           <section class="card-panel payment-card">
             <div class="section-head payment-head">
               <div>
-                <h2 class="title-with-mark title-money">Продлить</h2>
+                <h2>Продлить</h2>
               </div>
             </div>
             <div id="plans" class="plans-grid"></div>
             <div id="autopaySetup" class="autopay-setup hidden">
               <div class="autopay-info">
-                <h3 id="autopayPlanTitle" class="title-with-mark title-sync">Автопродление</h3>
+                <h3 id="autopayPlanTitle">Автопродление</h3>
                 <p id="autopayNextText" class="muted"></p>
               </div>
               <div class="autopay-controls">
@@ -154,7 +157,7 @@
         <section id="instructions" class="card-panel instructions-panel">
           <div class="section-head">
             <div>
-              <h2 class="title-with-mark title-tools">Инструкции</h2>
+              <h2>Инструкции</h2>
             </div>
           </div>
           <div class="platform-grid">
@@ -207,7 +210,7 @@
         <button id="payAnyMethodBtn" class="btn btn-primary" type="button">Любым способом</button>
         <button id="payAutopayBtn" class="btn btn-secondary" type="button">Картой с автопродлением</button>
       </div>
-      <button id="closePaymentModalBtn" class="link-button" type="button">отмена</button>
+      <button id="closePaymentModalBtn" class="link-button" type="button">Отмена</button>
     </div>
   </div>
   <dialog id="devicesDialog" class="account-dialog" aria-labelledby="devicesTitle">
@@ -285,7 +288,7 @@
   <script src="../assets/vendor/telegram-web-app.js?v=20261029" defer></script>
   <script src="../assets/js/subscription-state.js?v=20261021-status" defer></script>
   <script src="../assets/js/cabinet-features.js?v=20261113-global-sales" defer></script>
-  <script src="../assets/js/cabinet.js?v=20261102-perf" defer></script>
+  <script src="../assets/js/cabinet.js?v=20261119-n2" defer></script>
   <script src="../assets/js/ui-motion.js?v=20261102-perf" defer></script>
 </body>
 </html>
