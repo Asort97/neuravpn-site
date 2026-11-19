@@ -20,7 +20,24 @@ set +a
 mkdir -p "$SITE_DIR/.runtime"
 cd "$SITE_DIR"
 
-go build -o "$API_BIN" ./cmd/web
+# Build on disk, not in /tmp: /tmp is a small tmpfs, and a build killed by a
+# restart leaves its go-build* work dir behind. Clear leftovers before every build.
+GO_TMP="$SITE_DIR/.runtime/gotmp"
+rm -rf "$GO_TMP"
+mkdir -p "$GO_TMP"
+export GOTMPDIR="$GO_TMP"
+
+# A failed build keeps the last good binary running instead of taking the site down.
+if go build -o "$API_BIN.new" ./cmd/web; then
+  mv -f "$API_BIN.new" "$API_BIN"
+elif [ -x "$API_BIN" ]; then
+  echo "go build failed; starting the previous $API_BIN" >&2
+  rm -f "$API_BIN.new"
+else
+  echo "go build failed and no previous binary exists" >&2
+  exit 1
+fi
+rm -rf "$GO_TMP"
 
 cleanup() {
   [ -n "${API_PID:-}" ] && kill "$API_PID" 2>/dev/null || true
