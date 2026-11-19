@@ -1,0 +1,14 @@
+# Install: cp deploy/logrotate-neuravpn-site /etc/logrotate.d/neuravpn-site
+# The API and static server append to these files and keep them open,
+# so rotate with copytruncate instead of restarting the service.
+/var/log/neuravpn-site/*.log {
+    daily
+    maxsize 20M
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    su root root
+}

@@ -4,8 +4,10 @@ set -euo pipefail
 SITE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${ENV_FILE:-$SITE_DIR/.env.web}"
 API_BIN="$SITE_DIR/.runtime/neuravpn-web-api"
-API_LOG="${API_LOG:-/tmp/neuravpn-web-api.log}"
-SITE_LOG="${SITE_LOG:-/tmp/neuravpn-site.log}"
+# Logs live on disk (rotated by deploy/logrotate-neuravpn-site), not in the /tmp tmpfs.
+LOG_DIR="${LOG_DIR:-/var/log/neuravpn-site}"
+API_LOG="${API_LOG:-$LOG_DIR/web-api.log}"
+SITE_LOG="${SITE_LOG:-$LOG_DIR/site.log}"
 SITE_PORT="${SITE_PORT:-8085}"
 
 if [ ! -f "$ENV_FILE" ]; then
@@ -17,7 +19,7 @@ set -a
 . "$ENV_FILE"
 set +a
 
-mkdir -p "$SITE_DIR/.runtime"
+mkdir -p "$SITE_DIR/.runtime" "$(dirname "$API_LOG")" "$(dirname "$SITE_LOG")"
 cd "$SITE_DIR"
 
 # Build on disk, not in /tmp: /tmp is a small tmpfs, and a build killed by a
