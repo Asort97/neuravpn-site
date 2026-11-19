@@ -31,3 +31,12 @@ SOFTWARE.
 Inter and JetBrains Mono subsets are self-hosted from Google Fonts. Their SIL
 Open Font Licenses are included in `assets/fonts/Inter-LICENSE.txt` and
 `assets/fonts/JetBrainsMono-LICENSE.txt`.
+
+# Fonts
+
+Self-hosted WOFF2 subsets in `assets/fonts/`, from Google Fonts, under the
+SIL Open Font License 1.1:
+
+- Tenor Sans (Denis Masharov) — landing display face. License: `assets/fonts/TenorSans-OFL.txt`.
+- Caveat (The Caveat Project Authors) — landing margin notes. License: `assets/fonts/Caveat-OFL.txt`.
+- Inter and JetBrains Mono — see their license files in the same folder.

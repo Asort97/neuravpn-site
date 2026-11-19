@@ -2,6 +2,7 @@
             const DOMAIN = "<мой домен>";
             const ANDROID_PACKAGE = "com.neuravpn.app";
             const ANDROID_APK_URL = "https://github.com/Asort97/neuravpn-client/releases/download/v1.0.5/neuravpn_android_v1.0.5_arm64.apk";
+            const ANDROID_PLAY_URL = "https://play.google.com/store/apps/details?id=com.neuravpn.app";
             const WINDOWS_EXE_URL = "https://github.com/Asort97/neuravpn-client/releases/download/v.1.0.7/neuravpn-setup-v1.0.7.exe";
             const RELEASES_PAGE_URL = "https://github.com/Asort97/neuravpn-client/releases";
             const MAX_V_SIZE = 32 * 1024;
@@ -42,7 +43,7 @@
             const totalDownloadCount = document.getElementById("totalDownloadCount");
             let releaseCatalogPromise = null;
 
-            const initialAndroidUrl = isPlaceholderUrl(ANDROID_APK_URL) ? RELEASES_PAGE_URL : ANDROID_APK_URL;
+            const initialAndroidUrl = ANDROID_PLAY_URL;
             const initialWindowsUrl = isPlaceholderUrl(WINDOWS_EXE_URL) ? RELEASES_PAGE_URL : WINDOWS_EXE_URL;
             setLinkTargets(landingDownloadAndroidBtn, initialAndroidUrl, { newTab: false });
             setLinkTargets(landingDownloadWindowsBtn, initialWindowsUrl, { newTab: false });
@@ -413,13 +414,7 @@
 
                 console.log("[NeuraVPN] picked assets - android:", androidAsset, "windows:", windowsAsset);
 
-                if (androidAsset && androidAsset.browser_download_url) {
-                    setLinkTargets(landingDownloadAndroidBtn, androidAsset.browser_download_url, { newTab: false });
-                    setLinkTargets(fallbackAndroidBtn, androidAsset.browser_download_url, { newTab: false });
-                    console.log("[NeuraVPN] Setting android version:", androidAsset._resolvedVersion);
-                    updateVersionDisplay("android", androidAsset._resolvedVersion);
-                    debugLog("android download link updated", { name: androidAsset.name || "", version: androidAsset._resolvedVersion || "" });
-                }
+                // Android installs come from Google Play; GitHub assets only serve Windows.
                 if (windowsAsset && windowsAsset.browser_download_url) {
                     setLinkTargets(landingDownloadWindowsBtn, windowsAsset.browser_download_url, { newTab: false });
                     setLinkTargets(fallbackWindowsBtn, windowsAsset.browser_download_url, { newTab: false });

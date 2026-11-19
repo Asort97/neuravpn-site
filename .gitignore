@@ -10,3 +10,7 @@ build/
 .runtime/
 __pycache__/
 *.pyc
+
+# Local design tooling
+.claude/
+.impeccable/codex/

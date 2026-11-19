@@ -1,7 +1,7 @@
 (function () {
     const mediaBase = "../../assets/instructions/";
     const DOWNLOADS = {
-        android: "https://github.com/Asort97/neuravpn-client/releases/download/v1.0.5/neuravpn_android_v1.0.5_arm64.apk",
+        android: "https://play.google.com/store/apps/details?id=com.neuravpn.app",
         windows: "https://github.com/Asort97/neuravpn-client/releases/download/v.1.0.7/neuravpn-setup-v1.0.7.exe"
     };
     const isMiniApp = detectMiniApp();
@@ -29,10 +29,10 @@
             title: "Инструкция для Android",
             intro: "Установка клиента NeuraVPN, импорт ключа и включение VPN.",
             actions: [
-                { text: "Скачать Android", href: DOWNLOADS.android, download: true }
+                { text: "Google Play", href: DOWNLOADS.android }
             ],
             steps: [
-                { media: "Android/0.MP4", title: "Скачайте приложение", text: `скачайте APK neuravpn и запустите установку.`, actions: [{ text: "Скачать Android", href: DOWNLOADS.android, primary: true, download: true }] },
+                { media: "Android/0.MP4", title: "Скачайте приложение", text: `установите neuravpn из Google Play.`, actions: [{ text: "Открыть Google Play", href: DOWNLOADS.android, primary: true }] },
                 { media: "Android/1.MP4", title: "Вставьте ключ", text: `зайдите в приложение и вставьте ключ из буфера обмена. предварительно скопируйте ключ подключения из личного кабинета.` },
                 { media: "Android/2.MP4", title: "Включите VPN", text: `далее нажмите на кнопку включения. VPN начнёт работать.` }
             ]
